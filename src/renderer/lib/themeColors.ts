@@ -45,8 +45,8 @@ export const THEME_CSS_VARS: Record<ThemeColorKey, string> = {
 export const DEFAULT_THEME_COLORS: Record<ThemeColorKey, string> = {
   appBg: '#0b0b0a',
   sidebarActiveBg: '#1c1c1a',
-  brandGreen: '#f04747',
-  brightGreen: '#f04747',
+  brandGreen: '#e0b43a',
+  brightGreen: '#e0b43a',
   readableGreen: '#d92b2b',
   deepBlack: '#141412',
   secondaryDark: '#272725',
