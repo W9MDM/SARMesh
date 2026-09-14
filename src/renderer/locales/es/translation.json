@@ -5092,7 +5092,8 @@
     "network": "Red",
     "rrc": "RRC",
     "remote": "Remoto",
-    "games": "Juegos"
+    "games": "Juegos",
+    "aprs": "APRS"
   },
   "takServerPanel": {
     "title": "Servidor TAK",
@@ -5956,5 +5957,62 @@
     "identityUnavailable": "No se pudo leer tu identidad. Compruebe que Reticulum se esté ejecutando y vuelva a intentarlo.",
     "interfaceSaveFailed": "No se pudo guardar esta conexión. Verifique la configuración de su conexión e inténtelo nuevamente.",
     "identitySaveFailed": "No se pudo guardar su configuración de identidad. Intentar otra vez."
+  },
+  "aprsPanel": {
+    "title": "Puente APRS",
+    "running": "Marcha",
+    "stopped": "Stopped",
+    "start": "Puente de inicio",
+    "stop": "Puente de parada",
+    "up": "Subir",
+    "down": "Abajo",
+    "localHint": "Apunte a CalTopo Desktop, o cualquier cliente APRS, a 127.0.0.1:{{port}} como servidor APRS-IS. No se envía nada a través de RF o a la red pública de APRS, por lo que no se trata de una licencia de aficionado.",
+    "sinkStats": "{{clients}} cliente(s) · {{emitted}} baliza(s) enviada (s)",
+    "sink": {
+      "aprs-is-server": "Servidor APRS-IS local",
+      "aprs-is-upstream": "APRS-IS público",
+      "kiss-tcp": "BESO sobre TCP"
+    },
+    "rosterTitle": "Radios de seguimiento",
+    "rosterHint": "Solo las radios de esta lista tienen balizas. Todo lo demás en la malla se ignora, por lo que una malla ocupada no termina en su mapa de incidentes.",
+    "rosterEmpty": "Todavía no se están rastreando radios. Añade las que llevan tus equipos de campo.",
+    "addTracker": "Añade una radio que se escuche en la malla",
+    "choose": "Elige una radio...",
+    "noFixSuffix": "(aún no hay posición)",
+    "add": "Añadir",
+    "remove": "Eliminar",
+    "colNode": "Radio",
+    "colCallsign": "Señal de llamada",
+    "colTeam": "Equipo",
+    "colType": "Tipo",
+    "colOn": "En/Sobre",
+    "trackerType": {
+      "ground-team": "Equipo de tierra",
+      "k9-team": "Equipo K9",
+      "hasty-team": "Equipo apresurado",
+      "utv": "UTV / ATV",
+      "vehicle": "Vehículo",
+      "truck": "Truck",
+      "ambulance": "Ambulancia",
+      "helicopter": "Helicóptero",
+      "aircraft": "Aeronave",
+      "boat": "Boat",
+      "command-post": "Puesto de mando",
+      "base": "Base",
+      "repeater": "relé de repetición"
+    },
+    "settingsTitle": "Ajustes del puente",
+    "bindAddress": "Dirección de « bind »:",
+    "port": "Puerto",
+    "minInterval": "Segundos mínimos entre balizas",
+    "maxAge": "Suelta correcciones anteriores a (segundos, 0 = nunca)",
+    "commentSuffix": "Comentario añadido a cada baliza",
+    "verifyTitle": "Verificar el feed",
+    "verifyHint": "Envía una baliza de prueba para que pueda confirmar que aparece en CalTopo antes de que el equipo se despliegue.",
+    "latitude": "Latitud",
+    "longitude": "Longitude",
+    "sendTest": "Enviar baliza de prueba",
+    "recentTitle": "Balizas recientes",
+    "recentEmpty": "Aún no se ha enviado nada."
   }
 }

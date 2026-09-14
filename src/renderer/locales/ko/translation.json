@@ -5092,7 +5092,8 @@
     "network": "회로망",
     "rrc": "RRC",
     "remote": "원격",
-    "games": "게임"
+    "games": "게임",
+    "aprs": "APRS"
   },
   "takServerPanel": {
     "title": "TAK 서버",
@@ -5956,5 +5957,62 @@
     "identityUnavailable": "귀하의 신원을 읽을 수 없습니다. Reticulum이 실행 중인지 확인한 후 다시 시도하세요.",
     "interfaceSaveFailed": "이 연결을 저장할 수 없습니다. 연결 설정을 확인하고 다시 시도하세요.",
     "identitySaveFailed": "ID 설정을 저장할 수 없습니다. 다시 시도해 보세요."
+  },
+  "aprsPanel": {
+    "title": "APRS Bridge",
+    "running": "실행 중",
+    "stopped": "중지됨",
+    "start": "브리지 시작",
+    "stop": "STOP BRIDG",
+    "up": "위로",
+    "down": "아래로",
+    "localHint": "CalTopo Desktop 또는 모든 APRS 클라이언트를 127.0.0.1: {{port}} 로 APRS-IS 서버로 지정합니다. RF를 통해 또는 공용 APRS 네트워크로 전송되지 않으므로 아마추어 라이센스가 관련되지 않습니다.",
+    "sinkStats": "{{clients}} 고객 · {{emitted}} 비콘 전송 완료",
+    "sink": {
+      "aprs-is-server": "로컬 APRS-IS 서버",
+      "aprs-is-upstream": "공용 APRS-IS",
+      "kiss-tcp": "TCP에 키스"
+    },
+    "rosterTitle": "추적된 라디오",
+    "rosterHint": "이 목록의 라디오만 비컨됩니다. 메시의 다른 모든 내용은 무시되므로 바쁜 메시는 사고 지도에 표시되지 않습니다.",
+    "rosterEmpty": "아직 라디오를 추적하고 있지 않습니다. 현장 팀이 수행하고 있는 작업을 추가하세요.",
+    "addTracker": "메시에서 들리는 라디오를 추가합니다.",
+    "choose": "라디오 선택…",
+    "noFixSuffix": "(아직 포지션 없음)",
+    "add": "추가",
+    "remove": "제거",
+    "colNode": "무전",
+    "colCallsign": "콜사인",
+    "colTeam": "팀",
+    "colType": "유형",
+    "colOn": "설정",
+    "trackerType": {
+      "ground-team": "지상 팀",
+      "k9-team": "K9 팀",
+      "hasty-team": "신속한 팀",
+      "utv": "UTV/ATV",
+      "vehicle": "차량",
+      "truck": "트럭",
+      "ambulance": "구급차",
+      "helicopter": "헬리콥터",
+      "aircraft": "항공기",
+      "boat": "보트",
+      "command-post": "지휘소",
+      "base": "베이스",
+      "repeater": "리피터/릴레이"
+    },
+    "settingsTitle": "브리지 설정",
+    "bindAddress": "바인딩 주소",
+    "port": "포팅하기",
+    "minInterval": "비콘 사이의 최소 초",
+    "maxAge": "(seconds, 0 = never) 보다 오래된 수정사항 삭제",
+    "commentSuffix": "모든 비콘에 추가된 댓글",
+    "verifyTitle": "피드 확인",
+    "verifyHint": "팀이 배치하기 전에 CalTopo에 표시되는지 확인할 수 있도록 하나의 테스트 비콘을 보냅니다.",
+    "latitude": "위도",
+    "longitude": "경도(입력무관)",
+    "sendTest": "테스트 비콘 보내기",
+    "recentTitle": "최근 비콘",
+    "recentEmpty": "아직 전송된 것이 없습니다."
   }
 }

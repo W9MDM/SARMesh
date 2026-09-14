@@ -1,43 +1,49 @@
 # SARMesh
 
-> Cross-platform **Electron** desktop client for **Meshtastic**, **MeshCore**, and **Reticulum (LXMF)** on **macOS**, **Linux**, and **Windows** — **BLE**, **USB serial**, **Wi-Fi/TCP**, **MQTT**, local **SQLite** history, **routing diagnostics**, **16-language UI**, plus a Ratspeak-compatible Reticulum sidecar (**Games**, **encrypted paper**, **LXST voice**, Nomad, RRC, Remote).
+> Search and rescue desktop client for **Meshtastic**, **MeshCore** and **Reticulum (LXMF)** on
+> **Windows**, **Linux** and **macOS** — with an **APRS bridge** that feeds field team positions
+> straight into **CalTopo / SARTopo**, plus BLE, USB serial, Wi-Fi/TCP, MQTT, local SQLite
+> history and routing diagnostics.
 
 ![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)
-![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)
-[![CI Build](https://github.com/Colorado-Mesh/mesh-client/actions/workflows/ci.yaml/badge.svg)](https://github.com/Colorado-Mesh/mesh-client/actions/workflows/ci.yaml)
-[![Build/Release Electron App](https://github.com/Colorado-Mesh/mesh-client/actions/workflows/release.yaml/badge.svg?event=push)](https://github.com/Colorado-Mesh/mesh-client/actions/workflows/release.yaml?query=event%3Apush)
-[![Flatpak Build](https://github.com/Colorado-Mesh/mesh-client/actions/workflows/flatpak.yaml/badge.svg)](https://github.com/Colorado-Mesh/mesh-client/actions/workflows/flatpak.yaml)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/Colorado-Mesh/mesh-client)
-[![Publish Docs](https://github.com/Colorado-Mesh/mesh-client/actions/workflows/docs.yml/badge.svg)](https://github.com/Colorado-Mesh/mesh-client/actions/workflows/docs.yml)
-![Discord](https://img.shields.io/discord/1436156966648152271?label=chat&logo=discord)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)
+[![CI Build](https://github.com/W9MDM/SARMesh/actions/workflows/ci.yaml/badge.svg)](https://github.com/W9MDM/SARMesh/actions/workflows/ci.yaml)
+[![Tests](https://github.com/W9MDM/SARMesh/actions/workflows/tests.yaml/badge.svg)](https://github.com/W9MDM/SARMesh/actions/workflows/tests.yaml)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/W9MDM/SARMesh)
 
-**For everyone, everywhere.** We welcome community participation and collaboration in the development of this project!
+SARMesh is a fork of [Mesh-Client](https://github.com/Colorado-Mesh/mesh-client) by Colorado Mesh,
+rebuilt around what a search and rescue team actually needs on a callout. See [FORK.md](FORK.md)
+for what changed and what is inherited — the great majority of this codebase is their work.
 
-Releases and build artifacts are published on [GitHub](https://github.com/Colorado-Mesh/mesh-client); source is also manually mirrored to [gitworkshop](https://gitworkshop.dev/npub1wwaq5gyk7yljly3cwl3wleuk79nz63ukpp2a6lq5x4q9s9r4nrgqjk3dlv/relay.ngit.dev/sarmesh).
+Releases are published on [GitHub](https://github.com/W9MDM/SARMesh/releases).
 
 ---
 
 ## Why
 
-### SARMesh: The Universal Desktop Suite for Mesh Networks
+### Built for a callout, not a lab bench
 
-Reliable Desktop Power. Local Persistence. Total Insight.
+A search and rescue team already has a mapping provider. What it lacks is a way to get positions
+off a LoRa mesh and onto that map, and a defensible record of how thirty handheld radios are
+configured and who is carrying them.
 
-While official mobile apps cover the basics, desktop power users often face a fragmented ecosystem: limited desktop options for MeshCore and Reticulum (LXMF), inconsistent support across operating systems, and persistent sync issues on macOS. SARMesh fills those gaps with a high-performance desktop experience that unifies **Meshtastic**, **MeshCore**, and **Reticulum** in one app.
+SARMesh adds three things to an already capable multi-protocol mesh client:
 
-With a dedicated local SQLite database, SARMesh keeps message history and mesh logs durable across restarts and sync failures. It provides one reliable hub for Meshtastic, MeshCore, and Reticulum (via an AGPL Rust sidecar), delivering a unified workflow regardless of protocol or hardware.
+- **APRS bridge.** Field team positions heard on the mesh are re-broadcast as APRS. Point CalTopo
+  Desktop — or any APRS client — at `127.0.0.1:14580` and your teams appear on the incident map.
+  Nothing is transmitted over RF or to the public APRS network, so no amateur licence is involved.
+  See [docs/aprs-caltopo.md](docs/aprs-caltopo.md).
+- **Tracker types.** Each tracked radio is a ground team, K9 team, UTV, helicopter, base and so on.
+  That one choice sets both the APRS symbol other software renders and the icon SARMesh draws, so
+  a dog team looks like a dog everywhere.
+- **Roster-scoped tracking.** Only radios you put on the roster are beaconed, so a busy public mesh
+  does not end up on your incident map.
 
-**Why SARMesh?**
+Everything underneath is Mesh-Client's: Meshtastic, MeshCore and Reticulum in one app, BLE, USB
+serial, Wi-Fi/TCP and MQTT transports, durable local SQLite history, routing diagnostics, a
+firmware flasher, and a 15-language UI.
 
-- **True message persistence:** Local SQLite storage for reliable long-term history, without lost chats or broken logs.
-- **Universal protocol support:** One consistent interface for Meshtastic, MeshCore, and Reticulum (amber protocol pill; LXMF DMs, RRC hub chat, Nomad, Remote, Games, and LXST voice via sidecar).
-- **Advanced mesh visibility:** Routing diagnostics and mesh health insight that mobile apps often skip.
-- **Desktop-first workflow:** MQTT integration (Meshtastic/MeshCore); for Reticulum, LXMF DMs / encrypted paper / propagation, RRC, LRGP Games, LXST voice, and rnsh/rncp Remote — aimed at Ratspeak-compatible peers.
-- **Cross-platform stability:** A feature-rich experience across macOS, Linux, and Windows.
-
-From real-time diagnostics to permanent message archives, SARMesh delivers the desktop visibility serious mesh users require.
-
-**Protocol scope:** SARMesh focuses on **RF mesh** networking—LoRa and related radio meshes. Additional protocols are in scope when they support that kind of RF mesh path. Internet-only messaging stacks are out of scope. Amateur-radio (ham) protocols are welcome when they meet the same RF-mesh bar; SARMesh is for everyone, everywhere, and is not gated or targeted specifically at people with a ham radio license. Protocols that already ship may still use internet transports _alongside_ RF.
+**Protocol scope:** SARMesh focuses on **RF mesh** networking — LoRa and related radio meshes.
 
 **Known Bugs:**
 
@@ -412,7 +418,7 @@ Architecture and API: [docs/reticulum.md](docs/reticulum.md). Games wire parity:
 | **Windows** | Windows 10 version **1809+** or Windows 11 (x64 and arm64 installers) |
 | **Linux**   | x86_64 or aarch64; AppImage, `.deb`, `.rpm`, or Flatpak               |
 
-**Pre-built binaries** for **macOS**, **Linux**, and **Windows** are available in the [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) area. Download the installer or archive for your platform; no Node.js or build tools required.
+**Pre-built binaries** for **macOS**, **Linux**, and **Windows** are available in the [GitHub Releases](https://github.com/W9MDM/SARMesh/releases) area. Download the installer or archive for your platform; no Node.js or build tools required.
 
 - **Windows (Intel/AMD x64):** `SARMesh-Setup-{version}.exe`
 - **Windows 11 on ARM (Snapdragon, etc.):** `SARMesh-Setup-{version}-arm64.exe` — do not use the x64 installer on native ARM hardware.
@@ -426,7 +432,7 @@ flatpak run io.github.w9mdm.SARMesh
 
 VMware guests and other GPU edge cases: [Flatpak troubleshooting](docs/troubleshooting.md#flatpak-vmwgfx-driver-missing-vmware-on-macos).
 
-**Arch Linux (AUR, third-party):** community package [`sarmesh`](https://aur.archlinux.org/packages/sarmesh) (maintainer `victorix`) — **not** maintained by Colorado Mesh. Prefer [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) AppImage / `.deb` / `.rpm` / Flatpak for official builds. Report packaging issues on the AUR package page; report app bugs on GitHub.
+**Arch Linux:** no AUR package yet. Use the AppImage, `.deb`, `.rpm` or Flatpak from [GitHub Releases](https://github.com/W9MDM/SARMesh/releases).
 
 ```bash
 yay -S sarmesh # or: paru -S sarmesh
@@ -438,7 +444,7 @@ yay -S sarmesh # or: paru -S sarmesh
 - **Apple Silicon (M1/M2/M3/…):** download the **arm64 `.dmg`**, open it, and drag **SARMesh** to **Applications**.
 - **Intel Mac:** download the **x64 `.dmg`** (file name includes `x64`, or has no `arm64` suffix), open it, and drag **SARMesh** to **Applications**.
 - If you use the **`.zip`** instead: extract with **[Keka](https://www.keka.io/en/)** or `ditto -xk` — **do not use 7-Zip** (or Finder Archive Utility). Those tools flatten macOS framework symlinks and can cause a launch crash: `Library not loaded: Squirrel.framework`.
-- **Official [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) (v5.22.0+):** macOS builds are **Developer ID signed and notarized**. Drag to **Applications** and open normally — you should **not** need `xattr` or Right-click → Open.
+- **Official [GitHub Releases](https://github.com/W9MDM/SARMesh/releases) (v5.22.0+):** macOS builds are **Developer ID signed and notarized**. Drag to **Applications** and open normally — you should **not** need `xattr` or Right-click → Open.
 - **Unsigned local or fork builds** (`pnpm run dist:mac` without signing secrets, CI artifacts from forks): Gatekeeper may show **"SARMesh" is damaged and can't be opened** (or **File is damaged and cannot be opened**), especially on **Apple silicon**. That is quarantine on unsigned downloads, not a corrupt file.
 
 If the app is blocked:
@@ -463,7 +469,7 @@ See [Troubleshooting; macOS: File is damaged…](docs/troubleshooting.md#macos-f
 **Prerequisites:** [Node.js 22.13.0+](https://nodejs.org/) and [pnpm 12+](https://pnpm.io/installation) (repo pins an exact `packageManager` — Corepack, or `npm i -g pnpm` / `npm i -g corepack` on Node 25+). After a pnpm major bump, `pnpm install` / `pnpm run dev` print upgrade instructions if your local pnpm is too old.
 
 ```bash
-git clone https://github.com/Colorado-Mesh/mesh-client
+git clone https://github.com/W9MDM/SARMesh
 cd sarmesh
 pnpm install
 pnpm run dev

@@ -5092,7 +5092,8 @@
     "network": "Rete",
     "rrc": "RRC",
     "remote": "Remoto",
-    "games": "Giochi"
+    "games": "Giochi",
+    "aprs": "APRS"
   },
   "takServerPanel": {
     "title": "TAK Server",
@@ -5956,5 +5957,62 @@
     "identitySaveFailed": "Impossibile salvare le impostazioni dell'identità. Riprova.",
     "interfaceSaveFailed": "Impossibile salvare questa connessione. Controlla le impostazioni di connessione e riprova.",
     "interfacesUnavailable": "Impossibile leggere le tue connessioni. Controlla che Reticulum sia in esecuzione, quindi riprova."
+  },
+  "aprsPanel": {
+    "title": "APRS Bridge",
+    "running": "In marcia",
+    "stopped": "Interrotto",
+    "start": "Start Bridge",
+    "stop": "Arresto ponte",
+    "up": "Salita",
+    "down": "Discesa",
+    "localHint": "Punta CalTopo Desktop, o qualsiasi client APRS, a 127.0.0.1:{{port}} come server APRS-IS. Nulla viene inviato tramite RF o alla rete pubblica APRS, quindi non è coinvolta alcuna licenza amatoriale.",
+    "sinkStats": "{{clients}} client· {{emitted}} beacon inviato/i",
+    "sink": {
+      "aprs-is-server": "Server APRS-IS locale",
+      "aprs-is-upstream": "APRS-IS pubblico",
+      "kiss-tcp": "KISS over TCP"
+    },
+    "rosterTitle": "Radio tracciate",
+    "rosterHint": "Solo le radio di questo elenco sono trasmesse. Tutto il resto sulla mesh viene ignorato, quindi una mesh occupata non finisce sulla tua mappa degli incidenti.",
+    "rosterEmpty": "Nessuna radio è stata ancora rintracciata. Aggiungi quelli che stanno trasportando le tue squadre sul campo.",
+    "addTracker": "Aggiungi una radio ascoltata sulla rete",
+    "choose": "Scegli una radio...",
+    "noFixSuffix": "(nessuna posizione ancora)",
+    "add": "Aggiungi",
+    "remove": "Rimuovi",
+    "colNode": "Radio",
+    "colCallsign": "Nome in codice",
+    "colTeam": "Team",
+    "colType": "Tipo",
+    "colOn": "Attivato",
+    "trackerType": {
+      "ground-team": "Squadra di terra",
+      "k9-team": "K9 team",
+      "hasty-team": "Team frettoloso",
+      "utv": "UTV / ATV",
+      "vehicle": "Veicolo",
+      "truck": "Autocarro",
+      "ambulance": "Ambulanza",
+      "helicopter": "Elicottero",
+      "aircraft": "Aeromobili",
+      "boat": "Barca",
+      "command-post": "Posto di comando",
+      "base": "Basamento",
+      "repeater": "relè ripetitore"
+    },
+    "settingsTitle": "Impostazioni ponte",
+    "bindAddress": "Associa indirizzo",
+    "port": "Porta",
+    "minInterval": "Minimi secondi tra i beacon",
+    "maxAge": "Rilascia correzioni più vecchie di (secondi, 0 = mai)",
+    "commentSuffix": "Commento allegato a ogni beacon",
+    "verifyTitle": "Verificare il feed",
+    "verifyHint": "Invia un beacon di prova in modo da poter confermare che appare in CalTopo prima che il team si schieri.",
+    "latitude": "Latitudine",
+    "longitude": "Longitudine",
+    "sendTest": "Invia beacon di prova",
+    "recentTitle": "Beacon recenti",
+    "recentEmpty": "Non è stato ancora inviato nulla."
   }
 }

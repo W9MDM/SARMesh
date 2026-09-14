@@ -5092,7 +5092,8 @@
     "network": "ネットワーク",
     "rrc": "RRC",
     "remote": "リモート",
-    "games": "ゲーム"
+    "games": "ゲーム",
+    "aprs": "APRS"
   },
   "takServerPanel": {
     "title": "TAKサーバー",
@@ -5956,5 +5957,62 @@
     "identitySaveFailed": "ID 設定を保存できませんでした。もう一度やり直してください。",
     "interfaceSaveFailed": "この接続を保存できませんでした。接続設定を確認して、もう一度試してください。",
     "interfacesUnavailable": "接続を読み取れませんでした。 Reticulum が実行されていることを確認してから、再試行してください。"
+  },
+  "aprsPanel": {
+    "title": "APRSブリッジ",
+    "running": "ランニング",
+    "stopped": "中止中",
+    "start": "ブリッジを開始",
+    "stop": "ストップブリッジ",
+    "up": "投稿",
+    "down": "ダウン",
+    "localHint": "127.0.0.1: {{port}}のCalTopo Desktop、または任意のAPRSクライアントをAPRS - ISサーバーとしてポイントします。RFや公共のAPRSネットワークには何も送信されないため、アマチュアライセンスは関係ありません。",
+    "sinkStats": "{{clients}}クライアント· {{emitted}}ビーコンが送信されました",
+    "sink": {
+      "aprs-is-server": "ローカルAPRS - ISサーバー",
+      "aprs-is-upstream": "公開APRS - IS",
+      "kiss-tcp": "TCPを介したキス"
+    },
+    "rosterTitle": "追跡された無線",
+    "rosterHint": "このリストの無線のみがビーコンされます。メッシュ上の他のすべてが無視されるため、ビジーメッシュがインシデントマップに表示されることはありません。",
+    "rosterEmpty": "まだ無線は追跡されていません。フィールドチームが運んでいるものを追加します。",
+    "addTracker": "メッシュで聞こえたラジオを追加する",
+    "choose": "ラジオを選択してください…",
+    "noFixSuffix": "（まだポジションがありません）",
+    "add": "追加",
+    "remove": "削除する",
+    "colNode": "通信機",
+    "colCallsign": "識別信号",
+    "colTeam": "チーム",
+    "colType": "タイプ",
+    "colOn": "オン",
+    "trackerType": {
+      "ground-team": "地上チーム",
+      "k9-team": "K 9チーム",
+      "hasty-team": "慌ただしいチーム",
+      "utv": "UTV/ATV",
+      "vehicle": "車両",
+      "truck": "トラック",
+      "ambulance": "救急車",
+      "helicopter": "ヘリコプター",
+      "aircraft": "飛行機",
+      "boat": "ボート",
+      "command-post": "コマンドポスト",
+      "base": "ベース",
+      "repeater": "リピーター/リレー"
+    },
+    "settingsTitle": "ブリッジ設定",
+    "bindAddress": "バインド アドレス",
+    "port": "ポート",
+    "minInterval": "ビーコン間の最小秒数",
+    "maxAge": "より古いドロップ修正（秒、0 =一度もない）",
+    "commentSuffix": "すべてのビーコンにコメントが追加されました",
+    "verifyTitle": "フィードを確認する",
+    "verifyHint": "チームがデプロイする前にCalTopoに表示されることを確認できるように、テストビーコンを1つ送信します。",
+    "latitude": "緯度",
+    "longitude": "経度",
+    "sendTest": "テストビーコンを送信",
+    "recentTitle": "最近のビーコン",
+    "recentEmpty": "まだ何も送信されていません。"
   }
 }

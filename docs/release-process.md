@@ -233,7 +233,7 @@ If `latest.yml` lists hyphenated Setup names but the release only has dotted Git
 
 1. Download the existing x64 and arm64 NSIS binaries from the release (dotted names).
 2. Re-upload the **same files** as extra assets named `SARMesh-Setup-{version}.exe` and `SARMesh-Setup-{version}-arm64.exe`. Keep the dotted files.
-3. Confirm `https://github.com/Colorado-Mesh/mesh-client/releases/download/v{version}/SARMesh-Setup-{version}.exe` returns 302, not 404.
+3. Confirm `https://github.com/W9MDM/SARMesh/releases/download/v{version}/SARMesh-Setup-{version}.exe` returns 302, not 404.
 
 Example for v5.36.0 (run from a temp dir after `gh auth login`):
 

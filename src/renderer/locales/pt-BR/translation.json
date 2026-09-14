@@ -5092,7 +5092,8 @@
     "network": "Rede",
     "rrc": "RRC",
     "remote": "Remoto",
-    "games": "Jogos"
+    "games": "Jogos",
+    "aprs": "APRs"
   },
   "takServerPanel": {
     "title": "Servidor TAK",
@@ -5956,5 +5957,62 @@
     "identityUnavailable": "Não foi possível ler sua identidade. Verifique se o Reticulum está funcionando e tente novamente.",
     "interfacesUnavailable": "Não foi possível ler suas conexões. Verifique se o Reticulum está funcionando e tente novamente.",
     "identitySaveFailed": "Não foi possível salvar suas configurações de identidade. Tente novamente."
+  },
+  "aprsPanel": {
+    "title": "Ponte APRs",
+    "running": "Funcionamento",
+    "stopped": "Parado",
+    "start": "Iniciar ponte",
+    "stop": "Ponte de parada",
+    "up": "Para cima",
+    "down": "Baixo",
+    "localHint": "Point CalTopo Desktop, ou qualquer cliente APRS, em 127.0.0.1:{{port}} como um servidor APRS-IS. Nada é enviado por RF ou para a rede pública da APRs, portanto, nenhuma licença amadora está envolvida.",
+    "sinkStats": "{{clients}} cliente(s) · {{emitted}} beacon(s) enviado (s)",
+    "sink": {
+      "aprs-is-server": "Servidor APRS-IS local",
+      "aprs-is-upstream": "APRS-IS público",
+      "kiss-tcp": "BEIJO sobre TCP"
+    },
+    "rosterTitle": "Rádios rastreados",
+    "rosterHint": "Apenas os rádios desta lista são sinalizados. Todo o resto na malha é ignorado, então uma malha ocupada não acaba no seu mapa de incidentes.",
+    "rosterEmpty": "Nenhum rádio está sendo rastreado ainda. Adicione os que suas equipes de campo estão carregando.",
+    "addTracker": "Adicione um rádio ouvido na malha",
+    "choose": "Escolha um rádio...",
+    "noFixSuffix": "(nenhuma posição ainda)",
+    "add": "Adicionar",
+    "remove": "Remover",
+    "colNode": "Rádio",
+    "colCallsign": "Indicativo de chamada",
+    "colTeam": "Equipe",
+    "colType": "Tipo",
+    "colOn": "Ligado",
+    "trackerType": {
+      "ground-team": "Equipe de solo",
+      "k9-team": "Equipe K9",
+      "hasty-team": "Equipe apressada",
+      "utv": "UTV / ATV",
+      "vehicle": "Veículo",
+      "truck": "Caminhão",
+      "ambulance": "Ambulância",
+      "helicopter": "Helicóptero",
+      "aircraft": "Aeronave",
+      "boat": "Barco",
+      "command-post": "Posto de Comando",
+      "base": "Base",
+      "repeater": "Repetidor / relé"
+    },
+    "settingsTitle": "Configurações do modo Bridge",
+    "bindAddress": "Vincular endereço",
+    "port": "Bombordo",
+    "minInterval": "Mínimo de segundos entre beacons",
+    "maxAge": "Soltar correções com mais de (segundos, 0 = nunca)",
+    "commentSuffix": "Comentário anexado a cada beacon",
+    "verifyTitle": "Verifique o feed",
+    "verifyHint": "Envia um sinalizador de teste para que você possa confirmar que ele aparece no CalTopo antes que a equipe seja implantada.",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "sendTest": "Enviar baliza de teste",
+    "recentTitle": "Beacons recentes",
+    "recentEmpty": "Nada foi enviado ainda."
   }
 }

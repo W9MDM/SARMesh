@@ -53,6 +53,7 @@ import type { ReticulumSidecarStatus } from '../shared/reticulum-types';
 import { findLxmUrlInArgv, isForwardableSARMeshOpenUrl } from '../shared/sarMeshDeepLink';
 import type { TAKServerStatus, TAKSettings } from '../shared/tak-types';
 import { MS_PER_MINUTE, MS_PER_SECOND } from '../shared/timeConstants';
+import { AprsBridgeManager } from './aprs-bridge-manager';
 import {
   bleCoexistenceCoordinator,
   type BlePeripheralOwner,
@@ -114,6 +115,7 @@ import { formatGpxTracks, GPX_EXPORT_MAX_POINTS } from './gpxExportFormat';
 import { isHarmlessSocketOptionError } from './harmlessSocketOptionError';
 import { probeHttpRttMs, probeTcpRttMs } from './host-link-rtt';
 import { isValidHttpHostname } from './httpHostValidation';
+import { registerAprsIpcHandlers } from './ipc/aprs-handlers';
 import { registerGpsIpcHandlers } from './ipc/gps-handlers';
 import { registerReticulumDbIpcHandlers } from './ipc/reticulum-db-handlers';
 import { registerReticulumIpcHandlers, wireReticulumSidecarBridge } from './ipc/reticulum-handlers';
@@ -293,6 +295,58 @@ function isMacAddress(value: string): boolean {
 let takServerManager: TakServerManager | null = null;
 let takServerManagerLoadPromise: Promise<TakServerManager> | null = null;
 
+let aprsBridgeManager: AprsBridgeManager | null = null;
+
+/**
+ * The APRS bridge is created eagerly on first use and then fed synchronously
+ * from the node-update path, so it cannot be lazily imported the way the TAK
+ * server is. It only pulls in `net`/`fs`, so the bundle cost is negligible.
+ */
+function getAprsBridgeManager(): AprsBridgeManager {
+  if (!aprsBridgeManager) {
+    const manager = new AprsBridgeManager();
+    manager.loadSettings();
+    manager.loadRoster();
+    manager.on('status', (status) => {
+      if (mainWindow) mainWindow.webContents.send('aprs:status', status);
+      else console.debug('[main] aprs:status dropped (mainWindow not ready)');
+    });
+    manager.on('emitted', (record) => {
+      if (mainWindow) mainWindow.webContents.send('aprs:emitted', record);
+      else console.debug('[main] aprs:emitted dropped (mainWindow not ready)');
+    });
+    aprsBridgeManager = manager;
+  }
+  return aprsBridgeManager;
+}
+
+/**
+ * Offer a node position to the APRS bridge. Called from every path that learns
+ * a node's position, so the bridge sees RF, MQTT and BLE alike. Cheap and
+ * non-throwing: the bridge drops anything not on the roster.
+ */
+function offerNodeToAprs(node: { node_id?: unknown } & Record<string, unknown>): void {
+  if (!aprsBridgeManager) return; // never started; nothing to feed
+  const nodeId = Number(node.node_id);
+  if (!Number.isFinite(nodeId)) return;
+  try {
+    aprsBridgeManager.onNodeUpdate({
+      node_id: nodeId,
+      latitude: node.latitude as number | null | undefined,
+      longitude: node.longitude as number | null | undefined,
+      altitude: node.altitude as number | null | undefined,
+      last_heard: node.last_heard as number | null | undefined,
+      long_name: node.long_name as string | null | undefined,
+      short_name: node.short_name as string | null | undefined,
+    });
+  } catch (err) {
+    console.error(
+      '[aprs] node update failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+  }
+}
+
 let reticulumSidecarManager: ReticulumSidecarManager | null = null;
 
 function ensureReticulumSidecarManager(): ReticulumSidecarManager {
@@ -469,6 +523,7 @@ async function shutdownAppResources(): Promise<void> {
   isQuitting = true;
   try {
     takServerManager?.stop();
+    void aprsBridgeManager?.stop();
   } catch (err) {
     console.debug(
       '[main] TAK server stop during shutdown (ignored):',
@@ -3078,6 +3133,7 @@ mqttManager.on('nodeUpdate', (n: CachedNode) => {
     mainWindow.webContents.send('mqtt:node-update', { ...n, protocol: 'meshtastic' as const });
   else console.debug('[main] mqtt:node-update dropped (mainWindow not ready)');
   takServerManager?.onNodeUpdate({ ...n, altitude: n.altitude ?? undefined });
+  offerNodeToAprs({ ...n });
 });
 mqttManager.on(
   'traceRouteReply',
@@ -4116,7 +4172,7 @@ ipcMain.handle('db:saveNode', (event, node) => {
         END,
         path = COALESCE(excluded.path, nodes.path)
     `);
-    return stmt.run({
+    const result = stmt.run({
       role: null,
       hops_away: node.hops_away ?? null,
       rssi: null,
@@ -4138,6 +4194,10 @@ ipcMain.handle('db:saveNode', (event, node) => {
       hops: node.hops ?? node.hops_away ?? null,
       path: node.path != null ? JSON.stringify(node.path) : null,
     });
+    // Every transport (RF, BLE, serial, MQTT) funnels node positions through
+    // db:saveNode, so this is the one place the APRS bridge has to observe.
+    offerNodeToAprs(node);
+    return result;
   } catch (err) {
     finishDbIpcHandler('db:saveNode', err);
   }
@@ -6523,6 +6583,8 @@ registerTakIpcHandlers({
   validateTakSettings,
 });
 
+registerAprsIpcHandlers({ getAprsBridgeManager });
+
 registerReticulumIpcHandlers({
   idleStatus: IDLE_RETICULUM_STATUS,
   ensureManager: ensureReticulumSidecarManager,
@@ -6815,6 +6877,7 @@ app.on('will-quit', (event) => {
     ]);
     try {
       takServerManager?.stop();
+      void aprsBridgeManager?.stop();
     } catch (err) {
       console.debug(
         '[main] TAK server stop during will-quit (ignored):',

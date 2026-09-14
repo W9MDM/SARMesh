@@ -5172,7 +5172,8 @@
     "network": "Sieć",
     "rrc": "RRC",
     "remote": "Zdalny",
-    "games": "Gry"
+    "games": "Gry",
+    "aprs": "APRS"
   },
   "takServerPanel": {
     "title": "Serwer TAK",
@@ -6050,5 +6051,62 @@
     "identitySaveFailed": "Nie można zapisać ustawień Twojej tożsamości. Spróbuj ponownie.",
     "interfaceSaveFailed": "Nie udało się zapisać tego połączenia. Sprawdź ustawienia połączenia i spróbuj ponownie.",
     "identityUnavailable": "Nie udało się odczytać Twojej tożsamości. Sprawdź, czy Reticulum działa, a następnie spróbuj ponownie."
+  },
+  "aprsPanel": {
+    "title": "Most APRS",
+    "running": "Uruchomiony",
+    "stopped": "Wstrzymany",
+    "start": "Rozpocznij most",
+    "stop": "Mostek zatrzymania",
+    "up": "Góra",
+    "down": "Dół",
+    "localHint": "Punkt CalTopo Desktop lub dowolny klient APRS o 127.0.0.1:{{port}} jako serwer APRS-IS. Nic nie jest przesyłane przez RF ani do publicznej sieci APRS, więc nie dotyczy to licencji amatora.",
+    "sinkStats": "{{clients}} klient(-ci) · Sygnalizator (-y) nawigacyjny(-e) {{emitted}} wysłany (-e)",
+    "sink": {
+      "aprs-is-server": "Lokalny serwer APRS-IS",
+      "aprs-is-upstream": "Publiczne APRS-IS",
+      "kiss-tcp": "KISS over TCP"
+    },
+    "rosterTitle": "Radia gąsienicowe",
+    "rosterHint": "Sygnalizowane są tylko radia z tej listy. Wszystko inne na siatce jest ignorowane, więc ruchliwa siatka nie kończy się na mapie incydentów.",
+    "rosterEmpty": "Żadne radia nie są jeszcze śledzone. Dodaj te, które niosą Twoje zespoły terenowe.",
+    "addTracker": "Dodaj radio słyszalne na siatce",
+    "choose": "Wybierz radio…",
+    "noFixSuffix": "(brak pozycji)",
+    "add": "Dodaj",
+    "remove": "Usuń",
+    "colNode": "Radio",
+    "colCallsign": "Znak wywoławczy",
+    "colTeam": "Zespół",
+    "colType": "Typ",
+    "colOn": "Wł.",
+    "trackerType": {
+      "ground-team": "Zespół naziemny",
+      "k9-team": "Zespół K9",
+      "hasty-team": "Pośpieszny zespół",
+      "utv": "UTV / ATV",
+      "vehicle": "Pojazd",
+      "truck": "Ciężarówka",
+      "ambulance": "Samochód sanitarny (ambulans)",
+      "helicopter": "Śmigłowiec",
+      "aircraft": "Dron",
+      "boat": "Łódź",
+      "command-post": "Centrum dowodzenia.",
+      "base": "Baza",
+      "repeater": "Przemiennik / przekaźnik"
+    },
+    "settingsTitle": "Ustawienia mostka",
+    "bindAddress": "Używany adres:",
+    "port": "Port",
+    "minInterval": "Minimalne sekundy między sygnałami nawigacyjnymi",
+    "maxAge": "Poprawki starsze niż (sekundy, 0 = nigdy)",
+    "commentSuffix": "Komentarz dołączony do każdej latarni",
+    "verifyTitle": "Sprawdź posuw",
+    "verifyHint": "Wysyła jeden sygnalizator testowy, aby potwierdzić, że pojawi się w CalTopo przed wdrożeniem zespołu.",
+    "latitude": "Szerokość geograficzna",
+    "longitude": "Długość geograficzna",
+    "sendTest": "TEST SYGNALIZATORA",
+    "recentTitle": "Najnowsze sygnały nawigacyjne",
+    "recentEmpty": "Nic nie wysłano."
   }
 }

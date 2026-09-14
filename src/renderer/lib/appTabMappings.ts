@@ -24,6 +24,7 @@ export const STATS_PANEL_INDEX = TAB_SLOT_IDS.indexOf('Stats');
 export const SNIFFER_PANEL_INDEX = TAB_SLOT_IDS.indexOf('Sniffer');
 export const RF_PANEL_INDEX = TAB_SLOT_IDS.indexOf('RF');
 export const GRAPH_PANEL_INDEX = TAB_SLOT_IDS.indexOf('Graph');
+export const APRS_PANEL_INDEX = TAB_SLOT_IDS.indexOf('APRS');
 
 type TabCapabilityRequirement = keyof ProtocolCapabilities | { or: (keyof ProtocolCapabilities)[] };
 
@@ -50,6 +51,7 @@ const TAB_CAPABILITY_REQUIREMENTS: (TabCapabilityRequirement | undefined)[] = [
   'hasRfStats', // RF
   { or: ['hasNeighborInfo', 'nodeListTabUsesContactsLabel'] }, // Graph
   'hasReticulumTopologyPanel', // Topology
+  undefined, // APRS
 ];
 
 function tabVisible(

@@ -1,6 +1,12 @@
 // Single source of truth for the Electron context bridge API surface.
 import type { MeshNode, MQTTSettings, MQTTStatus } from '../renderer/lib/types';
 import type {
+  AprsBridgeStatus,
+  AprsEmitRecord,
+  AprsSettings,
+  AprsTrackedClient,
+} from './aprs-types';
+import type {
   GamesActionRequest,
   GamesActionResult,
   GamesAppManifest,
@@ -1175,6 +1181,27 @@ export interface ElectronAPI {
       ) => Promise<void>;
       remove: (id: number) => Promise<void>;
     };
+  };
+
+  // ─── APRS bridge ─────────────────────────────────────────────────────────────
+  aprs: {
+    start: (settings: AprsSettings) => Promise<void>;
+    stop: () => Promise<void>;
+    getStatus: () => Promise<AprsBridgeStatus>;
+    getSettings: () => Promise<AprsSettings>;
+    saveSettings: (settings: AprsSettings) => Promise<void>;
+    getRoster: () => Promise<AprsTrackedClient[]>;
+    setRoster: (roster: AprsTrackedClient[]) => Promise<AprsTrackedClient[]>;
+    upsertTrackedClient: (client: AprsTrackedClient) => Promise<AprsTrackedClient[]>;
+    removeTrackedClient: (nodeId: number) => Promise<AprsTrackedClient[]>;
+    getRecent: (limit?: number) => Promise<AprsEmitRecord[]>;
+    sendTestBeacon: (
+      callsign: string,
+      latitude: number,
+      longitude: number,
+    ) => Promise<AprsEmitRecord>;
+    onStatus: (cb: (status: AprsBridgeStatus) => void) => () => void;
+    onEmitted: (cb: (record: AprsEmitRecord) => void) => () => void;
   };
 
   // ─── TAK server ──────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { lazy } from 'react';
 
+export const AprsBridgePanel = lazy(() => import('./components/AprsBridgePanel'));
 export const AdminPanel = lazy(() => import('./components/AdminPanel'));
 export const AppPanel = lazy(() => import('./components/AppPanel'));
 export const TakServerPanel = lazy(() => import('./components/TakServerPanel'));

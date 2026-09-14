@@ -5092,7 +5092,8 @@
     "network": "网络",
     "rrc": "RRC",
     "remote": "远程",
-    "games": "出賽"
+    "games": "出賽",
+    "aprs": "APRS"
   },
   "takServerPanel": {
     "title": "TAK服务器",
@@ -5956,5 +5957,62 @@
     "identitySaveFailed": "无法保存您的身份设置。再试一次。",
     "interfacesUnavailable": "无法读取您的连接。检查 Reticulum 是否正在运行，然后重试。",
     "interfaceSaveFailed": "无法保存此连接。检查您的连接设置并重试。"
+  },
+  "aprsPanel": {
+    "title": "APRS Bridge",
+    "running": "运行",
+    "stopped": "停止",
+    "start": "起动桥",
+    "stop": "停止桥接",
+    "up": "向上",
+    "down": "下跌",
+    "localHint": "Point CalTopo Desktop或任何APRS客户端，地址为127.0.0.1: {{port}} ，作为APRS-IS服务器。不会通过射频或公共APRS网络发送任何信息，因此不涉及业余许可证。",
+    "sinkStats": "{{clients}}客户· {{emitted}}信标已发送",
+    "sink": {
+      "aprs-is-server": "本地APRS-IS服务器",
+      "aprs-is-upstream": "公共APRS-IS",
+      "kiss-tcp": "KISS over TCP"
+    },
+    "rosterTitle": "跟踪无线电",
+    "rosterHint": "只有此列表中的无线电才会被信标。网格上的其他所有内容都将被忽略，因此繁忙的网格不会最终出现在事件地图上。",
+    "rosterEmpty": "尚未跟踪任何无线电。添加您的现场团队携带的物品。",
+    "addTracker": "添加在网格上听到的收音机",
+    "choose": "选择一个收音机…",
+    "noFixSuffix": "（还没有职位）",
+    "add": "视需要增加填充棉。",
+    "remove": "移除",
+    "colNode": "广播电台",
+    "colCallsign": "呼号",
+    "colTeam": "團隊",
+    "colType": "类型",
+    "colOn": "开",
+    "trackerType": {
+      "ground-team": "地面小组",
+      "k9-team": "K9团队",
+      "hasty-team": "匆忙的团队",
+      "utv": "UTV/全地形车",
+      "vehicle": "車輛",
+      "truck": "运输卡车",
+      "ambulance": "救护车",
+      "helicopter": "直升机",
+      "aircraft": "战机",
+      "boat": "轮船",
+      "command-post": "指挥所",
+      "base": "军团据点",
+      "repeater": "中继器/继电器"
+    },
+    "settingsTitle": "桥接设置",
+    "bindAddress": "Bind 地址 ：",
+    "port": "端口",
+    "minInterval": "信标之间的最小秒数",
+    "maxAge": "删除早于（秒， 0 =从不）的修复",
+    "commentSuffix": "每个信标都追加了注释",
+    "verifyTitle": "验证订阅源",
+    "verifyHint": "发送一个测试信标，以便在团队部署之前确认它出现在CalTopo中。",
+    "latitude": "纬度",
+    "longitude": "经度",
+    "sendTest": "发送测试信标",
+    "recentTitle": "最近的信标",
+    "recentEmpty": "尚未发送任何信息。"
   }
 }

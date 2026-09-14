@@ -5133,7 +5133,8 @@
     "network": "Síť",
     "rrc": "RRC",
     "remote": "Vzdálený přístup",
-    "games": "Herní aktivity"
+    "games": "Herní aktivity",
+    "aprs": "APRS"
   },
   "takServerPanel": {
     "title": "Server TAK",
@@ -6004,5 +6005,62 @@
     "identitySaveFailed": "Nastavení identity se nepodařilo uložit. Zkuste to znovu.",
     "interfaceSaveFailed": "Toto připojení se nepodařilo uložit. Zkontrolujte nastavení připojení a zkuste to znovu.",
     "interfacesUnavailable": "Vaše spojení se nepodařilo přečíst. Zkontrolujte, zda Reticulum běží, a zkuste to znovu."
+  },
+  "aprsPanel": {
+    "title": "Most APRS",
+    "running": "Probíhá",
+    "stopped": "POZASTAVENO",
+    "start": "Spustit most",
+    "stop": "Zastavit most",
+    "up": "Nahoru",
+    "down": "Dolů",
+    "localHint": "Bod CalTopo Desktop nebo jakýkoli klient APRS na 127.0.0.1:{{port}} jako server APRS-IS. Nic se neposílá přes RF nebo do veřejné sítě APRS, takže se nejedná o amatérskou licenci.",
+    "sinkStats": "{{clients}} klienti · {{emitted}} odeslané majáky",
+    "sink": {
+      "aprs-is-server": "Lokální server APRS-IS",
+      "aprs-is-upstream": "Veřejné APRS-IS",
+      "kiss-tcp": "POLIBEK nad TCP"
+    },
+    "rosterTitle": "Pásová rádia",
+    "rosterHint": "Zobrazí se pouze rádia na tomto seznamu. Vše ostatní na síti je ignorováno, takže zaneprázdněná síť neskončí na mapě incidentů.",
+    "rosterEmpty": "Zatím nejsou sledována žádná rádia. Přidejte ty, které mají vaše týmy v terénu.",
+    "addTracker": "Přidejte rádio, které uslyšíte na síťce",
+    "choose": "Vyberte rádio…",
+    "noFixSuffix": "(zatím žádná pozice)",
+    "add": "Přidat",
+    "remove": "Odstranit",
+    "colNode": "Rádio",
+    "colCallsign": "Volací značka",
+    "colTeam": "Tým",
+    "colType": "Typ",
+    "colOn": "Zapnuto",
+    "trackerType": {
+      "ground-team": "Pozemní tým",
+      "k9-team": "Tým K9",
+      "hasty-team": "Unáhlený tým",
+      "utv": "UTV / ATV",
+      "vehicle": "Vozidlo",
+      "truck": "Nákladní vůz",
+      "ambulance": "Ambulance",
+      "helicopter": "Vrtulník",
+      "aircraft": "Letadla",
+      "boat": "Loď",
+      "command-post": "velitelské stanoviště,",
+      "base": "Podkladový",
+      "repeater": "Opakovač / relé"
+    },
+    "settingsTitle": "Nastavení mostu",
+    "bindAddress": "Adresa připojení:",
+    "port": "Port",
+    "minInterval": "Minimální počet sekund mezi majáky",
+    "maxAge": "Drop opravy starší než (sekundy, 0 = nikdy)",
+    "commentSuffix": "Komentář připojen ke každému majáku",
+    "verifyTitle": "Ověřte zdroj",
+    "verifyHint": "Odešle jeden testovací maják, abyste mohli potvrdit, že se zobrazí v CalTopo před nasazením týmu.",
+    "latitude": "Zeměpisná šířka",
+    "longitude": "Zeměpisná délka",
+    "sendTest": "Poslat testovací maják",
+    "recentTitle": "Nedávné majáky",
+    "recentEmpty": "Zatím nebylo nic odesláno."
   }
 }

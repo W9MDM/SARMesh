@@ -153,6 +153,7 @@ import { ContactGroupsModal, NodeDetailModal, ReticulumPeerDetailModal } from '.
 import {
   AdminPanel,
   AppPanel,
+  AprsBridgePanel,
   ChannelUtilizationChart,
   DiagnosticsPanel,
   GamesPanel,
@@ -187,6 +188,7 @@ import { getAppSettingsRaw, isRrcUnreadAllRoomMessagesEnabled } from './lib/appS
 import {
   ADMIN_PANEL_INDEX,
   APP_PANEL_INDEX,
+  APRS_PANEL_INDEX,
   computeTabMappings,
   DIAGNOSTICS_PANEL_INDEX,
   findFilteredTabIndexForPanel,
@@ -4388,6 +4390,29 @@ function AppContent() {
                                   ? meshcorePanelActions.importPrivateKey
                                   : undefined
                               }
+                            />
+                          </Suspense>
+                        </ErrorBoundary>
+                      ) : null}
+                    </div>
+                    <div
+                      id={`panel-${APRS_PANEL_INDEX}`}
+                      role="tabpanel"
+                      aria-labelledby={`tab-${Math.max(0, findFilteredTabIndexForPanel(selectByProtocol(tabsByProtocol, protocol), APRS_PANEL_INDEX))}`}
+                      hidden={activePanelIndex !== APRS_PANEL_INDEX}
+                      className="w-full min-w-0"
+                    >
+                      {activePanelIndex === APRS_PANEL_INDEX ? (
+                        <ErrorBoundary>
+                          <Suspense fallback={<PanelSkeleton />}>
+                            <AprsBridgePanel
+                              nodes={[
+                                ...selectByProtocol(uiNodesByProtocol, protocol).values(),
+                              ].map((n) => ({
+                                nodeId: n.node_id,
+                                label: n.long_name || n.short_name || String(n.node_id),
+                                hasPosition: Boolean(n.latitude && n.longitude),
+                              }))}
                             />
                           </Suspense>
                         </ErrorBoundary>

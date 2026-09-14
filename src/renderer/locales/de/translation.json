@@ -5092,7 +5092,8 @@
     "network": "Netzwerk",
     "rrc": "RRC",
     "remote": "Remote",
-    "games": "Spiele"
+    "games": "Spiele",
+    "aprs": "APRS"
   },
   "takServerPanel": {
     "title": "TAK-Server",
@@ -5956,5 +5957,62 @@
     "interfacesUnavailable": "Ihre Verbindungen konnten nicht gelesen werden. Überprüfen Sie, ob Reticulum ausgeführt wird, und versuchen Sie es dann erneut.",
     "interfaceSaveFailed": "Diese Verbindung konnte nicht gespeichert werden. Überprüfen Sie Ihre Verbindungseinstellungen und versuchen Sie es erneut.",
     "identityUnavailable": "Ihre Identität konnte nicht gelesen werden. Überprüfen Sie, ob Reticulum ausgeführt wird, und versuchen Sie es dann erneut."
+  },
+  "aprsPanel": {
+    "title": "APRS-Brücke",
+    "running": "Laufend",
+    "stopped": "Stopped",
+    "start": "Startbrücke",
+    "stop": "Stopp-Brücke",
+    "up": "Auf",
+    "down": "Ab",
+    "localHint": "Zeigen Sie CalTopo Desktop oder einen beliebigen APRS-Client auf 127.0.0.1:{{port}} als APRS-IS-Server. Nichts wird über RF oder an das öffentliche APRS-Netzwerk gesendet, daher ist keine Amateurlizenz erforderlich.",
+    "sinkStats": "{{clients}} Client(s) · {{emitted}} Beacon(s) gesendet",
+    "sink": {
+      "aprs-is-server": "Lokaler APRS-IS-Server",
+      "aprs-is-upstream": "Öffentliche APRS-IS",
+      "kiss-tcp": "KUSS über TCP"
+    },
+    "rosterTitle": "Verfolgte Funkgeräte",
+    "rosterHint": "Es werden nur Funkgeräte auf dieser Liste angezeigt. Alles andere auf dem Netz wird ignoriert, so dass ein besetztes Netz nicht auf Ihrer Ereigniskarte landet.",
+    "rosterEmpty": "Es werden noch keine Funkgeräte verfolgt. Fügen Sie die hinzu, die Ihre Außendienstteams tragen.",
+    "addTracker": "Fügen Sie ein Radio hinzu, das am Netz gehört wird",
+    "choose": "Wählen Sie ein Radio...",
+    "noFixSuffix": "(noch keine Position)",
+    "add": "Hinzufügen",
+    "remove": "Entlassen",
+    "colNode": "Radio",
+    "colCallsign": "Rufzeichen",
+    "colTeam": "Team",
+    "colType": "Typ",
+    "colOn": "Ein",
+    "trackerType": {
+      "ground-team": "Bodenteam",
+      "k9-team": "K9-Team",
+      "hasty-team": "Hastiges Team",
+      "utv": "UTV / ATV",
+      "vehicle": "Fahrzeug",
+      "truck": "LKW",
+      "ambulance": "Rettungsdienst",
+      "helicopter": "Helikopter",
+      "aircraft": "Fluggerät",
+      "boat": "Bootes",
+      "command-post": "Kommandoposten",
+      "base": "Sockel",
+      "repeater": "Signalüberwacher"
+    },
+    "settingsTitle": "Brückeneinstellungen",
+    "bindAddress": "Bind Address",
+    "port": "Port",
+    "minInterval": "Minimale Sekunden zwischen den Beacons",
+    "maxAge": "Drop Fixes älter als (Sekunden, 0 = nie)",
+    "commentSuffix": "Kommentar an jedes Leuchtfeuer angehängt",
+    "verifyTitle": "Überprüfen Sie den Feed",
+    "verifyHint": "Sendet eine Testbake, damit Sie bestätigen können, dass sie in CalTopo angezeigt wird, bevor das Team sie einsetzt.",
+    "latitude": "Breitengrad",
+    "longitude": "Längengrad",
+    "sendTest": "Testbake senden",
+    "recentTitle": "Aktuelle Beacons",
+    "recentEmpty": "Noch nichts gesendet."
   }
 }

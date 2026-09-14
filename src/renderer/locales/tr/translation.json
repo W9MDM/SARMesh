@@ -5092,7 +5092,8 @@
     "network": "Ağ",
     "rrc": "RRC",
     "remote": "Uzak",
-    "games": "Oyun"
+    "games": "Oyun",
+    "aprs": "APRS"
   },
   "takServerPanel": {
     "title": "TAK Sunucusu",
@@ -5956,5 +5957,62 @@
     "identitySaveFailed": "Kimlik ayarlarınız kaydedilemedi. Tekrar deneyin.",
     "interfacesUnavailable": "Bağlantılarınız okunamadı. Reticulum'un çalıştığını kontrol edin ve tekrar deneyin.",
     "interfaceSaveFailed": "Bu bağlantı kaydedilemedi. Bağlantı ayarlarınızı kontrol edip tekrar deneyin."
+  },
+  "aprsPanel": {
+    "title": "APRS Köprüsü",
+    "running": "Çalışıyor",
+    "stopped": "Durduruldu",
+    "start": "Başlangıç köprüsü",
+    "stop": "Durdurma köprüsü",
+    "up": "Yukarı",
+    "down": "Down",
+    "localHint": "CalTopo Masaüstü'nü veya herhangi bir APRS istemcisini 127.0.0.1:{{port}} adresinden bir APRS - IS sunucusu olarak işaretleyin. RF üzerinden veya halka açık APRS ağına hiçbir şey gönderilmez, bu nedenle amatör lisans söz konusu değildir.",
+    "sinkStats": "{{clients}} müşteri(ler) · {{emitted}} yol gösterici(ler) gönderildi",
+    "sink": {
+      "aprs-is-server": "Yerel APRS - IS sunucusu",
+      "aprs-is-upstream": "Kamu APRS - IS",
+      "kiss-tcp": "TCP üzerinden ÖPÜCÜK"
+    },
+    "rosterTitle": "Paletli telsizler",
+    "rosterHint": "Sadece bu listedeki radyolar işaretlenir. Ağdaki diğer her şey göz ardı edilir, bu nedenle meşgul bir ağ olay haritanızda yer almaz.",
+    "rosterEmpty": "Henüz hiçbir radyo izlenmiyor. Saha ekiplerinizin taşıdıklarını ekleyin.",
+    "addTracker": "Ağa duyulan bir radyo ekleyin",
+    "choose": "Bir radyo seçin…",
+    "noFixSuffix": "(henüz bir pozisyon yok)",
+    "add": "Ekle",
+    "remove": "Kaldır",
+    "colNode": "Radyo",
+    "colCallsign": "Çağrı kodu",
+    "colTeam": "Ekip",
+    "colType": "Tür",
+    "colOn": "Açık",
+    "trackerType": {
+      "ground-team": "Yer ekibi",
+      "k9-team": "K9 ekibi",
+      "hasty-team": "Aceleci ekip",
+      "utv": "UTV / ATV",
+      "vehicle": "Araç",
+      "truck": "Kamyon",
+      "ambulance": "Ambulans",
+      "helicopter": "Helikopter",
+      "aircraft": "Hava aracı",
+      "boat": "Tekne",
+      "command-post": "Komuta merkezi",
+      "base": "Taban",
+      "repeater": "Tekrarlayıcı / röle"
+    },
+    "settingsTitle": "Köprü ayarları",
+    "bindAddress": "Bağlanacak adres:",
+    "port": "Liman",
+    "minInterval": "İşaretçiler arasındaki minimum saniye",
+    "maxAge": "Şundan daha eski bırak düzeltmeleri (saniye, 0 = asla)",
+    "commentSuffix": "Her yol göstericiye eklenen yorum",
+    "verifyTitle": "Akışı doğrulayın",
+    "verifyHint": "Ekip konuşlanmadan önce CalTopo'da göründüğünü onaylayabilmeniz için bir test feneri gönderir.",
+    "latitude": "Enlem",
+    "longitude": "Boylam",
+    "sendTest": "Test fenerini gönder",
+    "recentTitle": "Son işaretler",
+    "recentEmpty": "Henüz bir şey gönderilmedi."
   }
 }

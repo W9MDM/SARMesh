@@ -1,5 +1,7 @@
 import type { OutboxEntry, OutboxEntryInput } from '@/shared/electron-api.types';
 
+import { DEFAULT_APRS_SETTINGS, IDLE_APRS_STATUS } from '../../shared/aprs-types';
+
 /* eslint-disable @typescript-eslint/require-await -- no-op async IPC stubs for browser dev */
 const noop = (): void => {};
 const noopUnsub = (): (() => void) => () => {};
@@ -311,6 +313,27 @@ export function createDevElectronApiStub(): typeof window.electronAPI {
       export: async () => null,
       onLine: noopUnsub,
       logDeviceConnection: noopAsync,
+    },
+    aprs: {
+      start: noopAsync,
+      stop: noopAsync,
+      getStatus: async () => IDLE_APRS_STATUS,
+      getSettings: async () => DEFAULT_APRS_SETTINGS,
+      saveSettings: noopAsync,
+      getRoster: async () => [],
+      setRoster: async () => [],
+      upsertTrackedClient: async () => [],
+      removeTrackedClient: async () => [],
+      getRecent: async () => [],
+      sendTestBeacon: async () => ({
+        time: Date.now(),
+        nodeId: 0,
+        callsign: 'TEST',
+        frame: '',
+        sinks: [],
+      }),
+      onStatus: noopUnsub,
+      onEmitted: noopUnsub,
     },
     tak: {
       start: noopAsync,

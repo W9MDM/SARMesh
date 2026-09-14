@@ -2,6 +2,8 @@ import { vi } from 'vitest';
 
 import type { ElectronAPI, OutboxEntry, OutboxEntryInput } from '@/shared/electron-api.types';
 
+import { DEFAULT_APRS_SETTINGS, IDLE_APRS_STATUS } from '../shared/aprs-types';
+
 const outboxMockRows: OutboxEntry[] = [];
 let outboxMockIdSeq = 1;
 
@@ -363,6 +365,27 @@ export function createElectronAPIMock(): ElectronAPI {
       export: vi.fn().mockResolvedValue(null),
       onLine: vi.fn().mockReturnValue(() => {}),
       logDeviceConnection: vi.fn().mockResolvedValue(undefined),
+    },
+    aprs: {
+      start: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn().mockResolvedValue(undefined),
+      getStatus: vi.fn().mockResolvedValue(IDLE_APRS_STATUS),
+      getSettings: vi.fn().mockResolvedValue(DEFAULT_APRS_SETTINGS),
+      saveSettings: vi.fn().mockResolvedValue(undefined),
+      getRoster: vi.fn().mockResolvedValue([]),
+      setRoster: vi.fn().mockResolvedValue([]),
+      upsertTrackedClient: vi.fn().mockResolvedValue([]),
+      removeTrackedClient: vi.fn().mockResolvedValue([]),
+      getRecent: vi.fn().mockResolvedValue([]),
+      sendTestBeacon: vi.fn().mockResolvedValue({
+        time: 0,
+        nodeId: 0,
+        callsign: 'TEST',
+        frame: '',
+        sinks: [],
+      }),
+      onStatus: vi.fn().mockReturnValue(() => {}),
+      onEmitted: vi.fn().mockReturnValue(() => {}),
     },
     tak: {
       start: vi.fn().mockResolvedValue(undefined),

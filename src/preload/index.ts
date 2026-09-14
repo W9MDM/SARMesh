@@ -1,6 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 import type {
+  AprsBridgeStatus,
+  AprsEmitRecord,
+  AprsSettings,
+  AprsTrackedClient,
+} from '../shared/aprs-types';
+import type {
   BlePeripheralOwner,
   BleScanOwner,
   ElectronAPI,
@@ -1077,6 +1083,45 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('meshtastic:tcp-disconnected', handler);
         return () => ipcRenderer.off('meshtastic:tcp-disconnected', handler);
       },
+    },
+  },
+
+  // ─── APRS bridge ─────────────────────────────────────────────────
+  aprs: {
+    start: (settings: AprsSettings): Promise<void> => ipcRenderer.invoke('aprs:start', settings),
+    stop: (): Promise<void> => ipcRenderer.invoke('aprs:stop'),
+    getStatus: (): Promise<AprsBridgeStatus> => ipcRenderer.invoke('aprs:getStatus'),
+    getSettings: (): Promise<AprsSettings> => ipcRenderer.invoke('aprs:getSettings'),
+    saveSettings: (settings: AprsSettings): Promise<void> =>
+      ipcRenderer.invoke('aprs:saveSettings', settings),
+    getRoster: (): Promise<AprsTrackedClient[]> => ipcRenderer.invoke('aprs:getRoster'),
+    setRoster: (roster: AprsTrackedClient[]): Promise<AprsTrackedClient[]> =>
+      ipcRenderer.invoke('aprs:setRoster', roster),
+    upsertTrackedClient: (client: AprsTrackedClient): Promise<AprsTrackedClient[]> =>
+      ipcRenderer.invoke('aprs:upsertTrackedClient', client),
+    removeTrackedClient: (nodeId: number): Promise<AprsTrackedClient[]> =>
+      ipcRenderer.invoke('aprs:removeTrackedClient', nodeId),
+    getRecent: (limit?: number): Promise<AprsEmitRecord[]> =>
+      ipcRenderer.invoke('aprs:getRecent', limit),
+    sendTestBeacon: (
+      callsign: string,
+      latitude: number,
+      longitude: number,
+    ): Promise<AprsEmitRecord> =>
+      ipcRenderer.invoke('aprs:sendTestBeacon', callsign, latitude, longitude),
+    onStatus: (cb: (status: AprsBridgeStatus) => void): (() => void) => {
+      const handler = (_: unknown, status: AprsBridgeStatus) => {
+        cb(status);
+      };
+      ipcRenderer.on('aprs:status', handler);
+      return () => ipcRenderer.off('aprs:status', handler);
+    },
+    onEmitted: (cb: (record: AprsEmitRecord) => void): (() => void) => {
+      const handler = (_: unknown, record: AprsEmitRecord) => {
+        cb(record);
+      };
+      ipcRenderer.on('aprs:emitted', handler);
+      return () => ipcRenderer.off('aprs:emitted', handler);
     },
   },
 

@@ -47,8 +47,8 @@ Most translations in SARMesh are initially machine-generated using [MyMemory](ht
 
 If you find a mistranslation or an awkward phrasing:
 
-1. Go to the [SARMesh Issues](https://github.com/Colorado-Mesh/mesh-client/issues) page.
-2. Open a new [Translation Error](https://github.com/Colorado-Mesh/mesh-client/issues/new?assignees=&labels=translation&template=translation-error.md&title=Translation+Error) issue.
+1. Go to the [SARMesh Issues](https://github.com/W9MDM/SARMesh/issues) page.
+2. Open a new [Translation Error](https://github.com/W9MDM/SARMesh/issues/new?assignees=&labels=translation&template=translation-error.md&title=Translation+Error) issue.
 3. Provide the current text and your suggested correction.
 
 CI does **not** run `check:i18n` as a standalone workflow step. Quality rules run via **pre-commit** (`pnpm run check:i18n`) and indirectly in CI through Vitest (`locale-quality.test.ts` subprocess). See [docs/agents/i18n.md](agents/i18n.md) for maintainer commands (`pnpm run check:i18n`, `pnpm run i18n:auto-translate`).
@@ -74,7 +74,7 @@ Full rule set: `scripts/check-i18n-quality.mjs` and `scripts/check-i18n-quality.
 If you would like to help us add support for a new language:
 
 1. Check existing issues to see if someone is already working on it.
-2. Open a [Feature Request](https://github.com/Colorado-Mesh/mesh-client/issues/new?template=feature_request.md) specifically for the new language.
+2. Open a [Feature Request](https://github.com/W9MDM/SARMesh/issues/new?template=feature_request.md) specifically for the new language.
 3. We will help you set up the initial locale files and guide you through the translation process.
 
 ---

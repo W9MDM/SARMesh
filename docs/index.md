@@ -45,11 +45,11 @@ Key outcomes:
 
 ## Quick Start
 
-Pre-built binaries are available in [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases).
+Pre-built binaries are available in [GitHub Releases](https://github.com/W9MDM/SARMesh/releases).
 
 **macOS:** prefer the **`.dmg`**. If you use the **`.zip`**, extract with **[Keka](https://www.keka.io/en/)** or `ditto -xk` — not **7-Zip** (can break framework symlinks and crash at launch). See [Troubleshooting — Squirrel.framework](troubleshooting.md#macos-library-not-loaded-squirrelframework-after-zip-extract).
 
-Arch Linux users may also find a **third-party** AUR package ([`sarmesh`](https://aur.archlinux.org/packages/sarmesh)) — not maintained by Colorado Mesh; prefer GitHub Releases for official builds.
+Arch Linux users can use the AppImage, `.deb`, `.rpm` or Flatpak from GitHub Releases.
 
 For development setup, scripts, test harness, and git hooks, see [Development Guide](development-environment.md).
 

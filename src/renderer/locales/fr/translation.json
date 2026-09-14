@@ -5092,7 +5092,8 @@
     "network": "Réseau",
     "rrc": "RRC",
     "remote": "À distance",
-    "games": "Jeux"
+    "games": "Jeux",
+    "aprs": "APRS"
   },
   "takServerPanel": {
     "title": "Serveur TAK",
@@ -5956,5 +5957,62 @@
     "interfacesUnavailable": "Impossible de lire vos connexions. Vérifiez que Reticulum est en cours d'exécution, puis réessayez.",
     "identitySaveFailed": "Impossible d'enregistrer vos paramètres d'identité. Essayer à nouveau.",
     "interfaceSaveFailed": "Impossible d'enregistrer cette connexion. Vérifiez vos paramètres de connexion et réessayez."
+  },
+  "aprsPanel": {
+    "title": "Pont aprs",
+    "running": "En cours d'exécution",
+    "stopped": "Stoppé",
+    "start": "Démarrer le pont",
+    "stop": "Pont d'arrêt",
+    "up": "MONTER",
+    "down": "Bas",
+    "localHint": "Point CalTopo Desktop, ou tout client aprs, à 127.0.0.1 :{{port}} en tant que serveur aprs-IS. Rien n'est envoyé sur RF ou au réseau public aprs, donc aucune licence amateur n'est impliquée.",
+    "sinkStats": "{{clients}} client(s) · {{emitted}} balise(s) envoyée (s)",
+    "sink": {
+      "aprs-is-server": "Serveur local aprs-is",
+      "aprs-is-upstream": "APRS-IS public",
+      "kiss-tcp": "BAISER sur TCP"
+    },
+    "rosterTitle": "Radios suivies",
+    "rosterHint": "Seules les radios de cette liste sont balisées. Tout le reste sur le maillage est ignoré, de sorte qu'un maillage occupé ne se retrouve pas sur votre carte d'incident.",
+    "rosterEmpty": "Aucune radio n'est encore suivie. Ajoutez ceux que vos équipes de terrain transportent.",
+    "addTracker": "Ajoutez une radio entendue sur le maillage",
+    "choose": "Choisissez une radio…",
+    "noFixSuffix": "(pas encore de poste)",
+    "add": "Ajouter",
+    "remove": "Supprimer",
+    "colNode": "Radio",
+    "colCallsign": "Indicatif d’appel",
+    "colTeam": "Équipe",
+    "colType": "Type",
+    "colOn": "Marche",
+    "trackerType": {
+      "ground-team": "Équipe au sol",
+      "k9-team": "Équipe canine",
+      "hasty-team": "Équipe hâtive",
+      "utv": "UTV / ATV",
+      "vehicle": "Véhicule",
+      "truck": "Camion",
+      "ambulance": "Ambulance",
+      "helicopter": "l' hélicoptère",
+      "aircraft": "Aéronefs",
+      "boat": "Bateau",
+      "command-post": "Poste de commandement",
+      "base": "Assise",
+      "repeater": "relais de report"
+    },
+    "settingsTitle": "Paramètres du pont",
+    "bindAddress": "Bind Address",
+    "port": "Port",
+    "minInterval": "Nombre minimum de secondes entre les balises",
+    "maxAge": "Déposer des corrections plus anciennes que (secondes, 0 = jamais)",
+    "commentSuffix": "Commentaire annexé à chaque balise",
+    "verifyTitle": "Vérifier le flux",
+    "verifyHint": "Envoie une balise de test afin que vous puissiez confirmer qu'elle apparaît dans CalTopo avant le déploiement de l'équipe.",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "sendTest": "Envoyer la balise de test",
+    "recentTitle": "Balises récentes",
+    "recentEmpty": "Rien n'a encore été envoyé."
   }
 }

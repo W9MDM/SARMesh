@@ -5751,7 +5751,8 @@
     "rf": "RF",
     "graph": "Graph",
     "topology": "Network topology",
-    "admin": "Administration"
+    "admin": "Administration",
+    "aprs": "APRS"
   },
   "takServerPanel": {
     "title": "TAK Server",
@@ -5956,5 +5957,62 @@
     "identityUnavailable": "Could not read your identity. Check that Reticulum is running, then try again.",
     "interfaceSaveFailed": "Could not save this connection. Check your connection settings and try again.",
     "identitySaveFailed": "Could not save your identity settings. Try again."
+  },
+  "aprsPanel": {
+    "title": "APRS Bridge",
+    "running": "Running",
+    "stopped": "Stopped",
+    "start": "Start bridge",
+    "stop": "Stop bridge",
+    "up": "Up",
+    "down": "Down",
+    "localHint": "Point CalTopo Desktop, or any APRS client, at 127.0.0.1:{{port}} as an APRS-IS server. Nothing is sent over RF or to the public APRS network, so no amateur licence is involved.",
+    "sinkStats": "{{clients}} client(s) · {{emitted}} beacon(s) sent",
+    "sink": {
+      "aprs-is-server": "Local APRS-IS server",
+      "aprs-is-upstream": "Public APRS-IS",
+      "kiss-tcp": "KISS over TCP"
+    },
+    "rosterTitle": "Tracked radios",
+    "rosterHint": "Only radios on this list are beaconed. Everything else on the mesh is ignored, so a busy mesh does not end up on your incident map.",
+    "rosterEmpty": "No radios are being tracked yet. Add the ones your field teams are carrying.",
+    "addTracker": "Add a radio heard on the mesh",
+    "choose": "Choose a radio…",
+    "noFixSuffix": "(no position yet)",
+    "add": "Add",
+    "remove": "Remove",
+    "colNode": "Radio",
+    "colCallsign": "Callsign",
+    "colTeam": "Team",
+    "colType": "Type",
+    "colOn": "On",
+    "trackerType": {
+      "ground-team": "Ground team",
+      "k9-team": "K9 team",
+      "hasty-team": "Hasty team",
+      "utv": "UTV / ATV",
+      "vehicle": "Vehicle",
+      "truck": "Truck",
+      "ambulance": "Ambulance",
+      "helicopter": "Helicopter",
+      "aircraft": "Aircraft",
+      "boat": "Boat",
+      "command-post": "Command post",
+      "base": "Base",
+      "repeater": "Repeater / relay"
+    },
+    "settingsTitle": "Bridge settings",
+    "bindAddress": "Bind address",
+    "port": "Port",
+    "minInterval": "Minimum seconds between beacons",
+    "maxAge": "Drop fixes older than (seconds, 0 = never)",
+    "commentSuffix": "Comment appended to every beacon",
+    "verifyTitle": "Verify the feed",
+    "verifyHint": "Sends one test beacon so you can confirm it appears in CalTopo before the team deploys.",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "sendTest": "Send test beacon",
+    "recentTitle": "Recent beacons",
+    "recentEmpty": "Nothing sent yet."
   }
 }

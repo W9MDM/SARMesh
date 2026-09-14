@@ -305,7 +305,7 @@ Older releases also shipped a **universal** NSIS installer (x64 + arm64 in one `
 **Fix**
 
 1. Delete the broken install folder: `%LOCALAPPDATA%\Programs\SARMesh\`
-2. Download the **arm64** installer from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases): `SARMesh-Setup-{version}-arm64.exe` (not the x64-only `SARMesh-Setup-{version}.exe`). Older releases may show dotted GitHub names (`SARMesh.Setup.{version}-arm64.exe`) — use that file if the hyphenated name is missing.
+2. Download the **arm64** installer from [GitHub Releases](https://github.com/W9MDM/SARMesh/releases): `SARMesh-Setup-{version}-arm64.exe` (not the x64-only `SARMesh-Setup-{version}.exe`). Older releases may show dotted GitHub names (`SARMesh.Setup.{version}-arm64.exe`) — use that file if the hyphenated name is missing.
 3. Re-run the installer. Confirm `SARMesh.exe` exists in the install folder and the app appears in **Installed apps**.
 
 **Diagnostic checklist (if the exe is still missing)**
@@ -332,7 +332,7 @@ Download a CI or release artifact's `win-arm64-unpacked` folder and run `SARMesh
 
 ### macOS: File is damaged and cannot be opened
 
-**Official releases (v5.22.0+):** macOS artifacts from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) are **Developer ID signed and notarized** (`notarize: true` in [`electron-builder.yml`](../electron-builder.yml); signing secrets in [`release.yaml`](../.github/workflows/release.yaml)). They should open from **Applications** without `xattr`. If macOS still blocks a signed build, check **System Settings → Privacy & Security** for an **Allow** entry first.
+**Official releases (v5.22.0+):** macOS artifacts from [GitHub Releases](https://github.com/W9MDM/SARMesh/releases) are **Developer ID signed and notarized** (`notarize: true` in [`electron-builder.yml`](../electron-builder.yml); signing secrets in [`release.yaml`](../.github/workflows/release.yaml)). They should open from **Applications** without `xattr`. If macOS still blocks a signed build, check **System Settings → Privacy & Security** for an **Allow** entry first.
 
 **Unsigned builds** (local `pnpm run dist:mac` without `CSC_*` / `APPLE_*` env vars, fork CI artifacts, or older pre-notarization releases): macOS tags downloads with **`com.apple.quarantine`**. Gatekeeper may show **"File is damaged and cannot be opened"** (or **"SARMesh" is damaged and can't be opened**) instead of the usual unidentified-developer prompt — common on **Apple silicon**, not a corrupt file.
 
@@ -367,7 +367,7 @@ Referenced from: .../Electron Framework.framework/Versions/A/Electron Framework
 
 Similar errors may mention `Mantle.framework` or `ReactiveObjC.framework`. Electron Framework may load; the sibling auto-update frameworks fail first.
 
-**Cause:** The **macOS `.zip`** from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) was extracted with a tool that **does not preserve macOS framework symlinks** — especially **7-Zip**, and sometimes Finder Archive Utility. That flattens entries such as `Squirrel.framework/Squirrel` into tiny invalid files, so dyld aborts at launch. The release artifact itself is fine; the installed `.app` bundle is broken.
+**Cause:** The **macOS `.zip`** from [GitHub Releases](https://github.com/W9MDM/SARMesh/releases) was extracted with a tool that **does not preserve macOS framework symlinks** — especially **7-Zip**, and sometimes Finder Archive Utility. That flattens entries such as `Squirrel.framework/Squirrel` into tiny invalid files, so dyld aborts at launch. The release artifact itself is fine; the installed `.app` bundle is broken.
 
 **Fix:**
 
@@ -445,7 +445,7 @@ SARMESH_DISABLE_GPU=1 flatpak run io.github.w9mdm.SARMesh
 
 When `/sys/class/drm` is visible inside the sandbox, the wrapper may auto-detect `vmwgfx` and set `SARMESH_DISABLE_GPU=1` if DRI is unreliable there. Opt out of auto-detection: `SARMESH_DISABLE_GPU=0 flatpak run ...`. Force GPU despite detection: `SARMESH_ENABLE_GPU=1 flatpak run ...`.
 
-**Reinstall a release bundle** after downloading a new `.flatpak` from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases):
+**Reinstall a release bundle** after downloading a new `.flatpak` from [GitHub Releases](https://github.com/W9MDM/SARMesh/releases):
 
 ```bash
 flatpak uninstall --user io.github.w9mdm.SARMesh
@@ -463,7 +463,7 @@ The log line `F: /lib32 does not exist in runtime` is **harmless** on x86_64-onl
 
 **Fix**:
 
-1. Reinstall the latest `.flatpak` from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) (bundles after the #598 fix include an updated wrapper).
+1. Reinstall the latest `.flatpak` from [GitHub Releases](https://github.com/W9MDM/SARMesh/releases) (bundles after the #598 fix include an updated wrapper).
 2. Run with debug logging if it still fails:
    ```bash
    ZYPAK_DEBUG=1 flatpak run io.github.w9mdm.SARMesh
@@ -501,7 +501,7 @@ FATAL:content/browser/zygote_host/zygote_host_impl_linux.cc:129] No usable sandb
 
 **Cause**: The host blocks **unprivileged user namespaces** (common on **Ubuntu 23.10+** with AppArmor `apparmor_restrict_unprivileged_userns`, and on some hardened **Fedora** / **Arch** setups). The Flatpak wrapper passes `--disable-setuid-sandbox` (zypak owns Chromium sandboxing), so when user namespaces are unavailable Chromium has no usable sandbox and aborts.
 
-**Fix in app**: Current releases auto-retry with `--no-sandbox` when this fatal is detected (same fallback as `pnpm start` via `scripts/start-electron.mjs`). Reinstall the latest `.flatpak` from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) if you are on an older bundle.
+**Fix in app**: Current releases auto-retry with `--no-sandbox` when this fatal is detected (same fallback as `pnpm start` via `scripts/start-electron.mjs`). Reinstall the latest `.flatpak` from [GitHub Releases](https://github.com/W9MDM/SARMesh/releases) if you are on an older bundle.
 
 **Workaround** (skip the probe, force `--no-sandbox` on first launch):
 
@@ -531,7 +531,7 @@ The **outer Flatpak bubblewrap sandbox** still isolates the app when Chromium ru
 
 **Fix**:
 
-1. Install the **latest** SARMesh release from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) (do not downgrade the app after your database has been migrated).
+1. Install the **latest** SARMesh release from [GitHub Releases](https://github.com/W9MDM/SARMesh/releases) (do not downgrade the app after your database has been migrated).
 2. If you must use an older build, restore a `.db` backup exported **before** the upgrade, or start with a fresh profile (export first if you need data from the newer schema).
 
 **Log**: Details are in `sarmesh.log` under the app `userData` folder (macOS `~/Library/Application Support/sarmesh/`, Windows `%APPDATA%\sarmesh\`, Linux `~/.config/sarmesh/`).
@@ -1056,7 +1056,7 @@ The client deduplicates overlapping RF and MQTT hears within **5 minutes** (cros
 **Queue badge stuck at `Q: 255/256`**:
 
 - Usually means the companion radio outbound queue is nearly full. Enable debug logging and export logs if the badge stays red for minutes with no traffic; look for `[useMeshcoreRuntime] high queue depth=`.
-- Some **HTTP/TCP** companions pad the legacy 7-byte STATS CORE frame to 9 bytes with `raw[7]=0` and `raw[8]=0xff` (padding sentinel) or `raw[8]=0x18` (`RESP_CODE_STATS` framing leak). sarmesh treats those signatures as 7-byte layout (`queue_len` at byte 6). If chat send/receive works but the badge shows a stuck non-zero depth (e.g. `Q: 24/256` with `rawHex` ending in `000018`), upgrade to a build that includes this fix ([#600](https://github.com/Colorado-Mesh/mesh-client/issues/600)).
+- Some **HTTP/TCP** companions pad the legacy 7-byte STATS CORE frame to 9 bytes with `raw[7]=0` and `raw[8]=0xff` (padding sentinel) or `raw[8]=0x18` (`RESP_CODE_STATS` framing leak). sarmesh treats those signatures as 7-byte layout (`queue_len` at byte 6). If chat send/receive works but the badge shows a stuck non-zero depth (e.g. `Q: 24/256` with `rawHex` ending in `000018`), upgrade to a build that includes this fix ([#600](https://github.com/W9MDM/SARMesh/issues/600)).
 - On older builds, CORE stats could also be mis-parsed (false `Q: 255/256` with normal traffic).
 
 **Windows packaged updater: `Cannot find module 'semver'`**:
@@ -1065,7 +1065,7 @@ The client deduplicates overlapping RF and MQTT hears within **5 minutes** (cros
 
 **Windows packaged updater: `Cannot download … SARMesh-Setup-….exe status:404` (crash dialog)**:
 
-- `latest.yml` asks for hyphenated Setup names. GitHub stored dotted names when CI uploaded spaced NSIS filenames (`SARMesh Setup {version}.exe` → `SARMesh.Setup.{version}.exe`). Download the installer from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) manually (dotted or hyphenated name). Repair steps for a published release: [release-process.md](release-process.md#repair-windows-updater-assets-on-an-already-published-release).
+- `latest.yml` asks for hyphenated Setup names. GitHub stored dotted names when CI uploaded spaced NSIS filenames (`SARMesh Setup {version}.exe` → `SARMesh.Setup.{version}.exe`). Download the installer from [GitHub Releases](https://github.com/W9MDM/SARMesh/releases) manually (dotted or hyphenated name). Repair steps for a published release: [release-process.md](release-process.md#repair-windows-updater-assets-on-an-already-published-release).
 
 **Retest checklist (after upgrading from a known-good build)**:
 
@@ -2002,7 +2002,7 @@ Click the **globe icon** in the header to select from the 16 supported languages
 
 **A translation is incorrect or missing.**
 
-Translations are machine-generated using MyMemory and may contain errors. If you find a mistake, please open a [Translation Error issue](https://github.com/Colorado-Mesh/mesh-client/issues/new?assignees=&labels=translation&template=translation-error.md&title=Translation+Error) on GitHub with the correct text.
+Translations are machine-generated using MyMemory and may contain errors. If you find a mistake, please open a [Translation Error issue](https://github.com/W9MDM/SARMesh/issues/new?assignees=&labels=translation&template=translation-error.md&title=Translation+Error) on GitHub with the correct text.
 
 **Why are some strings still in English?**
 

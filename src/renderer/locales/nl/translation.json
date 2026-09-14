@@ -5092,7 +5092,8 @@
     "network": "Netwerk",
     "rrc": "RRC",
     "remote": "Op afstand",
-    "games": "Games"
+    "games": "Games",
+    "aprs": "APRS"
   },
   "takServerPanel": {
     "title": "TAK-server",
@@ -5956,5 +5957,62 @@
     "identityUnavailable": "Kan uw identiteit niet lezen. Controleer of Reticulum actief is en probeer het opnieuw.",
     "identitySaveFailed": "Kan uw identiteitsinstellingen niet opslaan. Probeer het opnieuw.",
     "interfacesUnavailable": "Kan uw verbindingen niet lezen. Controleer of Reticulum actief is en probeer het opnieuw."
+  },
+  "aprsPanel": {
+    "title": "APRS-brug",
+    "running": "Hardlopen",
+    "stopped": "Gestopt",
+    "start": "Start brug",
+    "stop": "Stopbrug",
+    "up": "Omhoog",
+    "down": "Omlaag",
+    "localHint": "Wijs CalTopo Desktop, of een APRS-client, op 127.0.0.1:{{port}} aan als een APRS-IS-server. Er wordt niets verzonden via RF of naar het openbare APRS-netwerk, dus er is geen amateurlicentie bij betrokken.",
+    "sinkStats": "{{clients}} client(s) · {{emitted}} beacon(s) verzonden",
+    "sink": {
+      "aprs-is-server": "Lokale APRS-IS server",
+      "aprs-is-upstream": "Openbare APRS-IS",
+      "kiss-tcp": "KISS over TCP"
+    },
+    "rosterTitle": "Gevolgde radio's",
+    "rosterHint": "Alleen radio's op deze lijst worden gebaakt. Al het andere op het mesh-netwerk wordt genegeerd, zodat een druk mesh-netwerk niet op je incidentkaart terechtkomt.",
+    "rosterEmpty": "Er worden nog geen radio's gevolgd. Voeg degene toe die je veldteams bij zich hebben.",
+    "addTracker": "Voeg een radio toe die op het mesh-netwerk is gehoord",
+    "choose": "Kies een radio...",
+    "noFixSuffix": "(nog geen functie)",
+    "add": "Toevoegen",
+    "remove": "Verwijderen",
+    "colNode": "Radio",
+    "colCallsign": "Roepletters",
+    "colTeam": "Team",
+    "colType": "Type",
+    "colOn": "Aan",
+    "trackerType": {
+      "ground-team": "Grondteam",
+      "k9-team": "K9-team",
+      "hasty-team": "Haastig team",
+      "utv": "UTV / ATV",
+      "vehicle": "Voertuig",
+      "truck": "Vrachtauto",
+      "ambulance": "Ziekenwagen",
+      "helicopter": "Helikopter",
+      "aircraft": "Vliegtuig",
+      "boat": "Boot",
+      "command-post": "Commandopost.",
+      "base": "Basis",
+      "repeater": "herhalingsrelais"
+    },
+    "settingsTitle": "Brug instellingen:",
+    "bindAddress": "Bind-adres:",
+    "port": "Poort",
+    "minInterval": "Minimale seconden tussen bakens",
+    "maxAge": "Drop fixes ouder dan (seconden, 0 = nooit)",
+    "commentSuffix": "Opmerking toegevoegd aan elk baken",
+    "verifyTitle": "Controleer de feed",
+    "verifyHint": "Stuurt één testbaken zodat u kunt bevestigen dat het in CalTopo verschijnt voordat het team wordt ingezet.",
+    "latitude": "Breedtegraad",
+    "longitude": "Lengtegraad (longtitude)",
+    "sendTest": "Testbaken verzenden",
+    "recentTitle": "Recente bakens",
+    "recentEmpty": "Er is nog niets verzonden."
   }
 }

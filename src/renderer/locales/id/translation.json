@@ -5092,7 +5092,8 @@
     "network": "Jaringan",
     "rrc": "RRC",
     "remote": "Jarak jauh",
-    "games": "Game"
+    "games": "Game",
+    "aprs": "APRS"
   },
   "takServerPanel": {
     "title": "Server TAK",
@@ -5956,5 +5957,62 @@
     "identityUnavailable": "Tidak dapat membaca identitas Anda. Periksa apakah Reticulum sedang berjalan, lalu coba lagi.",
     "interfacesUnavailable": "Tidak dapat membaca koneksi Anda. Periksa apakah Reticulum sedang berjalan, lalu coba lagi.",
     "interfaceSaveFailed": "Tidak dapat menyimpan koneksi ini. Periksa pengaturan koneksi Anda dan coba lagi."
+  },
+  "aprsPanel": {
+    "title": "Jembatan APRS",
+    "running": "Berjalan",
+    "stopped": "Dihentikan",
+    "start": "Mulai jembatan",
+    "stop": "Hentikan jembatan",
+    "up": "Atas",
+    "down": "Turun",
+    "localHint": "Point CalTopo Desktop, atau klien APRS, di 127.0.0.1:{{port}} sebagai server APRS - IS. Tidak ada yang dikirim melalui RF atau ke jaringan APRS publik, jadi tidak ada lisensi amatir yang terlibat.",
+    "sinkStats": "{{clients}} klien· {{emitted}} suar terkirim",
+    "sink": {
+      "aprs-is-server": "Server APRS - IS lokal",
+      "aprs-is-upstream": "Public APRS - IS",
+      "kiss-tcp": "KISS over TCP"
+    },
+    "rosterTitle": "Radio terlacak",
+    "rosterHint": "Hanya radio dalam daftar ini yang disorot. Semua hal lain di jala diabaikan, sehingga jala yang sibuk tidak berakhir di peta insiden Anda.",
+    "rosterEmpty": "Belum ada radio yang dilacak. Tambahkan yang dibawa oleh tim lapangan Anda.",
+    "addTracker": "Tambahkan radio yang terdengar di mesh",
+    "choose": "Pilih radio…",
+    "noFixSuffix": "(belum ada posisi)",
+    "add": "Tambahkan",
+    "remove": "Hapus",
+    "colNode": "Radio",
+    "colCallsign": "Callsign",
+    "colTeam": "Tim",
+    "colType": "Tipe",
+    "colOn": "Tentang",
+    "trackerType": {
+      "ground-team": "Tim lapangan",
+      "k9-team": "Tim K9",
+      "hasty-team": "Tim tergesa - gesa",
+      "utv": "UTV / ATV",
+      "vehicle": "Kendaraan",
+      "truck": "Truk",
+      "ambulance": "Ambulans",
+      "helicopter": "Helikopter",
+      "aircraft": "Pesawat",
+      "boat": "Perahu",
+      "command-post": "Pos Komando",
+      "base": "Base untuk Lemari Lab",
+      "repeater": "Pengulang / relai"
+    },
+    "settingsTitle": "Pengaturan Bridge",
+    "bindAddress": "Alamat pengikat",
+    "port": "Port",
+    "minInterval": "Detik minimum di antara suar",
+    "maxAge": "Jatuhkan perbaikan yang lebih lama dari (detik, 0 = tidak pernah)",
+    "commentSuffix": "Komentar ditambahkan ke setiap suar",
+    "verifyTitle": "Verifikasi feed",
+    "verifyHint": "Mengirimkan satu suar uji sehingga Anda dapat mengonfirmasinya muncul di CalTopo sebelum tim menyebarkannya.",
+    "latitude": "Lintang",
+    "longitude": "Bujur",
+    "sendTest": "Kirim suar uji",
+    "recentTitle": "Beacon terbaru",
+    "recentEmpty": "Belum ada yang terkirim."
   }
 }

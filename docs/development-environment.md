@@ -62,7 +62,7 @@ If `pnpm run docs:install` fails with `externally-managed-environment`, activate
 ### 2) Clone and install
 
 ```bash
-git clone https://github.com/Colorado-Mesh/mesh-client
+git clone https://github.com/W9MDM/SARMesh
 cd sarmesh
 node scripts/check-environment.mjs # optional but recommended on first clone
 pnpm install
@@ -810,7 +810,7 @@ Electron **44** (this repo’s runtime) requires **macOS 13 Ventura** or later f
 ### Build/run flow
 
 ```bash
-git clone https://github.com/Colorado-Mesh/mesh-client
+git clone https://github.com/W9MDM/SARMesh
 cd sarmesh
 pnpm install
 pnpm run dev
@@ -861,7 +861,7 @@ If a downloaded app reports "SARMesh is damaged and can't be opened", see [macOS
 ### Build/run flow
 
 ```powershell
-git clone https://github.com/Colorado-Mesh/mesh-client
+git clone https://github.com/W9MDM/SARMesh
 cd sarmesh
 pnpm install
 pnpm run dev
@@ -912,7 +912,7 @@ sudo dnf install python3 nspr nss
 ### Build/run flow
 
 ```bash
-git clone https://github.com/Colorado-Mesh/mesh-client
+git clone https://github.com/W9MDM/SARMesh
 cd sarmesh
 pnpm install
 pnpm run dev

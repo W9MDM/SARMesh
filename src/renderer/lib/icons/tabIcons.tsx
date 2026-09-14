@@ -16,6 +16,7 @@ import {
   MessageCircle,
   Network,
   Radio,
+  SatelliteDish,
   Settings,
   Shield,
   Terminal,
@@ -68,6 +69,8 @@ export function TabIcon({ name }: { name: string }) {
       return <Radio {...p} />;
     case 'Rooms':
       return <House {...p} />;
+    case 'APRS':
+      return <SatelliteDish {...p} />;
     case 'TAK':
       return <Crosshair {...p} />;
     case 'Stats':

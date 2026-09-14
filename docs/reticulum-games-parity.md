@@ -1,6 +1,6 @@
 # Reticulum Games — Ratspeak parity checklist
 
-Living matrix for [issue #773](https://github.com/Colorado-Mesh/mesh-client/issues/773). Wire protocol is [lrgp-rs](https://github.com/ratspeak/lrgp-rs) (LRGP v1). Product surface reference is Ratspeak:
+Living matrix for [issue #773](https://github.com/W9MDM/SARMesh/issues/773). Wire protocol is [lrgp-rs](https://github.com/ratspeak/lrgp-rs) (LRGP v1). Product surface reference is Ratspeak:
 
 - `crates/ratspeak-tauri/src/commands/games.rs`
 - `dashboard/static/js/games_tab.js`
