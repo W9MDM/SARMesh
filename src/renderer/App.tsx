@@ -4697,17 +4697,7 @@ function AppContent() {
               <span className="min-w-0">
                 {t('app.footerSlogan')}{' '}
                 <a
-                  href="https://discord.com/invite/McChKR5NpS"
-                  title={t('app.footerDiscordTitle')}
-                  className="text-slate-400 underline decoration-slate-600/80 underline-offset-2 transition-colors hover:text-slate-300"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {t('common.discord')}
-                </a>
-                {' • '}
-                <a
-                  href="https://github.com/Colorado-Mesh/mesh-client"
+                  href="https://github.com/W9MDM/SARMesh"
                   title={t('app.footerGithubTitle')}
                   className="text-slate-400 underline decoration-slate-600/80 underline-offset-2 transition-colors hover:text-slate-300"
                   target="_blank"
@@ -4716,14 +4706,15 @@ function AppContent() {
                   {t('common.github')}
                 </a>
                 {' • '}
+                {/* Credit to the upstream project this is forked from; see FORK.md. */}
                 <a
-                  href="https://coloradomesh.org/"
-                  title={t('app.footerWebsiteTitle')}
+                  href="https://github.com/Colorado-Mesh/mesh-client"
+                  title={t('app.footerUpstreamTitle')}
                   className="text-slate-400 underline decoration-slate-600/80 underline-offset-2 transition-colors hover:text-slate-300"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {t('common.website')}
+                  {t('app.footerUpstreamLabel')}
                 </a>
               </span>
               <span className="inline-flex flex-wrap items-center justify-end gap-2 justify-self-end text-right font-mono text-[10px] whitespace-nowrap tabular-nums">
