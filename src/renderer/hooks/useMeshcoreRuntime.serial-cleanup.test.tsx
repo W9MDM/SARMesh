@@ -1,0 +1,278 @@
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { touch } from '@/shared/touch';
+
+const serialConnCloseMock = vi.fn();
+const serialConnGetSelfInfoMock = vi.fn();
+
+vi.mock('@liamcottle/meshcore.js', () => {
+  class MockWebSerialConnection {
+    constructor(port: unknown) {
+      touch(port);
+    }
+    on(event: string | number, cb: (...args: unknown[]) => void) {
+      touch(event);
+      touch(cb);
+      return undefined;
+    }
+    off(event: string | number, cb: (...args: unknown[]) => void) {
+      touch(event);
+      touch(cb);
+      return undefined;
+    }
+    once(event: string | number, cb: (...args: unknown[]) => void) {
+      touch(event);
+      touch(cb);
+      return undefined;
+    }
+    emit(event: string | number, ...args: unknown[]) {
+      touch(event);
+      touch(args);
+      return undefined;
+    }
+    close = serialConnCloseMock;
+    getSelfInfo = serialConnGetSelfInfoMock;
+    getContacts = vi.fn().mockResolvedValue([]);
+    getChannels = vi.fn().mockResolvedValue([]);
+    syncDeviceTime = vi.fn().mockResolvedValue(undefined);
+    getBatteryVoltage = vi.fn().mockResolvedValue({ batteryMilliVolts: 4200 });
+    sendToRadioFrame = vi.fn().mockRejectedValue(new Error('mocked'));
+  }
+
+  class MockSerialConnection {
+    async write(bytes: Uint8Array) {
+      await Promise.resolve();
+      touch(bytes);
+      return undefined;
+    }
+    async onDataReceived(value: Uint8Array) {
+      await Promise.resolve();
+      touch(value);
+      return undefined;
+    }
+    async onConnected() {
+      await Promise.resolve();
+      return undefined;
+    }
+    onDisconnected() {
+      return undefined;
+    }
+    async close() {
+      await Promise.resolve();
+      return undefined;
+    }
+    on(event: string, cb: (...args: unknown[]) => void) {
+      touch(event);
+      touch(cb);
+      return undefined;
+    }
+    off(event: string, cb: (...args: unknown[]) => void) {
+      touch(event);
+      touch(cb);
+      return undefined;
+    }
+    once(event: string, cb: (...args: unknown[]) => void) {
+      touch(event);
+      touch(cb);
+      return undefined;
+    }
+    emit(event: string, ...args: unknown[]) {
+      touch(event);
+      touch(args);
+      return undefined;
+    }
+    sendToRadioFrame = vi.fn().mockRejectedValue(new Error('mocked'));
+  }
+
+  /** Base class for Noble-over-IPC (same surface as meshcore.js Connection). */
+  class MockConnection {
+    async write(bytes: Uint8Array) {
+      await Promise.resolve();
+      touch(bytes);
+      return undefined;
+    }
+    async sendToRadioFrame(data: Uint8Array) {
+      await Promise.resolve();
+      touch(data);
+      return undefined;
+    }
+    async onConnected() {
+      await Promise.resolve();
+      return undefined;
+    }
+    onDisconnected() {
+      return undefined;
+    }
+    onFrameReceived(frame: Uint8Array) {
+      touch(frame);
+      return undefined;
+    }
+    async close() {
+      await Promise.resolve();
+      return undefined;
+    }
+    on(event: string, cb: (...args: unknown[]) => void) {
+      touch(event);
+      touch(cb);
+      return undefined;
+    }
+    off(event: string, cb: (...args: unknown[]) => void) {
+      touch(event);
+      touch(cb);
+      return undefined;
+    }
+    once(event: string, cb: (...args: unknown[]) => void) {
+      touch(event);
+      touch(cb);
+      return undefined;
+    }
+    emit(event: string, ...args: unknown[]) {
+      touch(event);
+      touch(args);
+      return undefined;
+    }
+  }
+
+  return {
+    CayenneLpp: {
+      parse: vi.fn().mockReturnValue([]),
+    },
+    Connection: MockConnection,
+    SerialConnection: MockSerialConnection,
+    WebSerialConnection: MockWebSerialConnection,
+  };
+});
+
+import { useMeshcoreRuntime } from '../runtime/useMeshcoreRuntime';
+import { resetMeshcoreRuntimeElectronMocks } from '../vitestClearHelpers';
+
+interface MockSerialPort {
+  portId?: string;
+  open: ReturnType<typeof vi.fn>;
+  close: ReturnType<typeof vi.fn>;
+  getInfo: ReturnType<typeof vi.fn>;
+}
+
+function makeMockSerialPort(portId = 'port-1'): MockSerialPort {
+  return {
+    portId,
+    open: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
+    getInfo: vi.fn().mockReturnValue({ usbVendorId: 0x1234, usbProductId: 0x5678 }),
+  };
+}
+
+describe('useMeshcoreRuntime serial cleanup', () => {
+  beforeEach(() => {
+    resetMeshcoreRuntimeElectronMocks();
+    serialConnGetSelfInfoMock.mockClear();
+    serialConnCloseMock.mockClear();
+    serialConnGetSelfInfoMock.mockRejectedValue(new Error('serial init failed'));
+    serialConnCloseMock.mockResolvedValue(undefined);
+  });
+
+  it('connectAutomatic maps bare meshcore.js reject() to a readable serial error', async () => {
+    const port = makeMockSerialPort('auto-port');
+    Object.defineProperty(navigator, 'serial', {
+      configurable: true,
+      value: {
+        getPorts: vi.fn().mockResolvedValue([port]),
+      },
+    });
+    serialConnGetSelfInfoMock.mockRejectedValue(undefined);
+
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { result } = renderHook(() => useMeshcoreRuntime());
+
+    await expect(
+      act(async () => {
+        await result.current.connectAutomatic('serial', undefined, 'auto-port');
+      }),
+    ).rejects.toThrow('Serial auto-connect failed (radio did not respond)');
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/connectAutomatic serial error.*Serial auto-connect failed/),
+    );
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('connectAutomatic retries serial open once after failure', async () => {
+    vi.useFakeTimers();
+    try {
+      const port = makeMockSerialPort('auto-port');
+      Object.defineProperty(navigator, 'serial', {
+        configurable: true,
+        value: {
+          getPorts: vi.fn().mockResolvedValue([port]),
+        },
+      });
+      serialConnGetSelfInfoMock.mockReset();
+      serialConnGetSelfInfoMock.mockRejectedValue(new Error('open failed'));
+
+      const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { result } = renderHook(() => useMeshcoreRuntime());
+
+      const connectPromise = result.current.connectAutomatic('serial', undefined, 'auto-port');
+      const rejectionHandled = expect(connectPromise).rejects.toThrow('open failed');
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2_000);
+      });
+      await rejectionHandled;
+
+      expect(serialConnGetSelfInfoMock).toHaveBeenCalledTimes(2);
+      expect(debugSpy).toHaveBeenCalledWith(
+        '[useMeshcoreRuntime] connectAutomatic serial open failed — retrying once',
+      );
+      debugSpy.mockRestore();
+      warnSpy.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('connectAutomatic closes raw port even when connection close throws', async () => {
+    const port = makeMockSerialPort('auto-port');
+    Object.defineProperty(navigator, 'serial', {
+      configurable: true,
+      value: {
+        getPorts: vi.fn().mockResolvedValue([port]),
+      },
+    });
+    serialConnCloseMock.mockRejectedValue(new Error('conn close failed'));
+
+    const { result } = renderHook(() => useMeshcoreRuntime());
+
+    await expect(
+      act(async () => {
+        await result.current.connectAutomatic('serial', undefined, 'auto-port');
+      }),
+    ).rejects.toThrow('serial init failed');
+
+    expect(serialConnCloseMock).toHaveBeenCalledTimes(2);
+    expect(result.current.state.status).toBe('disconnected');
+  });
+
+  it('connect serial closes connection on init failure via ConnectionDriver', async () => {
+    const port = makeMockSerialPort('manual-port');
+    Object.defineProperty(navigator, 'serial', {
+      configurable: true,
+      value: {
+        requestPort: vi.fn().mockResolvedValue(port),
+      },
+    });
+    serialConnCloseMock.mockRejectedValue(new Error('conn close failed'));
+
+    const { result } = renderHook(() => useMeshcoreRuntime());
+
+    await expect(
+      act(async () => {
+        await result.current.connect('serial');
+      }),
+    ).rejects.toThrow('serial init failed');
+
+    expect(serialConnCloseMock).toHaveBeenCalledTimes(1);
+    expect(result.current.state.status).toBe('disconnected');
+  });
+});

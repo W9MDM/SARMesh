@@ -1,0 +1,166 @@
+/* eslint-disable no-secrets/no-secrets -- regression fixture from reporter (not a live credential) */
+import { describe, expect, it } from 'vitest';
+
+import {
+  formatChannelPskInput,
+  manualChannelPsksDeclareSlotIndices,
+  parseChannelPskInput,
+  parseManualChannelPublishEntries,
+  parseManualChannelPublishEntry,
+  validateChannelPskEntries,
+} from './meshtasticChannelPskInput';
+
+const KEY_A = '1PG7OiApB1nwvP+rz05pAQ==';
+const KEY_B = 'AAAAAAAAAAAAAAAAAAAAAA==';
+/** 32-byte AES-256 test key. */
+const KEY_AES256 = 'AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=';
+const REPORTER_LONGFAST_LINE = 'LongFast@0=ZUdhbGNWeThMN2FjcTNwb2wxcnFPRFc0UmJLSFRlY3E=';
+
+describe('parseChannelPskInput', () => {
+  it('parses a single bare base64 key', () => {
+    expect(parseChannelPskInput(KEY_A)).toEqual([KEY_A]);
+  });
+
+  it('parses multiple keys separated by newlines', () => {
+    expect(parseChannelPskInput(`${KEY_A}\n${KEY_B}`)).toEqual([KEY_A, KEY_B]);
+  });
+
+  it('parses multiple keys separated by commas', () => {
+    expect(parseChannelPskInput(`${KEY_A}, ${KEY_B}`)).toEqual([KEY_A, KEY_B]);
+  });
+
+  it('parses ChannelName=base64 entries', () => {
+    expect(parseChannelPskInput(`HamNet=${KEY_B}`)).toEqual([`HamNet=${KEY_B}`]);
+  });
+
+  it('parses ChannelName@index=base64 entries', () => {
+    expect(parseChannelPskInput(`HamNet@2=${KEY_B}`)).toEqual([`HamNet@2=${KEY_B}`]);
+  });
+
+  it('trims whitespace and drops empty segments', () => {
+    expect(parseChannelPskInput(`  ${KEY_A}  ,  , \n  ${KEY_B}  `)).toEqual([KEY_A, KEY_B]);
+  });
+});
+
+describe('formatChannelPskInput', () => {
+  it('joins entries with newlines', () => {
+    expect(formatChannelPskInput([KEY_A, KEY_B])).toBe(`${KEY_A}\n${KEY_B}`);
+  });
+
+  it('returns empty string for undefined', () => {
+    expect(formatChannelPskInput(undefined)).toBe('');
+  });
+});
+
+describe('validateChannelPskEntries', () => {
+  it('accepts valid AES-128 and AES-256 keys', () => {
+    expect(validateChannelPskEntries([KEY_A, KEY_AES256])).toBe('ok');
+  });
+
+  it('accepts ChannelName=base64 form', () => {
+    expect(validateChannelPskEntries([`HamNet=${KEY_B}`])).toBe('ok');
+  });
+
+  it('accepts ChannelName@index=base64 form', () => {
+    expect(validateChannelPskEntries([`HamNet@2=${KEY_B}`])).toBe('ok');
+  });
+
+  it('accepts reporter LongFast@0 key with trailing base64 padding', () => {
+    expect(validateChannelPskEntries([REPORTER_LONGFAST_LINE])).toBe('ok');
+  });
+
+  it('rejects invalid base64', () => {
+    expect(validateChannelPskEntries(['not!!!base64'])).toBe('invalidBase64');
+  });
+
+  it('rejects invalid decoded length', () => {
+    const twentyBytes = btoa(String.fromCharCode(...new Uint8Array(20).fill(2)));
+    expect(validateChannelPskEntries([twentyBytes])).toBe('invalidLength');
+  });
+
+  it('rejects decoded keys shorter than 16 bytes on named lines', () => {
+    const fifteenBytes = btoa(String.fromCharCode(...new Uint8Array(15).fill(2)));
+    expect(validateChannelPskEntries([`HamNet=${fifteenBytes}`])).toBe('invalidLength');
+  });
+
+  it('accepts 1-byte default public PSK on named lines', () => {
+    expect(validateChannelPskEntries(['LongFast=AQ=='])).toBe('ok');
+  });
+
+  it('returns ok for empty list', () => {
+    expect(validateChannelPskEntries([])).toBe('ok');
+  });
+});
+
+describe('parseManualChannelPublishEntry', () => {
+  it('parses ChannelName@index=base64 with index and psk', () => {
+    const entry = parseManualChannelPublishEntry(`HamNet@2=${KEY_B}`);
+    expect(entry).toEqual({
+      name: 'HamNet',
+      index: 2,
+      psk: Uint8Array.from(atob(KEY_B), (c) => c.charCodeAt(0)),
+    });
+  });
+
+  it('parses ChannelName=base64 without index', () => {
+    const entry = parseManualChannelPublishEntry(`LongFast=${KEY_AES256}`);
+    expect(entry?.name).toBe('LongFast');
+    expect(entry?.index).toBeUndefined();
+    expect(entry?.psk.length).toBe(32);
+  });
+
+  it('returns null for bare base64 (decrypt-only)', () => {
+    expect(parseManualChannelPublishEntry(KEY_A)).toBeNull();
+  });
+
+  it('returns null for invalid named lines', () => {
+    expect(parseManualChannelPublishEntry('BadName=not!!!base64')).toBeNull();
+  });
+
+  it('returns null for invalid AES key length', () => {
+    const twentyBytes = btoa(String.fromCharCode(...Array.from({ length: 20 }, () => 0xab)));
+    expect(parseManualChannelPublishEntry(`HamNet=${twentyBytes}`)).toBeNull();
+  });
+
+  it('returns null for keys shorter than 16 bytes', () => {
+    const oneByte = btoa(String.fromCharCode(0x01));
+    expect(parseManualChannelPublishEntry(`HamNet=${oneByte}`)).toBeNull();
+  });
+
+  it('parses reporter LongFast@0 key as 32-byte AES-256', () => {
+    const entry = parseManualChannelPublishEntry(REPORTER_LONGFAST_LINE);
+    expect(entry?.name).toBe('LongFast');
+    expect(entry?.index).toBe(0);
+    expect(entry?.psk.length).toBe(32);
+  });
+});
+
+describe('parseManualChannelPublishEntries', () => {
+  it('collects only valid named entries', () => {
+    const entries = parseManualChannelPublishEntries([
+      `HamNet=${KEY_B}`,
+      KEY_A,
+      `LongFast@0=${KEY_AES256}`,
+    ]);
+    expect(entries).toHaveLength(2);
+    expect(entries[0]?.name).toBe('HamNet');
+    expect(entries[1]?.index).toBe(0);
+  });
+});
+
+describe('manualChannelPsksDeclareSlotIndices', () => {
+  it('returns false when no named lines declare @index', () => {
+    expect(manualChannelPsksDeclareSlotIndices([KEY_A, `HamNet=${KEY_B}`])).toBe(false);
+  });
+
+  it('returns true when any named line includes @index', () => {
+    expect(manualChannelPsksDeclareSlotIndices([`LongFast@1=${KEY_B}`])).toBe(true);
+    expect(
+      manualChannelPsksDeclareSlotIndices([`HamNet=${KEY_B}`, `LongFast@0=${KEY_AES256}`]),
+    ).toBe(true);
+  });
+
+  it('returns false for empty input', () => {
+    expect(manualChannelPsksDeclareSlotIndices([])).toBe(false);
+  });
+});

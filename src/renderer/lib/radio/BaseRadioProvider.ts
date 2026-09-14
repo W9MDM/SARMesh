@@ -1,0 +1,428 @@
+import type { MeshProtocol } from '@/shared/meshProtocol';
+import { MS_PER_DAY, MS_PER_HOUR } from '@/shared/timeConstants';
+
+/**
+ * Protocol-agnostic capability descriptor. Each radio protocol adapter exposes
+ * one of these so UI and diagnostic engines can branch on features rather than
+ * on protocol name strings.
+ */
+export interface ProtocolCapabilities {
+  protocol: MeshProtocol;
+  /**
+   * Max `[i/N]` chunks the composer may emit per outbound text send.
+   * MeshCore is 1 (single-packet; no multi-split). Meshtastic/Reticulum use 9
+   * (keep in sync with `MAX_CHUNKS` in `chatComposerLimits.ts`).
+   */
+  composerMaxChunks: number;
+  /** Whether hops_away is populated for peers (Meshtastic / MeshCore: true; Reticulum: false) */
+  hasHopCount: boolean;
+  /** [min, max] valid hop limit for this protocol */
+  hopLimitRange: [number, number];
+  /** Whether MQTT hybrid / MQTT-only nodes can appear in the node list */
+  hasMqttHybrid: boolean;
+  /** Whether the Connection panel exposes MQTT connect/disconnect UI and header status */
+  hasMqttConnectionPanel: boolean;
+  /** Whether environment sensor telemetry (temp, humidity, pressure, IAQ) is available */
+  hasEnvironmentTelemetry: boolean;
+  /** Whether LocalStats RF diagnostics (channel_utilization, air_util_tx, rx_bad, rx_dupe) are available */
+  hasRfStats: boolean;
+  /** Whether neighbor info packets are available */
+  hasNeighborInfo: boolean;
+  /** Whether channel / modem config can be read and written */
+  hasChannelConfig: boolean;
+  /** Whether named modem presets are supported */
+  hasModemPresets: boolean;
+  /** Whether trace route is available */
+  hasTraceRoute: boolean;
+  /** Whether per-hop SNR from tracePath is available (MeshCore unique strength) */
+  hasPerHopSnr: boolean;
+  /**
+   * Whether GPS+hop distance heuristics (hop_goblin, close-in bad_route warning) apply.
+   * Meshtastic: true. MeshCore: false — multi-hop nearby contacts are poorly connected /
+   * repeater-mediated, not Meshtastic-style critical over-hopping.
+   */
+  hasDistanceBasedHopAnomalies: boolean;
+  /** Whether battery level / voltage telemetry is available */
+  hasBatteryTelemetry: boolean;
+  /** Whether repeater status (noise floor, air time, packet counts) is available */
+  hasRepeaterStatus: boolean;
+  /** Whether on-demand node status queries are supported */
+  hasOnDemandNodeStatus: boolean;
+  /** Whether Bluetooth config (enabled toggle, PIN) is available */
+  hasBluetoothConfig: boolean;
+  /** Whether device role selector is available */
+  hasDeviceRoleConfig: boolean;
+  /** Whether display config (screen on duration, units) is available */
+  hasDisplayConfig: boolean;
+  /** Whether power config (sleep timers, battery shutdown) is available */
+  hasPowerConfig: boolean;
+  /** Whether WiFi / Ethernet network config is available */
+  hasWifiConfig: boolean;
+  /** Whether telemetry device metrics update interval config is available */
+  hasTelemetryIntervalConfig: boolean;
+  /** User-defined contact groups + built-in filters on the Nodes/Contacts list */
+  hasUserManagedContactGroups: boolean;
+  /** MeshCore companion: contact auto-add / manual mode and related Radio UI */
+  hasCompanionContactManagementConfig: boolean;
+  /** MeshCore companion: telemetry request / location / environment privacy (NodePrefs telemetry modes) */
+  hasCompanionTelemetryPrivacyConfig: boolean;
+  /** Whether shutdown button is available */
+  hasShutdown: boolean;
+  /** Whether Reset NodeDB button is available */
+  hasNodeDbReset: boolean;
+  /** Whether factory reset buttons are available */
+  hasFactoryReset: boolean;
+  /** Whether full GPS position config is available; false = fixed lat/lon only */
+  hasFullPositionConfig: boolean;
+  /** Whether Security panel (PKI config) is available */
+  hasSecurityPanel: boolean;
+  /** Whether PKC remote node administration is available (Meshtastic 2.5+) */
+  hasRemoteAdmin: boolean;
+  /** Whether the TAK server panel is available (Meshtastic only) */
+  hasTakPanel: boolean;
+  /** Whether Remote Hardware (GPIO) control is available */
+  hasRemoteHardware: boolean;
+  /** Whether Serial Bridge is available */
+  hasSerial: boolean;
+  /** Whether Range Test packets are available */
+  hasRangeTest: boolean;
+  /** Whether Pax Counter (people counter) is available */
+  hasPaxCounter: boolean;
+  /** Whether Audio packets are available */
+  hasAudio: boolean;
+  /** Whether IP Tunnel is available */
+  hasIpTunnel: boolean;
+  /** Whether Detection Sensor packets are available */
+  hasDetectionSensor: boolean;
+  /** Whether Store & Forward is available */
+  hasStoreForward: boolean;
+  /** Whether ATAK Plugin integration is available */
+  hasAtakPlugin: boolean;
+  /** Whether the firmware reports lockdown status and accepts LockdownAuth (Meshtastic) */
+  hasLockdown: boolean;
+  /** Whether Map Report packets are available */
+  hasMapReport: boolean;
+  /** Whether XMODEM file transfer is available (Meshtastic local radio) */
+  hasXmodem: boolean;
+  /** Whether contact import/export is available (MeshCore) */
+  hasContactImportExport: boolean;
+  /** Whether cryptographic signing/key export is available (MeshCore) */
+  hasCryptoOperations: boolean;
+  /** Whether the raw RF packet log viewer is available (MeshCore LOG_RX_DATA) */
+  hasRawPacketLog: boolean;
+  /** Node list tab label uses "Contacts" instead of "Nodes" */
+  nodeListTabUsesContactsLabel: boolean;
+  /** Node list tab label uses "Peers" instead of "Nodes" (Reticulum) */
+  nodeListTabUsesPeersLabel: boolean;
+  /** Modules tab shows repeater tooling (MeshCore "Repeaters" tab slot) */
+  modulesTabUsesRepeatersLabel: boolean;
+  /** Dedicated Rooms tab for MeshCore room server BBS */
+  hasRoomServersPanel: boolean;
+  /** Radio panel: import JSON device config (MeshCore companion) */
+  hasJsonRadioConfigImport: boolean;
+  /** Node stale threshold in milliseconds (for node status UI) */
+  nodeStaleThresholdMs: number;
+  /** Node offline threshold in milliseconds (for node status UI) */
+  nodeOfflineThresholdMs: number;
+  /** Whether Connection panel shows firmware update check on connect */
+  hasFirmwareUpdateCheck: boolean;
+  /** Meshtastic: hide queue badge count of 1 while a local message is still sending */
+  dedupeQueueBadgeForLocalSending: boolean;
+  /** Header self-node label prefers deviceOwner.longName over picker label */
+  prefersDeviceOwnerLongNameInHeader: boolean;
+  /**
+   * Chat: when an own message has both device `status` and `mqttStatus`, show only the
+   * device badge (MeshCore — MQTT ✓ was masking RF heard-by). Meshtastic keeps dual badges.
+   */
+  prefersDeviceDeliveryStatusOverMqtt: boolean;
+  /** Meshtastic-centric routing/RF diagnostics (Hop Goblins, CU, foreign LoRa). */
+  hasDiagnosticsPanel: boolean;
+  /** Reticulum: Connection panel interface editor (TCP, Auto, serial) */
+  hasReticulumInterfaceConfig: boolean;
+  /** Reticulum: Network tab (identity, stack config, propagation) */
+  hasReticulumNetworkPanel: boolean;
+  /** Reticulum: RNode firmware flasher on Admin tab (ReticulumAdminPanel) */
+  hasRNodeFlasher: boolean;
+  /** Reticulum: dedicated Peers list panel on tab 2 */
+  hasReticulumPeersList: boolean;
+  /** Reticulum: ping panel on Diagnostics tab */
+  hasReticulumNativeDiagnostics: boolean;
+  /** Reticulum: dedicated network topology tab */
+  hasReticulumTopologyPanel: boolean;
+  /** Reticulum: RMAP v4 discovery map tab */
+  hasReticulumDiscoveryMap: boolean;
+  /** Reticulum: LXMF delivery status badge on chat messages */
+  hasLxmfDeliveryStatus: boolean;
+  /** Reticulum: dedicated peer detail modal (hash-based peers) */
+  hasReticulumPeerDetailModal: boolean;
+  /** Reticulum: Nomad Network sidebar tab */
+  hasNomadNetworkPanel: boolean;
+  hasRrcPanel: boolean;
+  /** Reticulum: Administration tab (flasher, factory reset) */
+  hasReticulumAdminPanel: boolean;
+  /** Reticulum: Remote tab (rnsh remote shell + rncp file transfer) */
+  hasReticulumRemotePanel: boolean;
+  /** Reticulum: rncp file transfer available from Chat DM header */
+  hasRncpTransfer: boolean;
+  /** Reticulum: LXST voice calls (Peers / Chat DM) */
+  hasLxstVoice: boolean;
+  /** Reticulum: LXMF voice memo recording + playback in DM composer / chat */
+  hasReticulumVoiceMemo: boolean;
+  /** Reticulum: LRGP games (Games tab, Peers / Chat DM Challenge) */
+  hasLrgpGames: boolean;
+  /** Whether Cancel/disconnect should stop Noble BLE scanning (Meshtastic/MeshCore on macOS/Windows). */
+  hasNobleBleScanning: boolean;
+  /** Reticulum: LXMF encrypted paper message share/scan (Chat DM) */
+  hasLxmfPaper: boolean;
+  /** DM composer payload limit (Reticulum LXMF only) */
+  lxmfPayloadLimit?: number;
+}
+
+export const MESHTASTIC_CAPABILITIES: ProtocolCapabilities = {
+  protocol: 'meshtastic',
+  composerMaxChunks: 9,
+  hasHopCount: true,
+  hopLimitRange: [1, 7],
+  hasMqttHybrid: true,
+  hasMqttConnectionPanel: true,
+  hasEnvironmentTelemetry: true,
+  hasRfStats: true,
+  hasNeighborInfo: true,
+  hasChannelConfig: true,
+  hasModemPresets: true,
+  hasTraceRoute: true,
+  hasPerHopSnr: false,
+  hasDistanceBasedHopAnomalies: true,
+  hasBatteryTelemetry: true,
+  hasRepeaterStatus: false,
+  hasOnDemandNodeStatus: false,
+  hasBluetoothConfig: true,
+  hasDeviceRoleConfig: true,
+  hasDisplayConfig: true,
+  hasPowerConfig: true,
+  hasWifiConfig: true,
+  hasTelemetryIntervalConfig: true,
+  hasUserManagedContactGroups: true,
+  hasCompanionContactManagementConfig: false,
+  hasCompanionTelemetryPrivacyConfig: false,
+  hasShutdown: true,
+  hasNodeDbReset: true,
+  hasFactoryReset: true,
+  hasFullPositionConfig: true,
+  hasSecurityPanel: true,
+  hasRemoteAdmin: true,
+  hasTakPanel: true,
+  hasRemoteHardware: true,
+  hasSerial: true,
+  hasRangeTest: true,
+  hasPaxCounter: true,
+  hasAudio: true,
+  hasIpTunnel: true,
+  hasDetectionSensor: true,
+  hasStoreForward: true,
+  hasAtakPlugin: true,
+  hasLockdown: true,
+  hasMapReport: true,
+  hasXmodem: true,
+  hasContactImportExport: false,
+  hasCryptoOperations: true,
+  hasRawPacketLog: true,
+  nodeListTabUsesContactsLabel: false,
+  nodeListTabUsesPeersLabel: false,
+  modulesTabUsesRepeatersLabel: false,
+  hasRoomServersPanel: false,
+  hasJsonRadioConfigImport: false,
+  nodeStaleThresholdMs: 2 * MS_PER_HOUR,
+  nodeOfflineThresholdMs: 7 * MS_PER_DAY,
+  hasFirmwareUpdateCheck: true,
+  dedupeQueueBadgeForLocalSending: true,
+  prefersDeviceOwnerLongNameInHeader: false,
+  prefersDeviceDeliveryStatusOverMqtt: false,
+  hasDiagnosticsPanel: true,
+  hasReticulumInterfaceConfig: false,
+  hasReticulumNetworkPanel: false,
+  hasRNodeFlasher: false,
+  hasReticulumPeersList: false,
+  hasReticulumNativeDiagnostics: false,
+  hasReticulumTopologyPanel: false,
+  hasReticulumDiscoveryMap: false,
+  hasLxmfDeliveryStatus: false,
+  hasReticulumPeerDetailModal: false,
+  hasNomadNetworkPanel: false,
+  hasRrcPanel: false,
+  hasReticulumAdminPanel: false,
+  hasReticulumRemotePanel: false,
+  hasRncpTransfer: false,
+  hasLxstVoice: false,
+  hasReticulumVoiceMemo: false,
+  hasLrgpGames: false,
+  hasNobleBleScanning: true,
+  hasLxmfPaper: false,
+};
+
+export const MESHCORE_CAPABILITIES: ProtocolCapabilities = {
+  protocol: 'meshcore',
+  composerMaxChunks: 1,
+  hasHopCount: true,
+  hopLimitRange: [1, 64],
+  /** MeshCore session is RF-first; MQTT bridge is optional and not shown as a node column. */
+  hasMqttHybrid: false,
+  hasMqttConnectionPanel: true,
+  hasEnvironmentTelemetry: true,
+  hasRfStats: true,
+  hasNeighborInfo: false,
+  hasChannelConfig: false,
+  hasModemPresets: false,
+  hasTraceRoute: true,
+  hasPerHopSnr: true,
+  hasDistanceBasedHopAnomalies: false,
+  hasBatteryTelemetry: true,
+  hasRepeaterStatus: true,
+  hasOnDemandNodeStatus: true,
+  hasBluetoothConfig: false,
+  hasDeviceRoleConfig: false,
+  hasDisplayConfig: false,
+  hasPowerConfig: false,
+  hasWifiConfig: false,
+  hasTelemetryIntervalConfig: false,
+  hasUserManagedContactGroups: true,
+  hasCompanionContactManagementConfig: true,
+  hasCompanionTelemetryPrivacyConfig: true,
+  hasShutdown: false,
+  hasNodeDbReset: false,
+  hasFactoryReset: false,
+  hasFullPositionConfig: false,
+  hasSecurityPanel: true,
+  hasRemoteAdmin: false,
+  hasTakPanel: false,
+  hasRemoteHardware: false,
+  hasSerial: false,
+  hasRangeTest: false,
+  hasPaxCounter: false,
+  hasAudio: false,
+  hasIpTunnel: false,
+  hasDetectionSensor: false,
+  hasStoreForward: false,
+  hasAtakPlugin: false,
+  hasLockdown: false,
+  hasMapReport: false,
+  hasXmodem: false,
+  hasContactImportExport: true,
+  hasCryptoOperations: true,
+  hasRawPacketLog: true,
+  nodeListTabUsesContactsLabel: true,
+  nodeListTabUsesPeersLabel: false,
+  modulesTabUsesRepeatersLabel: true,
+  hasRoomServersPanel: true,
+  hasJsonRadioConfigImport: true,
+  nodeStaleThresholdMs: 48 * MS_PER_HOUR,
+  nodeOfflineThresholdMs: 96 * MS_PER_HOUR,
+  hasFirmwareUpdateCheck: true,
+  dedupeQueueBadgeForLocalSending: false,
+  prefersDeviceOwnerLongNameInHeader: true,
+  prefersDeviceDeliveryStatusOverMqtt: true,
+  hasDiagnosticsPanel: true,
+  hasReticulumInterfaceConfig: false,
+  hasReticulumNetworkPanel: false,
+  hasRNodeFlasher: false,
+  hasReticulumPeersList: false,
+  hasReticulumNativeDiagnostics: false,
+  hasReticulumTopologyPanel: false,
+  hasReticulumDiscoveryMap: false,
+  hasLxmfDeliveryStatus: false,
+  hasReticulumPeerDetailModal: false,
+  hasNomadNetworkPanel: false,
+  hasRrcPanel: false,
+  hasReticulumAdminPanel: false,
+  hasReticulumRemotePanel: false,
+  hasRncpTransfer: false,
+  hasLxstVoice: false,
+  hasReticulumVoiceMemo: false,
+  hasLrgpGames: false,
+  hasNobleBleScanning: true,
+  hasLxmfPaper: false,
+};
+
+export const RETICULUM_CAPABILITIES: ProtocolCapabilities = {
+  protocol: 'reticulum',
+  composerMaxChunks: 9,
+  hasHopCount: false,
+  hopLimitRange: [1, 128],
+  hasMqttHybrid: false,
+  hasMqttConnectionPanel: false,
+  hasEnvironmentTelemetry: false,
+  hasRfStats: false,
+  hasNeighborInfo: false,
+  hasChannelConfig: false,
+  hasModemPresets: false,
+  hasTraceRoute: true,
+  hasPerHopSnr: false,
+  hasDistanceBasedHopAnomalies: false,
+  hasBatteryTelemetry: false,
+  hasRepeaterStatus: true,
+  hasOnDemandNodeStatus: false,
+  hasBluetoothConfig: false,
+  hasDeviceRoleConfig: false,
+  hasDisplayConfig: false,
+  hasPowerConfig: false,
+  hasWifiConfig: false,
+  hasTelemetryIntervalConfig: false,
+  hasUserManagedContactGroups: true,
+  hasCompanionContactManagementConfig: false,
+  hasCompanionTelemetryPrivacyConfig: false,
+  hasShutdown: false,
+  hasNodeDbReset: false,
+  hasFactoryReset: false,
+  hasFullPositionConfig: false,
+  hasSecurityPanel: false,
+  hasRemoteAdmin: false,
+  hasTakPanel: false,
+  hasRemoteHardware: false,
+  hasSerial: false,
+  hasRangeTest: false,
+  hasPaxCounter: false,
+  hasAudio: false,
+  hasIpTunnel: false,
+  hasDetectionSensor: false,
+  hasStoreForward: false,
+  hasAtakPlugin: false,
+  hasLockdown: false,
+  hasMapReport: false,
+  hasXmodem: false,
+  hasContactImportExport: false,
+  hasCryptoOperations: false,
+  hasRawPacketLog: true,
+  nodeListTabUsesContactsLabel: false,
+  nodeListTabUsesPeersLabel: true,
+  modulesTabUsesRepeatersLabel: false,
+  hasRoomServersPanel: false,
+  hasJsonRadioConfigImport: true,
+  nodeStaleThresholdMs: 7 * MS_PER_DAY,
+  nodeOfflineThresholdMs: 30 * MS_PER_DAY,
+  hasFirmwareUpdateCheck: false,
+  dedupeQueueBadgeForLocalSending: false,
+  prefersDeviceOwnerLongNameInHeader: false,
+  prefersDeviceDeliveryStatusOverMqtt: false,
+  hasDiagnosticsPanel: true,
+  hasReticulumInterfaceConfig: true,
+  hasReticulumNetworkPanel: true,
+  hasRNodeFlasher: true,
+  hasReticulumPeersList: true,
+  hasReticulumNativeDiagnostics: true,
+  hasReticulumTopologyPanel: true,
+  hasReticulumDiscoveryMap: true,
+  hasLxmfDeliveryStatus: true,
+  hasReticulumPeerDetailModal: true,
+  hasNomadNetworkPanel: true,
+  hasRrcPanel: true,
+  hasReticulumAdminPanel: true,
+  hasReticulumRemotePanel: true,
+  hasRncpTransfer: true,
+  hasLxstVoice: true,
+  hasReticulumVoiceMemo: true,
+  hasLrgpGames: true,
+  hasNobleBleScanning: false,
+  hasLxmfPaper: true,
+  // Keep in sync with RETICULUM_LXMF_PAYLOAD_LIMIT in chatComposerLimits.ts (no import — avoids cycle).
+  lxmfPayloadLimit: 4096,
+};

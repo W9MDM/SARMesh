@@ -1,0 +1,223 @@
+import type { Connection } from '@liamcottle/meshcore.js';
+import type { MeshDevice } from '@meshtastic/core';
+
+import { randomPrefixedId } from '@/shared/randomPrefixedId';
+
+import { setConnection } from '../stores/connectionStore';
+import {
+  addIdentity,
+  findIdentityBySignature,
+  setActiveIdentity,
+  updateIdentity,
+} from '../stores/identityStore';
+import { connectionDriver } from './drivers/ConnectionDriver';
+import { packetRouter } from './drivers/PacketRouter';
+import { mergeOfflineStoreIntoIdentity } from './mergeOfflineIdentityStore';
+import { tryReuseOfflineProtocolIdentity } from './offlineProtocolIdentities';
+import { meshcoreProtocol } from './protocols/MeshCoreProtocol';
+import { meshtasticProtocol } from './protocols/MeshtasticProtocol';
+import type { DiscoveryInfo } from './protocols/Protocol';
+import type { ConnectionType, IdentityId, TransportParams } from './types';
+
+function patchIdentityFromDiscovery(
+  identityId: IdentityId,
+  protocol: typeof meshtasticProtocol | typeof meshcoreProtocol,
+  params: TransportParams,
+  discovery: DiscoveryInfo,
+): void {
+  updateIdentity(identityId, {
+    signature: protocol.identitySignature(params, discovery),
+    ...(discovery.myNodeNum != null ? { selfNodeNum: discovery.myNodeNum } : {}),
+    ...(discovery.publicKey ? { publicKey: discovery.publicKey } : {}),
+  });
+}
+
+function resolveOrCreateIdentity(
+  protocol: typeof meshtasticProtocol | typeof meshcoreProtocol,
+  params: TransportParams,
+  discovery?: DiscoveryInfo,
+): IdentityId {
+  const provisionalKey = protocol.identitySignature(params);
+  const resolvedKey = discovery ? protocol.identitySignature(params, discovery) : provisionalKey;
+  const existing =
+    connectionDriver.lookupIdentityId(resolvedKey, provisionalKey) ??
+    findIdentityBySignature(resolvedKey)?.id ??
+    findIdentityBySignature(provisionalKey)?.id ??
+    null;
+  if (existing) {
+    connectionDriver.registerTransportKeys(existing, provisionalKey, resolvedKey);
+    mergeOfflineStoreIntoIdentity(protocol.type, existing);
+    if (discovery) patchIdentityFromDiscovery(existing, protocol, params, discovery);
+    return existing;
+  }
+  const reusableOffline = tryReuseOfflineProtocolIdentity(protocol.type);
+  if (reusableOffline) {
+    updateIdentity(reusableOffline, { lastSeenAt: Date.now() });
+    if (discovery) {
+      patchIdentityFromDiscovery(reusableOffline, protocol, params, discovery);
+    } else {
+      updateIdentity(reusableOffline, { signature: resolvedKey });
+    }
+    connectionDriver.registerTransportKeys(reusableOffline, provisionalKey, resolvedKey);
+    return reusableOffline;
+  }
+  const identityId = randomPrefixedId(protocol.type);
+  addIdentity({
+    id: identityId,
+    protocol,
+    signature: resolvedKey,
+    transports: [],
+    createdAt: Date.now(),
+    lastSeenAt: Date.now(),
+  });
+  connectionDriver.registerTransportKeys(identityId, provisionalKey, resolvedKey);
+  mergeOfflineStoreIntoIdentity(protocol.type, identityId);
+  if (discovery) patchIdentityFromDiscovery(identityId, protocol, params, discovery);
+  return identityId;
+}
+
+export interface MeshtasticProtocolIngressAttach {
+  identityId: IdentityId;
+  detach: () => void;
+}
+
+/** Connect inputs collected by ConnectionPanel, before protocol-specific shaping. */
+export interface MeshTransportParamOptions {
+  peripheralId?: string;
+  portSignature?: string;
+  host?: string;
+}
+
+/**
+ * Shared transport-params builder. Meshtastic and MeshCore accept different
+ * transport subsets but must shape the shared ones identically, otherwise the
+ * same physical device yields two different identity signatures.
+ */
+function buildMeshTransportParams(
+  caller: string,
+  type: ConnectionType,
+  opts: MeshTransportParamOptions,
+): TransportParams {
+  switch (type) {
+    case 'ble':
+      return { type: 'ble', peripheralId: opts.peripheralId };
+    case 'serial':
+      return { type: 'serial', portSignature: opts.portSignature };
+    case 'http':
+      return { type: 'http', host: opts.host ?? '' };
+    case 'tcp':
+      return { type: 'tcp', host: opts.host ?? '' };
+    default: {
+      const _exhaustive: never = type;
+      throw new Error(`${caller}: unsupported connection type ${String(_exhaustive)}`);
+    }
+  }
+}
+
+export function meshtasticTransportParams(
+  type: ConnectionType,
+  opts: MeshTransportParamOptions,
+): TransportParams {
+  return buildMeshTransportParams('meshtasticTransportParams', type, opts);
+}
+
+/**
+ * Registers a Meshtastic identity, wires protocol ingress into PacketRouter,
+ * and exposes the SDK handle to ConnectionDriver action hooks.
+ */
+export function attachMeshtasticProtocolIngress(
+  device: MeshDevice,
+  type: ConnectionType,
+  opts: { peripheralId?: string; portSignature?: string; host?: string },
+  discovery?: DiscoveryInfo,
+): MeshtasticProtocolIngressAttach {
+  const params = meshtasticTransportParams(type, opts);
+  const identityId = resolveOrCreateIdentity(meshtasticProtocol, params, discovery);
+  if (discovery?.myNodeNum != null && discovery.myNodeNum > 0) {
+    connectionDriver.remapMeshtasticNodeSignature(identityId, params, discovery.myNodeNum);
+    if (discovery.publicKey) {
+      updateIdentity(identityId, { publicKey: discovery.publicKey });
+    }
+  }
+  setConnection(identityId, { status: 'connecting', connectionType: type });
+  setActiveIdentity(identityId);
+
+  const teardown = meshtasticProtocol.subscribe(device, (event) => {
+    try {
+      packetRouter.dispatch(event, identityId);
+    } catch (err) {
+      console.error(
+        '[meshIdentityBridge] packetRouter.dispatch failed:',
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  });
+  const detachDriver = connectionDriver.registerExternalTransport(
+    identityId,
+    meshtasticProtocol,
+    device,
+    type,
+    params,
+    teardown,
+  );
+
+  return { identityId, detach: detachDriver };
+}
+
+/** After driver connect + `getSelfInfo`, align identity signature with resolved node id. */
+export function finalizeMeshcoreDriverIdentity(
+  identityId: IdentityId,
+  params: TransportParams,
+  discovery: DiscoveryInfo,
+): void {
+  const provisionalKey = meshcoreProtocol.identitySignature(params);
+  const resolvedKey = meshcoreProtocol.identitySignature(params, discovery);
+  patchIdentityFromDiscovery(identityId, meshcoreProtocol, params, discovery);
+  connectionDriver.registerTransportKeys(identityId, provisionalKey, resolvedKey);
+}
+
+export interface MeshcoreProtocolIngressAttach {
+  identityId: IdentityId;
+  detach: () => void;
+}
+
+export function meshcoreTransportParams(
+  type: 'ble' | 'serial' | 'tcp',
+  opts: MeshTransportParamOptions,
+): TransportParams {
+  return buildMeshTransportParams('meshcoreTransportParams', type, opts);
+}
+
+export function attachMeshcoreProtocolIngress(
+  conn: Connection,
+  type: 'ble' | 'serial' | 'tcp',
+  opts: { peripheralId?: string; portSignature?: string; host?: string },
+  discovery?: DiscoveryInfo,
+): MeshcoreProtocolIngressAttach {
+  const params = meshcoreTransportParams(type, opts);
+  const identityId = resolveOrCreateIdentity(meshcoreProtocol, params, discovery);
+  const connectionType = type === 'tcp' ? 'http' : type;
+  setConnection(identityId, { status: 'connecting', connectionType });
+  setActiveIdentity(identityId);
+
+  const teardown = meshcoreProtocol.subscribe(conn, (event) => {
+    try {
+      packetRouter.dispatch(event, identityId);
+    } catch (err) {
+      console.error(
+        '[meshIdentityBridge] packetRouter.dispatch failed:',
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  });
+  const detachDriver = connectionDriver.registerExternalTransport(
+    identityId,
+    meshcoreProtocol,
+    conn,
+    type === 'tcp' ? 'tcp' : type,
+    params,
+    teardown,
+  );
+
+  return { identityId, detach: detachDriver };
+}

@@ -1,0 +1,6863 @@
+import { spawn } from 'child_process';
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  crashReporter,
+  dialog,
+  ipcMain,
+  Menu,
+  MenuItem,
+  type NativeImage,
+  nativeImage,
+  Notification,
+  powerMonitor,
+  powerSaveBlocker,
+  safeStorage,
+  screen,
+  type Session,
+  shell,
+  systemPreferences,
+  Tray,
+} from 'electron';
+import fs from 'fs';
+import path from 'path';
+import zlib from 'zlib';
+
+import type { MQTTSettings } from '../renderer/lib/types';
+import {
+  MESHCORE_REPEATER_CREDENTIAL_SETTING_PREFIX,
+  MESHCORE_ROOM_CREDENTIAL_SETTING_PREFIX,
+  MESHCORE_ROOM_LAST_POST_SETTING_PREFIX,
+  MESHCORE_ROOM_SYNC_SETTING_PREFIX,
+  MESHTASTIC_REMOTE_ADMIN_KEY_SETTING_PREFIX,
+} from '../shared/appSettingsKeyPrefixes';
+import { APP_ABOUT_TAGLINE } from '../shared/appTagline';
+import { clampQueryLimit } from '../shared/clampQueryLimit';
+import { parseConnectHostPort } from '../shared/connectHost';
+import { NODES_LAST_HEARD_SEC_SQL, normalizeLastHeardToUnixSec } from '../shared/lastHeardUnits';
+import { findLxmUrlInArgv, isForwardableMeshClientOpenUrl } from '../shared/meshClientDeepLink';
+import {
+  sanitizeMeshcoreAdvLatLonForDb,
+  sanitizeMeshcoreLastAdvertForDb,
+} from '../shared/meshcoreContactSanitize';
+import { MESHCORE_CONTACTS_BATCH_MAX } from '../shared/meshcoreContactsBatchLimit';
+import type { MeshProtocol } from '../shared/meshProtocol';
+import { MESH_PROTOCOL_SET } from '../shared/meshProtocol';
+import {
+  formatMeshtasticBluetoothPin,
+  parseMeshtasticBluetoothPin,
+} from '../shared/meshtasticBluetoothPin';
+import { effectiveMessageTimestampMs } from '../shared/messageTimestampSkew';
+import { sanitizeUnicodeReactionScalar } from '../shared/reactionEmoji';
+import type { ReticulumSidecarStatus } from '../shared/reticulum-types';
+import type { TAKServerStatus, TAKSettings } from '../shared/tak-types';
+import { MS_PER_MINUTE, MS_PER_SECOND } from '../shared/timeConstants';
+import {
+  bleCoexistenceCoordinator,
+  type BlePeripheralOwner,
+  BleScanBusyError,
+  type BleScanOwner,
+} from './ble-coexistence-coordinator';
+import { ensureCameraAccess, isAllowedCameraPrivacySettingsUrl } from './cameraAccess';
+import {
+  assertChatExportMessageSizes,
+  formatChatExportLinesWithTotalCap,
+} from './chatExportFormat';
+import { showCrashReportDialog } from './crash-report-dialog';
+import {
+  addContactToGroup,
+  closeDatabase,
+  createContactGroup,
+  deleteAllMeshcorePathHistory,
+  deleteContactGroup,
+  deleteMeshcoreContactOn,
+  deleteMeshcoreContactsByAge,
+  deleteMeshcoreContactsNeverAdvertised,
+  deleteMeshcorePathHistoryForNode,
+  deleteNodesBySource,
+  deleteNodesWithoutLongname,
+  exportDatabase,
+  getAllMeshcoreHopHistoryRows,
+  getAllMeshcorePathHistory,
+  getContactGroupMembers,
+  getContactGroups,
+  getDatabase,
+  getMeshcoreHopHistory,
+  getMeshcorePathHistory,
+  getMeshcoreTraceHistory,
+  initDatabase,
+  isDatabaseSchemaTooNewError,
+  isDatabaseSchemaUpgradeDeclinedError,
+  mergeDatabase,
+  type MeshcoreContactUpsertParams,
+  migrateRfStubNodes,
+  pruneMeshcoreContactsByCount,
+  pruneMeshcorePathHistory,
+  prunePositionHistory,
+  prunePositionHistoryPerNode,
+  recordMeshcorePathOutcome,
+  removeContactFromGroup,
+  saveMeshcoreContactsBatch,
+  saveMeshcoreHopHistory,
+  saveMeshcoreTraceHistory,
+  searchMeshcoreMessages,
+  searchMessages,
+  updateContactGroup,
+  upsertMeshcorePathHistory,
+  upsertNodePath,
+} from './database';
+import { finishDbIpcHandler, finishDbIpcReadHandler, getDbForIpc } from './db-ipc-lifecycle';
+import { formatDatabaseSchemaTooNewMessage, showFatalStartupError } from './fatal-startup-dialog';
+import { fetchLinkPreview } from './fetchLinkPreview';
+import { formatGpxTracks, GPX_EXPORT_MAX_POINTS } from './gpxExportFormat';
+import { isHarmlessSocketOptionError } from './harmlessSocketOptionError';
+import { probeHttpRttMs, probeTcpRttMs } from './host-link-rtt';
+import { isValidHttpHostname } from './httpHostValidation';
+import { registerGpsIpcHandlers } from './ipc/gps-handlers';
+import { registerReticulumDbIpcHandlers } from './ipc/reticulum-db-handlers';
+import { registerReticulumIpcHandlers, wireReticulumSidecarBridge } from './ipc/reticulum-handlers';
+import { registerReticulumIdentityIpcHandlers } from './ipc/reticulum-identity-handlers';
+import { registerRrcDbIpcHandlers } from './ipc/rrc-db-handlers';
+import { registerTakIpcHandlers } from './ipc/tak-handlers';
+import { destroyRegisteredTcpBridgeSockets, registerTcpBridgeIpcHandlers } from './ipc/tcp-bridge';
+import { createIpcRateLimiter } from './ipcRateLimit';
+import { registerLinuxWebBluetoothCancelIpcHandlers } from './linuxWebBluetoothCancelIpc';
+import {
+  formatBluetoothctlSpawnError,
+  linuxWebBluetoothDeviceSelection,
+} from './linuxWebBluetoothDeviceSelection';
+import { listMeshcoreDmPeersFromDb, listMeshtasticDmPeersFromDb } from './listDmPeers';
+import { snapshotLiveSessionMeter } from './live-session-meter';
+import {
+  clearLogFile,
+  exportLogTo,
+  flushLogBeforeQuit,
+  formatRuntimeLogTag,
+  forwardRendererConsoleMessage,
+  getLogPath,
+  getRecentLines,
+  initLogFile,
+  logDeviceConnection,
+  patchMainConsole,
+  sanitizeLogMessage,
+  setMainWindow,
+} from './log-service';
+import {
+  createLongSessionNudgeController,
+  type LongSessionNudgeController,
+  parseLongSessionRestartPayload,
+} from './longSessionNudge';
+import { MeshcoreMqttAdapter } from './meshcore-mqtt-adapter';
+import { decodePathPayload, isPathPacket } from './meshcore-path-decoder';
+import { ensureMicrophoneAccess, isAllowedMicrophonePrivacySettingsUrl } from './microphoneAccess';
+import { resolveMqttBrokerClientId } from './mqtt-broker-client-id';
+import { type CachedNode, MQTTManager, parsePsk } from './mqtt-manager';
+import { handleNobleBleToRadioWrite } from './noble-ble-ipc';
+import { type NobleBleDevice, NobleBleManager, type NobleSessionId } from './noble-ble-manager';
+import { readFileUpTo } from './readFileUpTo';
+import { createRendererHeartbeatWatchdog } from './rendererHeartbeatWatchdog';
+import { resolveRendererLoadUrl } from './resolveRendererLoadUrl';
+import {
+  readReticulumAttachmentBytes,
+  takeReticulumAttachmentAudioRateToken,
+} from './reticulum-attachment-audio';
+import {
+  readReticulumAttachmentAsDataUrl,
+  takeReticulumAttachmentImageRateToken,
+} from './reticulum-attachment-image';
+import { assertReticulumAttachmentPathJailed } from './reticulum-attachment-path';
+import { ReticulumSidecarManager } from './reticulum-sidecar-manager';
+import {
+  buildSupportBundleZip,
+  defaultSupportBundleFilename,
+  isSupportBundleMode,
+} from './support-bundle';
+import type { TakServerManager } from './tak-server-manager';
+import { updateUnreadAppBadge } from './unreadAppBadge';
+import { getCheckNowFromMenu, initUpdater } from './updater';
+import { assertIpcSender, validateIpcSender } from './validate-ipc-sender';
+import { buildWindowsAboutDocumentHtml } from './windows-about-html';
+
+// Route main-process console through log file + Log panel (must run before other code logs)
+patchMainConsole();
+
+// Capture native minidumps locally (no upload). Failure point: crashReporter unavailable in some test harnesses.
+try {
+  crashReporter.start({ uploadToServer: false });
+  console.debug('[main] crashReporter started (uploadToServer: false)');
+} catch (e: unknown) {
+  console.warn(
+    '[main] crashReporter.start failed:',
+    sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+  );
+}
+
+// Linux: SIGSEGV in Electron GPU process on some Wayland / driver stacks (electron#41980).
+// Must run before app.whenReady(). CLI flags --disable-gpu also work; env avoids wrapper scripts.
+if (process.platform === 'linux' && process.env.MESH_CLIENT_DISABLE_GPU === '1') {
+  app.disableHardwareAcceleration();
+}
+
+// ─── Single instance lock ───────────────────────────────────────────
+// Must run before app.whenReady() to take effect. Second instance will
+// focus the existing window and exit.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+  process.exit(0);
+}
+
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.meshclient.app');
+}
+
+/** Trusted Help menu / About credits URLs (static, not user-controlled). */
+const HELP_URL_WEBSITE = 'https://coloradomesh.org/';
+const HELP_URL_GITHUB = 'https://github.com/Colorado-Mesh/mesh-client';
+const HELP_URL_DISCORD = 'https://discord.com/invite/McChKR5NpS';
+
+// ─── Window state persistence ───────────────────────────────────────
+interface WindowState {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const WINDOW_STATE_PATH = path.join(app.getPath('userData'), 'window-state.json');
+const DEFAULT_WINDOW_STATE: WindowState = { x: 0, y: 0, width: 1200, height: 800 };
+
+function loadWindowState(): WindowState {
+  try {
+    if (fs.existsSync(WINDOW_STATE_PATH)) {
+      const raw = JSON.parse(fs.readFileSync(WINDOW_STATE_PATH, 'utf-8')) as unknown;
+      if (
+        raw &&
+        typeof raw === 'object' &&
+        typeof (raw as Record<string, unknown>).x === 'number' &&
+        typeof (raw as Record<string, unknown>).y === 'number' &&
+        typeof (raw as Record<string, unknown>).width === 'number' &&
+        typeof (raw as Record<string, unknown>).height === 'number'
+      ) {
+        return raw as WindowState;
+      }
+    }
+  } catch {
+    // catch-no-log-ok: non-critical; fall through to defaults
+  }
+  return DEFAULT_WINDOW_STATE;
+}
+
+function saveWindowState(state: WindowState): void {
+  try {
+    fs.writeFileSync(WINDOW_STATE_PATH, JSON.stringify(state), 'utf-8');
+  } catch {
+    // catch-no-log-ok: non-critical persistence failure
+  }
+}
+
+function isWindowStateOnScreen(state: WindowState): boolean {
+  const displays = screen.getAllDisplays();
+  return displays.some((d) => {
+    const { x, y, width, height } = d.workArea;
+    return (
+      state.x < x + width &&
+      state.x + state.width > x &&
+      state.y < y + height &&
+      state.y + state.height > y
+    );
+  });
+}
+
+const mqttManager = new MQTTManager();
+const meshcoreMqttAdapter = new MeshcoreMqttAdapter();
+const nobleBleManager = new NobleBleManager();
+bleCoexistenceCoordinator.setNobleManager(nobleBleManager);
+
+/** TAK status before the lazy-loaded `TakServerManager` module is imported. */
+const IDLE_TAK_STATUS: TAKServerStatus = { running: false, port: 8089, clientCount: 0 };
+
+const IDLE_RETICULUM_STATUS: ReticulumSidecarStatus = {
+  running: false,
+  port: 0,
+  pid: null,
+};
+
+/** MAC address format: XX:XX:XX:XX:XX:XX */
+function isMacAddress(value: string): boolean {
+  const parts = value.split(':');
+  if (parts.length !== 6) return false;
+  return parts.every((part) => /^[0-9A-Fa-f]{2}$/.test(part));
+}
+
+let takServerManager: TakServerManager | null = null;
+let takServerManagerLoadPromise: Promise<TakServerManager> | null = null;
+
+let reticulumSidecarManager: ReticulumSidecarManager | null = null;
+
+function ensureReticulumSidecarManager(): ReticulumSidecarManager {
+  if (!reticulumSidecarManager) {
+    reticulumSidecarManager = new ReticulumSidecarManager();
+    wireReticulumSidecarBridge(reticulumSidecarManager, () => mainWindow);
+  }
+  return reticulumSidecarManager;
+}
+
+function attachTakForwarders(manager: TakServerManager): void {
+  manager.on('status', (status) => {
+    if (mainWindow) mainWindow.webContents.send('tak:status', status);
+    else console.debug('[main] tak:status dropped (mainWindow not ready)');
+  });
+  manager.on('client-connected', (client) => {
+    if (mainWindow) mainWindow.webContents.send('tak:clientConnected', client);
+    else console.debug('[main] tak:clientConnected dropped (mainWindow not ready)');
+  });
+  manager.on('client-disconnected', (clientId) => {
+    if (mainWindow) mainWindow.webContents.send('tak:clientDisconnected', clientId);
+    else console.debug('[main] tak:clientDisconnected dropped (mainWindow not ready)');
+  });
+}
+
+async function ensureTakServerManager(): Promise<TakServerManager> {
+  if (takServerManager) return takServerManager;
+  takServerManagerLoadPromise ??= import('./tak-server-manager').then((mod) => {
+    const manager = new mod.TakServerManager();
+    attachTakForwarders(manager);
+    takServerManager = manager;
+    return manager;
+  });
+  return takServerManagerLoadPromise;
+}
+
+/** Min node ID for MeshCore chat stub nodes (derived from meshcoreUtils). */
+const MESHCORE_CHAT_STUB_ID_MIN = 0xa0000000 >>> 0;
+/** Max node ID for MeshCore chat stub nodes (derived from meshcoreUtils). */
+const MESHCORE_CHAT_STUB_ID_MAX = 0xafffffff >>> 0;
+/** Max bytes per BLE write IPC (DoS guard). */
+const NOBLE_BLE_TO_RADIO_MAX_BYTES = 512;
+/** Max bytes for Meshtastic Xmodem file upload (DoS guard; matches meshcore:openJsonFile). */
+const MESHTASTIC_XMODEM_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
+
+function isAnyMqttConnected(): boolean {
+  return mqttManager.getStatus() === 'connected' || meshcoreMqttAdapter.getStatus() === 'connected';
+}
+
+let mainWindow: BrowserWindow | null = null;
+const rendererHeartbeatWatchdog = createRendererHeartbeatWatchdog();
+/** Win32 About: native About panel can hard-crash; use a small HTML BrowserWindow instead (#406). */
+let windowsAboutWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
+/** Retain tray context menu so macOS menu bridge does not see a freed model (avoids console warning / crashes). */
+let trayContextMenu: Menu | null = null;
+/** Retain application menu on macOS so the menu bridge has a stable model. */
+let appMenu: Menu | null = null;
+let isConnected = false;
+let isQuitting = false;
+let shutdownDone = false;
+/** Shared quit/relaunch single-flight (app:quit, app:relaunch, OS nudge Restart). */
+let quitMainInFlight = false;
+/** Last tray unread count — restore Dock badge after long-session nudge clears. */
+let lastTrayUnreadCount = 0;
+let longSessionNudge: LongSessionNudgeController | null = null;
+
+function getLongSessionNudge(): LongSessionNudgeController {
+  longSessionNudge ??= createLongSessionNudgeController({
+    platform: process.platform,
+    isNotificationSupported: () => Notification.isSupported(),
+    createNotification: (opts) => {
+      const note = new Notification(opts);
+      return {
+        on: (event, listener) => {
+          if (event === 'action') {
+            note.on('action', (...args: unknown[]) => {
+              listener(...args);
+            });
+          } else {
+            note.on('click', (...args: unknown[]) => {
+              listener(...args);
+            });
+          }
+        },
+        show: () => {
+          note.show();
+        },
+        close: () => {
+          note.close();
+        },
+      };
+    },
+    setDockBadge: (badge) => {
+      app.dock?.setBadge(badge);
+    },
+    flashFrame: (flash) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.flashFrame(flash);
+      }
+    },
+    showAndFocusMainWindow: () => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      mainWindow.show();
+      mainWindow.focus();
+    },
+    relaunchApp: () => {
+      void quitMainProcess({ relaunch: true });
+    },
+    getLastUnreadCount: () => lastTrayUnreadCount,
+    logWarn: (message) => {
+      console.warn(sanitizeLogMessage(message));
+    },
+  });
+  return longSessionNudge;
+}
+
+/**
+ * Graceful main-process exit used by app:quit / app:relaunch / OS long-session Restart.
+ * Mirrors historical app:quit cleanup; optional relaunch schedules a new instance before exit.
+ */
+async function quitMainProcess(opts: { relaunch?: boolean } = {}): Promise<void> {
+  if (quitMainInFlight) return;
+  quitMainInFlight = true;
+  isQuitting = true;
+  isConnected = false;
+  try {
+    try {
+      getLongSessionNudge().clear();
+    } catch {
+      // catch-no-log-ok best-effort OS cue clear before exit
+    }
+    await nobleBleManager.stopAllScanning();
+    try {
+      await nobleBleManager.disconnectAll();
+    } catch (err) {
+      console.error(
+        '[main] quitMainProcess BLE disconnectAll failed:',
+        sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+      );
+    }
+
+    await shutdownAppResources();
+
+    destroyRegisteredTcpBridgeSockets('quitMainProcess TCP socket destroy (ignored)');
+    stopPowerSaveBlocker();
+
+    nobleBleManager.releaseNobleProcessHandles();
+    tray?.destroy();
+    tray = null;
+    if (opts.relaunch) {
+      app.relaunch();
+    }
+    app.exit(0);
+  } catch (err) {
+    console.error(
+      '[main] quitMainProcess failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    if (opts.relaunch) {
+      try {
+        app.relaunch();
+      } catch {
+        // catch-no-log-ok relaunch already best-effort in failure path before quit
+      }
+    }
+    app.quit();
+  }
+}
+
+/** Stop network services, flush logs, and close SQLite before process exit. */
+async function shutdownAppResources(): Promise<void> {
+  if (shutdownDone) return;
+  isQuitting = true;
+  try {
+    takServerManager?.stop();
+  } catch (err) {
+    console.debug(
+      '[main] TAK server stop during shutdown (ignored):',
+      err instanceof Error ? err.message : err,
+    ); // log-injection-ok internal cleanup
+  }
+  try {
+    await reticulumSidecarManager?.stop({ forQuit: true });
+  } catch (err) {
+    console.debug(
+      '[main] Reticulum sidecar stop during shutdown (ignored):',
+      err instanceof Error ? err.message : err,
+    ); // log-injection-ok internal cleanup
+  }
+  try {
+    mqttManager.disconnect();
+    meshcoreMqttAdapter.disconnect();
+  } catch (err) {
+    console.debug(
+      '[main] MQTT disconnect during shutdown (ignored):',
+      err instanceof Error ? err.message : err,
+    ); // log-injection-ok internal library error during cleanup
+  }
+  await flushLogBeforeQuit();
+  closeDatabase();
+  shutdownDone = true;
+}
+
+/** powerSaveBlocker ID while a device is connected; null when not active. */
+let powerSaveBlockerId: number | null = null;
+
+// ─── Windows taskbar overlay badge icon ────────────────────────────
+/** Build a minimal 16×16 RGBA PNG buffer for use as the Windows taskbar overlay icon. */
+function buildBadgePng(): Buffer {
+  const W = 16,
+    H = 16;
+  // CRC32 (used by PNG chunk format)
+  const crcTable = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    crcTable[i] = c;
+  }
+  function crc32(buf: Buffer): number {
+    let c = 0xffffffff;
+    for (const byte of buf) c = crcTable[(c ^ byte) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  }
+  function chunk(type: string, data: Buffer): Buffer {
+    const typeBytes = Buffer.from(type, 'ascii');
+    const lenBuf = Buffer.allocUnsafe(4);
+    lenBuf.writeUInt32BE(data.length, 0);
+    const crcBuf = Buffer.allocUnsafe(4);
+    crcBuf.writeUInt32BE(crc32(Buffer.concat([typeBytes, data])), 0);
+    return Buffer.concat([lenBuf, typeBytes, data, crcBuf]);
+  }
+  // IHDR: 16×16, 8-bit RGBA
+  const ihdr = Buffer.allocUnsafe(13);
+  ihdr.writeUInt32BE(W, 0);
+  ihdr.writeUInt32BE(H, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 6; // color type: RGBA
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
+  // Raw scanlines: filter byte (0) + RGBA per pixel — red with circular alpha mask
+  const rows: Buffer[] = [];
+  const cx = (W - 1) / 2,
+    cy = (H - 1) / 2,
+    r2 = (W / 2) * (W / 2);
+  for (let y = 0; y < H; y++) {
+    const row = Buffer.allocUnsafe(1 + W * 4);
+    row[0] = 0; // filter: None
+    for (let x = 0; x < W; x++) {
+      const off = 1 + x * 4;
+      const inside = (x - cx) * (x - cx) + (y - cy) * (y - cy) <= r2;
+      row[off] = 220; // R
+      row[off + 1] = 53; // G
+      row[off + 2] = 69; // B
+      row[off + 3] = inside ? 255 : 0; // A
+    }
+    rows.push(row);
+  }
+  const idat = zlib.deflateSync(Buffer.concat(rows));
+  const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  return Buffer.concat([
+    sig,
+    chunk('IHDR', ihdr),
+    chunk('IDAT', idat),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+// Pending Serial callback
+let pendingSerialCallback: ((portId: string) => void) | null = null;
+let pendingSerialSelectionTimer: ReturnType<typeof setTimeout> | null = null;
+const SERIAL_PORT_SELECTION_TIMEOUT_MS = 120_000;
+
+function clearPendingSerialSelectionTimer(): void {
+  if (pendingSerialSelectionTimer) {
+    clearTimeout(pendingSerialSelectionTimer);
+    pendingSerialSelectionTimer = null;
+  }
+}
+// Last serial port discovery set: only allow selection IPC to resolve with ids from this set
+// (empty string always allowed = cancel). Prevents arbitrary id injection from a compromised renderer.
+let lastSerialPortIds = new Set<string>();
+
+// Linux Web Bluetooth device selection session: linuxWebBluetoothDeviceSelection
+// (retain-first callback + device merge — see linuxWebBluetoothDeviceSelection.ts)
+// MeshCore may need bluetoothctl pairing + PIN before resolving requestDevice().
+const BLUETOOTH_DEVICE_SELECTION_TIMEOUT_MS = 300 * MS_PER_SECOND;
+
+// Bluetooth pairing state (Linux only — setBluetoothPairingHandler)
+// Electron's Response type requires confirmed: boolean, pin is optional
+interface BluetoothPairingResponse {
+  confirmed: boolean;
+  pin?: string;
+}
+let pendingPairingCallback: ((response: BluetoothPairingResponse) => void) | null = null;
+let pendingPairingRetryCount = 0;
+/** Which BLE stack is connecting; MeshCore must not auto-use Meshtastic default PIN on first pairing. */
+let blePairingSessionKind: MeshProtocol = 'meshtastic';
+
+// Noble BLE pairing state (Win32 — no Chromium pairing handler available)
+
+let hasInstalledOsmReferrerHook = false;
+const OSM_HTTP_REFERRER = 'https://meshtastic-client.app/';
+
+// ─── Global error handlers (prevent silent crashes in packaged app) ──
+process.on('uncaughtException', (error) => {
+  if (isHarmlessSocketOptionError(error)) {
+    console.warn(
+      '[main] Ignoring best-effort socket QoS failure:',
+      sanitizeLogMessage(error.message),
+    );
+    return;
+  }
+  console.error(
+    '[main] Uncaught exception:',
+    sanitizeLogMessage(error?.stack ?? error?.message ?? String(error)),
+  );
+  void flushLogBeforeQuit();
+  // Offer a consent-gated crash report. The dialog throttles itself (60s) and
+  // fails silently if a native dialog is unavailable (early startup / after quit).
+  showCrashReportDialog({ source: 'uncaughtException', error });
+});
+
+process.on('unhandledRejection', (reason) => {
+  if (isHarmlessSocketOptionError(reason)) {
+    console.warn(
+      '[main] Ignoring best-effort socket QoS failure:',
+      sanitizeLogMessage(reason instanceof Error ? reason.message : String(reason)),
+    );
+    return;
+  }
+  console.error(
+    '[main] Unhandled rejection:',
+    sanitizeLogMessage(reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)),
+  );
+  void flushLogBeforeQuit();
+  // Normalize to an Error so the report includes a stack trace where possible.
+  const error = reason instanceof Error ? reason : new Error(String(reason));
+  showCrashReportDialog({ source: 'unhandledRejection', error });
+});
+
+// ─── Bluetooth pairing handler (Linux only) ──────────────────────────
+// Note: Bluetooth pairing for Web Bluetooth is handled via session.setBluetoothPairingHandler()
+// which is set up after mainWindow creation. See the setup below near select-bluetooth-device.
+
+// ─── IPC validation helpers (main process boundary) ───────────────────
+const MAX_PAYLOAD_LENGTH = 1024 * 1024; // 1MB cap for message payload
+const MAX_STATUS_STRING = 1024;
+// Align with reasonable Meshtastic/DB bounds to prevent unbounded string allocation
+const MAX_NODE_STRING = 512;
+const MAX_HW_MODEL = 128;
+const MAX_GROUP_NAME = 100;
+
+function safeNonNegativeInt(value: unknown): number {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) throw new Error('Invalid non-negative integer');
+  return n >>> 0;
+}
+
+/** MeshCore chat channel index (-2 Rooms, -1 DMs, 0+ group channels). */
+function safeMeshcoreChannelIndex(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n) || n < -2 || n > 1_000_000) {
+    throw new Error('Invalid MeshCore channel index');
+  }
+  return Math.trunc(n);
+}
+
+function validateSaveMessage(message: unknown): asserts message is Record<string, unknown> & {
+  sender_id: number;
+  sender_name: string;
+  payload: string;
+  channel: number;
+  timestamp: number;
+  packetId?: number;
+  status?: string;
+  error?: string;
+  emoji?: number;
+  replyId?: number;
+  to?: number;
+  mqttStatus?: string;
+  receivedVia?: string;
+} {
+  if (!message || typeof message !== 'object')
+    throw new Error('db:saveMessage: message must be an object');
+  const m = message as Record<string, unknown>;
+  if (typeof m.payload !== 'string') throw new Error('db:saveMessage: payload must be a string');
+  if (m.payload.length > MAX_PAYLOAD_LENGTH) throw new Error('db:saveMessage: payload too long');
+  const rawSenderId = Number(m.sender_id);
+  if (!Number.isFinite(rawSenderId))
+    throw new Error('db:saveMessage: sender_id must be a finite number');
+  m.sender_id = rawSenderId >>> 0;
+  if (m.to != null) {
+    const rawTo = Number(m.to);
+    if (!Number.isFinite(rawTo)) throw new Error('db:saveMessage: to must be a finite number');
+    m.to = rawTo >>> 0;
+  }
+  if (typeof m.sender_name !== 'string')
+    throw new Error('db:saveMessage: sender_name must be a string');
+  if (m.sender_name.length > MAX_NODE_STRING)
+    throw new Error('db:saveMessage: sender_name too long');
+  if (m.status != null && typeof m.status === 'string' && m.status.length > MAX_STATUS_STRING)
+    throw new Error('db:saveMessage: status too long');
+  if (m.error != null && typeof m.error === 'string' && m.error.length > MAX_STATUS_STRING)
+    throw new Error('db:saveMessage: error too long');
+  if (
+    m.mqttStatus != null &&
+    typeof m.mqttStatus === 'string' &&
+    m.mqttStatus.length > MAX_STATUS_STRING
+  )
+    throw new Error('db:saveMessage: mqttStatus too long');
+  safeNonNegativeInt(m.channel);
+  if (typeof m.timestamp !== 'number' && typeof m.timestamp !== 'undefined')
+    throw new Error('db:saveMessage: timestamp must be a number');
+  if (m.timestamp != null && !Number.isFinite(m.timestamp))
+    throw new Error('db:saveMessage: invalid timestamp');
+  if (m.rxHops != null) {
+    const h = Number(m.rxHops);
+    if (!Number.isInteger(h) || h < 0)
+      throw new Error('db:saveMessage: rxHops must be a non-negative integer');
+  }
+}
+
+function validateSaveNode(
+  node: unknown,
+): asserts node is Record<string, unknown> & { node_id: number } {
+  if (!node || typeof node !== 'object') throw new Error('db:saveNode: node must be an object');
+  const n = node as Record<string, unknown>;
+  const rawNodeId = Number(n.node_id);
+  if (!Number.isFinite(rawNodeId)) throw new Error('db:saveNode: node_id must be a finite number');
+  n.node_id = rawNodeId >>> 0;
+  const checkStr = (key: string, max: number) => {
+    const v = n[key];
+    if (v != null && typeof v === 'string' && v.length > max)
+      throw new Error(`db:saveNode: ${key} exceeds maximum length`);
+  };
+  checkStr('long_name', MAX_NODE_STRING);
+  checkStr('short_name', 64);
+  checkStr('hw_model', MAX_HW_MODEL);
+  checkStr('source', 64);
+}
+
+function validateSaveMeshcoreMessage(msg: unknown): asserts msg is Record<string, unknown> & {
+  payload: string;
+  timestamp: number;
+} {
+  if (!msg || typeof msg !== 'object')
+    throw new Error('db:saveMeshcoreMessage: message must be an object');
+  const m = msg as Record<string, unknown>;
+  if (typeof m.payload !== 'string')
+    throw new Error('db:saveMeshcoreMessage: payload must be a string');
+  if (m.payload.length > MAX_PAYLOAD_LENGTH)
+    throw new Error('db:saveMeshcoreMessage: payload too long');
+  if (typeof m.timestamp !== 'number' || !Number.isFinite(m.timestamp))
+    throw new Error('db:saveMeshcoreMessage: timestamp must be a finite number');
+  if (
+    m.sender_name != null &&
+    typeof m.sender_name === 'string' &&
+    m.sender_name.length > MAX_NODE_STRING
+  )
+    throw new Error('db:saveMeshcoreMessage: sender_name too long');
+  if (m.status != null && typeof m.status === 'string' && m.status.length > MAX_STATUS_STRING)
+    throw new Error('db:saveMeshcoreMessage: status too long');
+  const validReceivedVia = ['rf', 'mqtt', 'both'];
+  if (m.received_via != null) {
+    if (typeof m.received_via !== 'string' || m.received_via.length > 8)
+      throw new Error('db:saveMeshcoreMessage: received_via invalid');
+    if (!validReceivedVia.includes(m.received_via))
+      throw new Error('db:saveMeshcoreMessage: received_via must be rf, mqtt, or both');
+  }
+  if (m.rx_packet_fingerprint != null) {
+    if (
+      typeof m.rx_packet_fingerprint !== 'string' ||
+      !/^[0-9A-Fa-f]{8}$/.test(m.rx_packet_fingerprint)
+    )
+      throw new Error('db:saveMeshcoreMessage: rx_packet_fingerprint must be 8 hex chars');
+  }
+  if (m.rx_hops != null) {
+    const h = Number(m.rx_hops);
+    if (!Number.isInteger(h) || h < 0)
+      throw new Error('db:saveMeshcoreMessage: rx_hops must be a non-negative integer');
+  }
+  if (m.room_server_id != null) {
+    const rs = Number(m.room_server_id);
+    if (!Number.isInteger(rs) || rs < 0)
+      throw new Error('db:saveMeshcoreMessage: room_server_id must be a non-negative integer');
+  }
+  if (m.sender_id != null) {
+    const rawSender = Number(m.sender_id);
+    if (!Number.isFinite(rawSender))
+      throw new Error('db:saveMeshcoreMessage: sender_id must be a finite number');
+    m.sender_id = rawSender >>> 0;
+  }
+  if (m.to_node != null) {
+    const rawTo = Number(m.to_node);
+    if (!Number.isFinite(rawTo))
+      throw new Error('db:saveMeshcoreMessage: to_node must be a finite number');
+    m.to_node = rawTo >>> 0;
+  }
+}
+
+function validateSaveMeshcoreContact(contact: unknown): asserts contact is Record<
+  string,
+  unknown
+> & {
+  node_id: number;
+  public_key: string;
+} {
+  if (!contact || typeof contact !== 'object')
+    throw new Error('db:saveMeshcoreContact: contact must be an object');
+  const c = contact as Record<string, unknown>;
+  const nodeId = Number(c.node_id);
+  if (!Number.isFinite(nodeId) || nodeId < 0)
+    throw new Error('db:saveMeshcoreContact: node_id must be a finite non-negative number');
+  if (typeof c.public_key !== 'string')
+    throw new Error('db:saveMeshcoreContact: public_key must be a string');
+  if (c.public_key.length > 128) throw new Error('db:saveMeshcoreContact: public_key too long');
+  if (c.adv_name != null && typeof c.adv_name === 'string' && c.adv_name.length > MAX_NODE_STRING)
+    throw new Error('db:saveMeshcoreContact: adv_name too long');
+  if (c.nickname != null && typeof c.nickname === 'string' && c.nickname.length > MAX_NODE_STRING)
+    throw new Error('db:saveMeshcoreContact: nickname too long');
+  if (c.contact_flags != null) {
+    const f = Number(c.contact_flags);
+    if (!Number.isInteger(f) || f < 0 || f > 255)
+      throw new Error('db:saveMeshcoreContact: contact_flags must be 0–255');
+  }
+  if (c.hops_away != null) {
+    const h = Number(c.hops_away);
+    if (!Number.isInteger(h) || h < 0)
+      throw new Error('db:saveMeshcoreContact: hops_away must be a non-negative integer');
+  }
+  if (c.on_radio != null) {
+    const o = Number(c.on_radio);
+    if (o !== 0 && o !== 1) throw new Error('db:saveMeshcoreContact: on_radio must be 0 or 1');
+  }
+  if (
+    c.last_synced_from_radio != null &&
+    (typeof c.last_synced_from_radio !== 'string' || c.last_synced_from_radio.length > 128)
+  ) {
+    throw new Error('db:saveMeshcoreContact: last_synced_from_radio must be a string <= 128');
+  }
+}
+
+function meshcoreContactInputToUpsertParams(
+  c: Record<string, unknown>,
+): MeshcoreContactUpsertParams {
+  const coords = sanitizeMeshcoreAdvLatLonForDb(
+    c.adv_lat != null ? Number(c.adv_lat) : null,
+    c.adv_lon != null ? Number(c.adv_lon) : null,
+  );
+  return {
+    node_id: Number(c.node_id),
+    public_key: c.public_key as string,
+    adv_name: typeof c.adv_name === 'string' ? c.adv_name : null,
+    contact_type: c.contact_type != null ? Number(c.contact_type) : 0,
+    last_advert: sanitizeMeshcoreLastAdvertForDb(
+      c.last_advert != null ? Number(c.last_advert) : null,
+    ),
+    adv_lat: coords.adv_lat,
+    adv_lon: coords.adv_lon,
+    last_snr: c.last_snr != null ? Number(c.last_snr) : null,
+    last_rssi: c.last_rssi != null ? Number(c.last_rssi) : null,
+    nickname: typeof c.nickname === 'string' ? c.nickname : null,
+    contact_flags: c.contact_flags != null ? Number(c.contact_flags) : 0,
+    hops_away: c.hops_away != null ? Number(c.hops_away) : null,
+    on_radio: c.on_radio != null ? Number(c.on_radio) : null,
+    last_synced_from_radio:
+      typeof c.last_synced_from_radio === 'string' ? c.last_synced_from_radio : null,
+  };
+}
+
+function validateTakSettings(settings: unknown): asserts settings is TAKSettings {
+  if (!settings || typeof settings !== 'object')
+    throw new Error('tak:start: settings must be an object');
+  const s = settings as Record<string, unknown>;
+  if (typeof s.enabled !== 'boolean') throw new Error('tak:start: enabled must be boolean');
+  const port = Number(s.port);
+  if (!Number.isInteger(port) || port < 1024 || port > 65535)
+    throw new Error('tak:start: port must be an integer 1024–65535');
+  if (typeof s.serverName !== 'string' || s.serverName.length === 0 || s.serverName.length > 256)
+    throw new Error('tak:start: serverName must be a non-empty string ≤ 256 chars');
+  if (typeof s.requireClientCert !== 'boolean')
+    throw new Error('tak:start: requireClientCert must be boolean');
+  if (typeof s.autoStart !== 'boolean') throw new Error('tak:start: autoStart must be boolean');
+}
+
+function validateMqttSettings(settings: unknown): void {
+  if (!settings || typeof settings !== 'object')
+    throw new Error('mqtt:connect: settings must be an object');
+  const s = settings as Record<string, unknown>;
+  if (typeof s.server !== 'string' || !s.server.trim())
+    throw new Error('mqtt:connect: server must be a non-empty string');
+  if (!isValidHttpHostname(s.server.trim()))
+    throw new Error('mqtt:connect: server hostname invalid');
+  const port = Number(s.port);
+  if (!Number.isInteger(port) || port < 1 || port > 65535)
+    throw new Error('mqtt:connect: port must be 1–65535');
+  if (s.topicPrefix != null && typeof s.topicPrefix !== 'string')
+    throw new Error('mqtt:connect: topicPrefix must be a string');
+  if (s.username != null && typeof s.username !== 'string')
+    throw new Error('mqtt:connect: username must be a string');
+  if (s.password != null && typeof s.password !== 'string')
+    throw new Error('mqtt:connect: password must be a string');
+  if (s.tlsInsecure != null && typeof s.tlsInsecure !== 'boolean')
+    throw new Error('mqtt:connect: tlsInsecure must be a boolean');
+  if (s.tlsEnabled != null && typeof s.tlsEnabled !== 'boolean')
+    throw new Error('mqtt:connect: tlsEnabled must be a boolean');
+  if (s.useWebSocket != null && typeof s.useWebSocket !== 'boolean')
+    throw new Error('mqtt:connect: useWebSocket must be a boolean');
+  if (s.meshcorePacketLoggerEnabled != null && typeof s.meshcorePacketLoggerEnabled !== 'boolean') {
+    throw new Error('mqtt:connect: meshcorePacketLoggerEnabled must be a boolean');
+  }
+  if (s.mqttTransportProtocol != null) {
+    if (s.mqttTransportProtocol !== 'meshtastic' && s.mqttTransportProtocol !== 'meshcore') {
+      throw new Error('mqtt:connect: mqttTransportProtocol must be meshtastic or meshcore');
+    }
+  }
+}
+
+const MAX_MESHCORE_MQTT_TEXT = 16000;
+
+function validateMqttPublishMeshcoreArgs(args: unknown): void {
+  if (!args || typeof args !== 'object')
+    throw new Error('mqtt:publishMeshcore: args must be an object');
+  const a = args as Record<string, unknown>;
+  if (typeof a.text !== 'string') throw new Error('mqtt:publishMeshcore: text must be a string');
+  if (a.text.length > MAX_MESHCORE_MQTT_TEXT)
+    throw new Error('mqtt:publishMeshcore: text too long');
+  const ch = Number(a.channelIdx);
+  if (!Number.isFinite(ch) || ch < 0 || ch > 255)
+    throw new Error('mqtt:publishMeshcore: channelIdx must be 0–255');
+  if (a.senderName != null && (typeof a.senderName !== 'string' || a.senderName.length > 200)) {
+    throw new Error('mqtt:publishMeshcore: senderName invalid');
+  }
+  if (a.senderNodeId != null) {
+    const id = Number(a.senderNodeId);
+    if (!Number.isFinite(id) || id < 0)
+      throw new Error('mqtt:publishMeshcore: senderNodeId invalid');
+  }
+  if (a.timestamp != null && !Number.isFinite(Number(a.timestamp))) {
+    throw new Error('mqtt:publishMeshcore: timestamp invalid');
+  }
+}
+
+const MAX_MESHCORE_PACKET_LOG_ORIGIN = 200;
+const MAX_MESHCORE_PACKET_LOG_RAW_HEX = 2048;
+
+function validateMqttPublishMeshcorePacketLogArgs(args: unknown): void {
+  if (!args || typeof args !== 'object')
+    throw new Error('mqtt:publishMeshcorePacketLog: args must be an object');
+  const a = args as Record<string, unknown>;
+  if (typeof a.origin !== 'string' || a.origin.length === 0)
+    throw new Error('mqtt:publishMeshcorePacketLog: origin must be a non-empty string');
+  if (a.origin.length > MAX_MESHCORE_PACKET_LOG_ORIGIN)
+    throw new Error('mqtt:publishMeshcorePacketLog: origin too long');
+  const snr = Number(a.snr);
+  const rssi = Number(a.rssi);
+  if (!Number.isFinite(snr)) throw new Error('mqtt:publishMeshcorePacketLog: snr must be finite');
+  if (!Number.isFinite(rssi)) throw new Error('mqtt:publishMeshcorePacketLog: rssi must be finite');
+  if (a.rawHex != null) {
+    if (typeof a.rawHex !== 'string')
+      throw new Error('mqtt:publishMeshcorePacketLog: rawHex invalid');
+    if (a.rawHex.length > MAX_MESHCORE_PACKET_LOG_RAW_HEX)
+      throw new Error('mqtt:publishMeshcorePacketLog: rawHex too long');
+    if (!/^[0-9a-fA-F]*$/.test(a.rawHex))
+      throw new Error('mqtt:publishMeshcorePacketLog: rawHex must be hex');
+  }
+}
+
+function validateOptionalPskBase64(value: unknown, channel: string): void {
+  if (value == null) return;
+  if (typeof value !== 'string') throw new Error(`${channel}: pskBase64 must be a string`);
+  if (!parsePsk(value)) throw new Error(`${channel}: pskBase64 must decode to 16 or 32 bytes`);
+}
+
+function validateMqttUpdateChannelKeysArgs(args: unknown): void {
+  if (!args || typeof args !== 'object')
+    throw new Error('mqtt:updateChannelKeys: args must be an object');
+  const a = args as Record<string, unknown>;
+  if (!Array.isArray(a.entries))
+    throw new Error('mqtt:updateChannelKeys: entries must be an array');
+  if (a.entries.length > 32) throw new Error('mqtt:updateChannelKeys: too many entries');
+  for (const entry of a.entries) {
+    if (!entry || typeof entry !== 'object')
+      throw new Error('mqtt:updateChannelKeys: each entry must be an object');
+    const e = entry as Record<string, unknown>;
+    if (typeof e.name !== 'string' || !e.name.trim())
+      throw new Error('mqtt:updateChannelKeys: name must be a non-empty string');
+    if (e.name.length > 64) throw new Error('mqtt:updateChannelKeys: name too long');
+    validateOptionalPskBase64(e.pskBase64, 'mqtt:updateChannelKeys');
+    if (e.index !== undefined) {
+      if (typeof e.index !== 'number' || !Number.isInteger(e.index) || e.index < 0 || e.index > 7) {
+        throw new Error('mqtt:updateChannelKeys: index must be an integer 0–7');
+      }
+    }
+  }
+}
+
+function validateMqttUpdateTopicPrefixArgs(args: unknown): void {
+  if (!args || typeof args !== 'object')
+    throw new Error('mqtt:updateTopicPrefix: args must be an object');
+  const a = args as Record<string, unknown>;
+  if (typeof a.topicPrefix !== 'string')
+    throw new Error('mqtt:updateTopicPrefix: topicPrefix must be a string');
+  if (a.topicPrefix.length > 128) throw new Error('mqtt:updateTopicPrefix: topicPrefix too long');
+}
+
+function validateMqttPublishArgs(args: unknown): void {
+  if (!args || typeof args !== 'object') throw new Error('mqtt:publish: args must be an object');
+  const a = args as Record<string, unknown>;
+  if (typeof a.text !== 'string') throw new Error('mqtt:publish: text must be a string');
+  if (a.text.length > MAX_PAYLOAD_LENGTH) throw new Error('mqtt:publish: text too long');
+  const from = Number(a.from);
+  if (!Number.isFinite(from) || from <= 0)
+    throw new Error('mqtt:publish: from must be a positive node id');
+  const channel = Number(a.channel);
+  if (!Number.isFinite(channel) || channel < 0)
+    throw new Error('mqtt:publish: channel must be a non-negative integer');
+  if (a.destination != null) {
+    const dest = Number(a.destination);
+    if (!Number.isFinite(dest) || dest < 0)
+      throw new Error('mqtt:publish: destination must be a non-negative integer');
+  }
+  if (a.channelName != null && typeof a.channelName !== 'string')
+    throw new Error('mqtt:publish: channelName must be a string');
+  if (a.emoji != null) {
+    const emoji = Number(a.emoji);
+    if (!Number.isFinite(emoji) || emoji < 0)
+      throw new Error('mqtt:publish: emoji must be a non-negative integer');
+  }
+  if (a.replyId != null) {
+    const replyId = Number(a.replyId);
+    if (!Number.isFinite(replyId) || replyId < 0)
+      throw new Error('mqtt:publish: replyId must be a non-negative integer');
+  }
+  if (typeof a.publishJsonMirror !== 'boolean') {
+    throw new Error('mqtt:publish: publishJsonMirror must be a boolean');
+  }
+  validateOptionalPskBase64(a.pskBase64, 'mqtt:publish');
+}
+
+function validateMqttPublishProxyArgs(args: unknown): void {
+  if (!args || typeof args !== 'object') {
+    throw new Error('mqtt:publishProxy: args must be an object');
+  }
+  const a = args as Record<string, unknown>;
+  if (typeof a.topic !== 'string' || !a.topic.trim()) {
+    throw new Error('mqtt:publishProxy: topic must be a non-empty string');
+  }
+  if (a.topic.length > 512) {
+    throw new Error('mqtt:publishProxy: topic too long');
+  }
+  const hasData = a.data != null;
+  const hasText = typeof a.text === 'string';
+  if (!hasData && !hasText) {
+    throw new Error('mqtt:publishProxy: data or text required');
+  }
+  if (hasText && (a.text as string).length > 512 * 1024) {
+    throw new Error('mqtt:publishProxy: text too long');
+  }
+  if (hasData && !(a.data instanceof Uint8Array) && !ArrayBuffer.isView(a.data)) {
+    throw new Error('mqtt:publishProxy: data must be Uint8Array');
+  }
+  if (hasData) {
+    const dataBytes = a.data instanceof Uint8Array ? a.data : new Uint8Array(a.data as ArrayBuffer);
+    if (dataBytes.byteLength > 512 * 1024) {
+      throw new Error('mqtt:publishProxy: data too long');
+    }
+  }
+  if (a.retained != null && typeof a.retained !== 'boolean') {
+    throw new Error('mqtt:publishProxy: retained must be a boolean');
+  }
+}
+
+function validateMqttPublishWaypointArgs(args: unknown): void {
+  if (!args || typeof args !== 'object') {
+    throw new Error('mqtt:publishWaypoint: args must be an object');
+  }
+  const a = args as Record<string, unknown>;
+  if (typeof a.publishJsonMirror !== 'boolean') {
+    throw new Error('mqtt:publishWaypoint: publishJsonMirror must be a boolean');
+  }
+  const from = Number(a.from);
+  if (!Number.isFinite(from) || from <= 0) {
+    throw new Error('mqtt:publishWaypoint: from must be a positive node id');
+  }
+  const to = Number(a.to);
+  if (!Number.isFinite(to) || to < 0) {
+    throw new Error('mqtt:publishWaypoint: to must be a non-negative integer');
+  }
+  const channel = Number(a.channel);
+  if (!Number.isFinite(channel) || channel < 0) {
+    throw new Error('mqtt:publishWaypoint: channel must be a non-negative integer');
+  }
+  if (typeof a.channelName !== 'string' || !a.channelName.trim()) {
+    throw new Error('mqtt:publishWaypoint: channelName must be a non-empty string');
+  }
+  const wp = a.waypoint;
+  if (!wp || typeof wp !== 'object') {
+    throw new Error('mqtt:publishWaypoint: waypoint must be an object');
+  }
+  const w = wp as Record<string, unknown>;
+  const id = Number(w.id);
+  if (!Number.isFinite(id)) throw new Error('mqtt:publishWaypoint: waypoint.id invalid');
+  const latitudeI = Number(w.latitudeI);
+  const longitudeI = Number(w.longitudeI);
+  if (!Number.isFinite(latitudeI) || !Number.isFinite(longitudeI)) {
+    throw new Error('mqtt:publishWaypoint: waypoint latitudeI/longitudeI invalid');
+  }
+  if (typeof w.name !== 'string')
+    throw new Error('mqtt:publishWaypoint: waypoint.name must be a string');
+  if (w.name.length > 256) throw new Error('mqtt:publishWaypoint: waypoint.name too long');
+  if (w.description != null && typeof w.description !== 'string') {
+    throw new Error('mqtt:publishWaypoint: waypoint.description invalid');
+  }
+  if (typeof w.description === 'string' && w.description.length > 1024) {
+    throw new Error('mqtt:publishWaypoint: waypoint.description too long');
+  }
+  if (w.icon != null) {
+    const icon = Number(w.icon);
+    if (!Number.isFinite(icon) || icon < 0)
+      throw new Error('mqtt:publishWaypoint: waypoint.icon invalid');
+  }
+  if (w.lockedTo != null) {
+    const lt = Number(w.lockedTo);
+    if (!Number.isFinite(lt) || lt < 0)
+      throw new Error('mqtt:publishWaypoint: waypoint.lockedTo invalid');
+  }
+  if (w.expire != null) {
+    const ex = Number(w.expire);
+    if (!Number.isFinite(ex) || ex < 0)
+      throw new Error('mqtt:publishWaypoint: waypoint.expire invalid');
+  }
+  validateOptionalPskBase64(a.pskBase64, 'mqtt:publishWaypoint');
+}
+
+// Enable Web Serial; on Linux also enable Web Bluetooth at the process level
+// (per-webContents enableBlinkFeatures is not enough — Chromium gates WebBluetooth behind this switch).
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('enable-blink-features', 'Serial,WebBluetooth');
+  app.commandLine.appendSwitch('enable-features', 'WebBluetooth');
+  app.commandLine.appendSwitch('enable-experimental-web-platform-features');
+} else {
+  app.commandLine.appendSwitch('enable-blink-features', 'Serial');
+}
+
+// ─── Icon Path Helper ──────────────────────────────────────────────
+/**
+ * Resolves the correct icon file based on the platform and package status.
+ */
+function getAppIconPath() {
+  if (process.platform === 'win32') {
+    return app.isPackaged
+      ? path.join(process.resourcesPath, 'colorado-mesh.ico')
+      : path.join(__dirname, '../../resources/icons/win/colorado-mesh.ico');
+  }
+  if (process.platform === 'darwin') {
+    return app.isPackaged
+      ? path.join(process.resourcesPath, 'icon.icns')
+      : path.join(__dirname, '../../resources/icons/mac/icon.icns');
+  }
+  // Linux
+  return app.isPackaged
+    ? path.join(process.resourcesPath, '256x256.png')
+    : path.join(__dirname, '../../resources/icons/linux/256x256.png');
+}
+
+function buildTrayIcon(hasUnread: boolean): Electron.NativeImage {
+  let base = nativeImage.createEmpty();
+  try {
+    if (process.platform === 'darwin') {
+      const trayIconPath = app.isPackaged
+        ? path.join(process.resourcesPath, 'macos-menubar-icon-Template.png')
+        : path.join(
+            __dirname,
+            '../../resources/icons/mac/macos-menubar-icon-Template/macos-menubar-icon-Template.png',
+          );
+      base = nativeImage.createFromPath(trayIconPath);
+      base.setTemplateImage(true);
+    } else {
+      const trayIconPath = app.isPackaged
+        ? path.join(process.resourcesPath, '256x256.png')
+        : path.join(__dirname, '../../resources/icons/linux/256x256.png');
+      base = nativeImage.createFromPath(trayIconPath).resize({ width: 22, height: 22 });
+    }
+  } catch (e) {
+    console.error(
+      '[main] tray icon load failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+  }
+
+  if (!hasUnread) return base;
+
+  try {
+    // Overlay the red dot for unread messages
+    // Use getSize() after resize so the dot scales correctly with retina/2x template images.
+    // toBitmap() on macOS template images may return a buffer that is not exactly
+    // width*height*4 bytes, so we allocate the expected size and copy what we have.
+    const { width: actualW, height: actualH } = base.getSize();
+    const expectedSize = actualW * actualH * 4;
+    const rawBitmap = base.toBitmap();
+    const bitmap = Buffer.alloc(expectedSize, 0);
+    rawBitmap.copy(bitmap, 0, 0, Math.min(rawBitmap.length, expectedSize));
+
+    const dotR = Math.max(2, Math.round(actualW / 8));
+    const dotCx = actualW - dotR - 1;
+    const dotCy = dotR + 1;
+
+    for (let py = 0; py < actualH; py++) {
+      for (let px = 0; px < actualW; px++) {
+        const dx = px - dotCx;
+        const dy = py - dotCy;
+        if (dx * dx + dy * dy <= dotR * dotR) {
+          const idx = (py * actualW + px) * 4;
+          bitmap[idx] = 239; // R
+          bitmap[idx + 1] = 68; // G
+          bitmap[idx + 2] = 68; // B
+          bitmap[idx + 3] = 255; // A
+        }
+      }
+    }
+
+    return nativeImage.createFromBitmap(bitmap, { width: actualW, height: actualH });
+  } catch (e) {
+    console.error(
+      '[main] tray unread icon overlay failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+    return base;
+  }
+}
+
+function setupTray(window: BrowserWindow) {
+  try {
+    tray = new Tray(buildTrayIcon(false));
+    tray.setToolTip('Mesh-Client');
+    tray.on('click', () => {
+      window.show();
+      window.focus();
+    });
+    trayContextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Show Mesh-Client',
+        click: () => {
+          window.show();
+          window.focus();
+        },
+      },
+      { type: 'separator' },
+      {
+        label: `About ${app.name}`,
+        click: () => {
+          showAboutDialog();
+        },
+      },
+      { type: 'separator' },
+      {
+        label: 'Quit',
+        click: () => {
+          isQuitting = true;
+          mqttManager.disconnect();
+          meshcoreMqttAdapter.disconnect();
+          isConnected = false;
+          mainWindow?.destroy();
+          app.quit();
+        },
+      },
+    ]);
+    tray.setContextMenu(trayContextMenu);
+  } catch (e) {
+    console.error(
+      '[main] tray setup failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+    tray = null;
+    trayContextMenu = null;
+  }
+}
+
+function applyAboutPanelOptions(): void {
+  // GitHub #406: On Windows 11, Electron’s native About path (`setAboutPanelOptions` / `showAboutPanel`)
+  // can fault the process with no JS exception (upstream Electron + Win32 shell bug). We skip
+  // registering the panel on win32 because `showAboutDialog` uses the HTML fallback instead.
+  if (process.platform === 'win32') {
+    return;
+  }
+  const version = app.getVersion();
+  const credits = [
+    `Version ${version}`,
+    '',
+    APP_ABOUT_TAGLINE,
+    '',
+    'Reticulum support uses a bundled AGPL-3.0-or-later sidecar (mesh-client-reticulum). See docs/reticulum.md and docs/license.md.',
+    '',
+    'Reticulum stack inspiration: Ratspeak (https://github.com/ratspeak/Ratspeak)',
+    '',
+    'License: GPL-3.0-or-later (application code). AGPL-3.0-or-later applies to the bundled Reticulum sidecar binary.',
+    'Author: Colorado Mesh',
+    '',
+    `Website:  ${HELP_URL_WEBSITE}`,
+    `GitHub:   ${HELP_URL_GITHUB}`,
+    `Discord:  ${HELP_URL_DISCORD}`,
+  ].join('\n');
+
+  const iconCandidate = path.join(process.resourcesPath, '256x256.png');
+  const iconPath = fs.existsSync(iconCandidate) ? iconCandidate : undefined;
+
+  try {
+    if (process.platform === 'linux') {
+      app.setAboutPanelOptions({
+        applicationName: app.name,
+        applicationVersion: version,
+        copyright: 'Copyright © Colorado Mesh',
+        credits,
+        authors: ['Colorado Mesh'],
+        website: HELP_URL_WEBSITE,
+        ...(iconPath ? { iconPath } : {}),
+      });
+    } else {
+      app.setAboutPanelOptions({
+        applicationName: app.name,
+        applicationVersion: version,
+        copyright: 'Copyright © Colorado Mesh',
+        credits,
+        ...(iconPath ? { iconPath } : {}),
+      });
+    }
+  } catch (e: unknown) {
+    console.warn(
+      '[main] setAboutPanelOptions failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+  }
+}
+
+function openHelpExternalLink(rawUrl: string): void {
+  const target = parseHttpOrHttpsUrl(rawUrl);
+  if (!target) {
+    console.warn('[main] help link: invalid url', sanitizeLogMessage(rawUrl.slice(0, 200)));
+    return;
+  }
+  console.debug(`[main] help link: openExternal url=${sanitizeLogMessage(target.toString())}`);
+  void shell.openExternal(target.toString() /* parseHttpOrHttpsUrl */).catch((e: unknown) => {
+    console.error(
+      '[main] help link: openExternal failed',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+  });
+}
+
+function buildHelpMenuExternalLinkItems(): (
+  { type: 'separator' } | { label: string; click: () => void }
+)[] {
+  return [
+    { type: 'separator' as const },
+    {
+      label: 'Colorado Mesh Website',
+      click: () => {
+        openHelpExternalLink(HELP_URL_WEBSITE);
+      },
+    },
+    {
+      label: 'GitHub Repository',
+      click: () => {
+        openHelpExternalLink(HELP_URL_GITHUB);
+      },
+    },
+    {
+      label: 'Discord',
+      click: () => {
+        openHelpExternalLink(HELP_URL_DISCORD);
+      },
+    },
+  ];
+}
+
+/**
+ * GitHub #406: Windows 11 can hard-exit the app inside Electron’s native About APIs (`showAboutPanel`
+ * and related Win32 shell UI) before any try/catch — upstream Electron/Win32 bug. This replaces
+ * that path with a sandboxed data-URL window; https navigations are routed to `openHelpExternalLink`.
+ */
+function showWindowsAboutFallbackWindow(): void {
+  try {
+    if (windowsAboutWindow && !windowsAboutWindow.isDestroyed()) {
+      windowsAboutWindow.show();
+      windowsAboutWindow.focus();
+      return;
+    }
+
+    const parent = BrowserWindow.getFocusedWindow() ?? mainWindow ?? undefined;
+    const html = buildWindowsAboutDocumentHtml(app.name, app.getVersion());
+    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+
+    console.debug(
+      '[main] about: opening Windows HTML fallback',
+      sanitizeLogMessage(`parent=${Boolean(parent)}`),
+    );
+
+    const win = new BrowserWindow({
+      width: 440,
+      height: 480,
+      resizable: true,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      parent: parent ?? undefined,
+      modal: Boolean(parent),
+      title: `About ${app.name}`,
+      autoHideMenuBar: true,
+      show: false,
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+        webviewTag: false,
+      },
+    });
+
+    windowsAboutWindow = win;
+
+    win.webContents.on('will-navigate', (event, url) => {
+      if (url.startsWith('data:') || url === 'about:blank') return;
+      const t = parseHttpOrHttpsUrl(url);
+      if (t) {
+        event.preventDefault();
+        openHelpExternalLink(t.toString());
+        return;
+      }
+      event.preventDefault();
+    });
+
+    win.webContents.setWindowOpenHandler(({ url }) => {
+      // deny unexpected child windows (check:electron-security scans this block)
+      const t = parseHttpOrHttpsUrl(url);
+      if (t) {
+        openHelpExternalLink(t.toString());
+      }
+      return { action: 'deny' };
+    });
+
+    win.once('ready-to-show', () => {
+      if (!win.isDestroyed()) win.show();
+    });
+
+    win.on('closed', () => {
+      if (windowsAboutWindow === win) windowsAboutWindow = null;
+    });
+
+    void win.loadURL(dataUrl).catch((e: unknown) => {
+      console.error(
+        '[main] about: Windows HTML load failed',
+        sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+      );
+      if (!win.isDestroyed()) win.destroy();
+      if (windowsAboutWindow === win) windowsAboutWindow = null;
+    });
+  } catch (e: unknown) {
+    console.error(
+      '[main] about: Windows HTML fallback failed',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+    try {
+      dialog.showErrorBox(
+        `About ${app.name}`,
+        `${app.name}\nVersion ${app.getVersion()}\n\nCould not open the About window.`,
+      );
+    } catch {
+      // catch-no-log-ok dialog unavailable; error already logged above
+    }
+  }
+}
+
+function showAboutDialog(): void {
+  const appName = app.name;
+  const version = app.getVersion();
+
+  try {
+    console.debug(`[main] about dialog: opening app=${sanitizeLogMessage(appName)}`);
+    // GitHub #406: same Electron/Win32 native About bug as above — do not call `showAboutPanel` here.
+    if (process.platform === 'win32') {
+      showWindowsAboutFallbackWindow();
+      return;
+    }
+    app.showAboutPanel();
+  } catch (e) {
+    console.error(
+      '[main] about dialog failed',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+
+    try {
+      dialog.showErrorBox(`About ${appName}`, `${appName}\nVersion ${version}`);
+    } catch (fallbackError) {
+      console.error(
+        '[main] about dialog fallback failed',
+        sanitizeLogMessage(
+          fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+        ),
+      );
+    }
+  }
+}
+
+/**
+ * Application menu: macOS uses the app-name menu (About, updates, Hide, Quit), editMenu,
+ * and Help (project links). Windows/Linux get File (Quit), Edit, and Help (About, updates, links)
+ * so About is reachable from the menu bar and standard edit shortcuts work.
+ */
+function setupAppMenu() {
+  applyAboutPanelOptions();
+
+  if (process.platform === 'darwin') {
+    appMenu = Menu.buildFromTemplate([
+      {
+        label: app.name,
+        submenu: [
+          {
+            label: `About ${app.name}`,
+            click: () => {
+              showAboutDialog();
+            },
+          },
+          { type: 'separator' as const },
+          {
+            label: 'Check for Updates\u2026',
+            click: () => getCheckNowFromMenu()?.(),
+          },
+          { type: 'separator' as const },
+          {
+            label: 'Hide',
+            accelerator: 'Command+H',
+            click: () => {
+              app.hide();
+            },
+          },
+          { type: 'separator' as const },
+          {
+            label: 'Quit',
+            accelerator: 'Command+Q',
+            click: () => {
+              isQuitting = true;
+              mqttManager.disconnect();
+              meshcoreMqttAdapter.disconnect();
+              app.quit();
+            },
+          },
+        ],
+      },
+      { role: 'editMenu' as const },
+      {
+        label: 'Help',
+        submenu: buildHelpMenuExternalLinkItems().filter(
+          (item): item is { label: string; click: () => void } => !('type' in item),
+        ),
+      },
+    ]);
+  } else {
+    appMenu = Menu.buildFromTemplate([
+      {
+        label: 'File',
+        submenu: [
+          {
+            label: 'Quit',
+            accelerator: 'Ctrl+Q',
+            click: () => {
+              isQuitting = true;
+              mqttManager.disconnect();
+              meshcoreMqttAdapter.disconnect();
+              app.quit();
+            },
+          },
+        ],
+      },
+      { role: 'editMenu' as const },
+      {
+        label: 'Help',
+        submenu: [
+          {
+            label: `About ${app.name}`,
+            click: () => {
+              showAboutDialog();
+            },
+          },
+          { type: 'separator' as const },
+          {
+            label: 'Check for Updates\u2026',
+            click: () => getCheckNowFromMenu()?.(),
+          },
+          ...buildHelpMenuExternalLinkItems(),
+        ],
+      },
+    ]);
+  }
+  Menu.setApplicationMenu(appMenu);
+}
+
+/**
+ * Win/Linux: Hunspell only runs after languages are set (see Electron spellchecker tutorial).
+ * macOS: native checker; still ensure the session flag is on. Re-run after load in case
+ * dictionary lists populate asynchronously.
+ */
+function configureRendererSpellcheck(sess: Session): void {
+  try {
+    sess.setSpellCheckerEnabled(true);
+
+    const available = sess.availableSpellCheckerLanguages;
+    if (!Array.isArray(available) || available.length === 0) {
+      console.warn('[main] spellcheck: no dictionaries listed yet (retry after load)');
+      return;
+    }
+    // Normalize codes for matching (both sides to hyphens) but pass original
+    // codes to setSpellCheckerLanguages.
+    const normAvailable = available.map((c) => c.replace(/_/g, '-'));
+    const loc = app.getLocale().replace(/_/g, '-');
+    const picked: string[] = [];
+
+    const exactIdx = normAvailable.indexOf(loc);
+    if (exactIdx !== -1) {
+      picked.push(available[exactIdx]);
+    }
+    const region = loc.split(/[-_]/)[0];
+    if (region) {
+      for (let i = 0; i < available.length; i++) {
+        const normCode = normAvailable[i];
+        if (
+          (normCode === region || normCode.startsWith(`${region}-`)) &&
+          !picked.includes(available[i])
+        ) {
+          picked.push(available[i]);
+        }
+      }
+    }
+    if (picked.length === 0) {
+      const enIdx = normAvailable.indexOf('en-US');
+      if (enIdx !== -1) {
+        picked.push(available[enIdx]);
+      }
+    }
+    if (picked.length === 0) {
+      picked.push(available[0]);
+    }
+
+    sess.setSpellCheckerLanguages(picked.slice(0, 3));
+  } catch (e) {
+    console.warn(
+      '[main] configureRendererSpellcheck',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+  }
+}
+
+function retryRendererSpellcheck(sess: Session): void {
+  configureRendererSpellcheck(sess);
+  for (const delayMs of [250, 1000, 5000]) {
+    setTimeout(() => {
+      configureRendererSpellcheck(sess);
+    }, delayMs);
+  }
+}
+
+interface SpellcheckReplacePayload {
+  suggestion: string;
+  misspelledWord: string;
+  selectionStartOffset?: number;
+}
+
+/** Chromium replaceMisspelling does not update React-controlled fields; renderer syncs via IPC. */
+function applySpellcheckSuggestion(
+  win: BrowserWindow,
+  suggestion: string,
+  misspelledWord: string,
+  selectionStartOffset?: number,
+): void {
+  const wc = win.webContents;
+  wc.replaceMisspelling(suggestion);
+  if (!misspelledWord) return;
+  const payload: SpellcheckReplacePayload = {
+    suggestion,
+    misspelledWord,
+    ...(selectionStartOffset != null ? { selectionStartOffset } : {}),
+  };
+  wc.send('spellcheck:replace', payload);
+}
+
+function parseHttpOrHttpsUrl(raw: string): URL | null {
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return parsed;
+  } catch {
+    // catch-no-log-ok — invalid URL strings should be ignored safely
+  }
+  return null;
+}
+
+function openExternalHttpOrHttpsIfExternal(currentUrl: string, targetUrl: string): boolean {
+  const target = parseHttpOrHttpsUrl(targetUrl);
+  if (!target) return false;
+
+  // Keep same-origin navigations inside Electron; only external websites are routed to the system browser.
+  const current = parseHttpOrHttpsUrl(currentUrl);
+  if (current?.origin === target.origin) return false;
+
+  shell.openExternal(target.toString()).catch((e: unknown) => {
+    console.error(
+      '[main] external link open failed',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+  });
+  return true;
+}
+
+function createWindow() {
+  const savedState = loadWindowState();
+  const bounds = isWindowStateOnScreen(savedState) ? savedState : DEFAULT_WINDOW_STATE;
+  const center = bounds === DEFAULT_WINDOW_STATE;
+
+  const win = new BrowserWindow({
+    width: bounds.width,
+    height: bounds.height,
+    x: center ? undefined : bounds.x,
+    y: center ? undefined : bounds.y,
+    minWidth: 900,
+    minHeight: 600,
+    title: 'Mesh Client',
+    // Use the helper to select .ico, .icns, or .png automatically
+    icon: getAppIconPath(),
+    webPreferences: {
+      preload: path.join(__dirname, '../preload/index.js'),
+      webviewTag: false,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      // Inline misspelling marks and context-menu suggestions (all platforms). macOS app menu
+      // stays minimal (no role-based Edit menu) to reduce WeakPtr menu-bridge noise.
+      spellcheck: true,
+      // Security note: experimentalFeatures enables the Web Bluetooth and Web Serial APIs
+      // required for direct device communication. These APIs are permission-gated via
+      // setPermissionCheckHandler/setPermissionRequestHandler (serial, geolocation, media).
+      experimentalFeatures: true,
+    },
+  });
+  mainWindow = win;
+
+  let windowStateSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  const scheduleSaveWindowState = () => {
+    if (windowStateSaveTimer) clearTimeout(windowStateSaveTimer);
+    windowStateSaveTimer = setTimeout(() => {
+      if (!win.isMinimized() && !win.isMaximized()) {
+        saveWindowState(win.getBounds());
+      }
+    }, 300);
+  };
+  win.on('move', scheduleSaveWindowState);
+  win.on('resize', scheduleSaveWindowState);
+
+  // External link handling: route http/https websites to the system browser.
+  // Failure point: malicious URL schemes attempting protocol-handler abuse.
+  // Guardrail: only pass validated http:/https: URLs to `shell.openExternal()`.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (typeof url !== 'string') return { action: 'deny' };
+    const currentUrl = win.webContents.getURL();
+    const openedExternal = openExternalHttpOrHttpsIfExternal(currentUrl, url);
+    return openedExternal ? { action: 'deny' } : { action: 'allow' };
+  });
+
+  win.webContents.on('will-navigate', (event, url) => {
+    const currentUrl = win.webContents.getURL();
+    const openedExternal = openExternalHttpOrHttpsIfExternal(currentUrl, url);
+    if (openedExternal) event.preventDefault();
+  });
+
+  configureRendererSpellcheck(win.webContents.session);
+  win.webContents.once('did-finish-load', () => {
+    retryRendererSpellcheck(win.webContents.session);
+    flushPendingOpenUrl();
+  });
+
+  // Electron does not show any context menu by default — we must call menu.popup().
+  // Spell suggestions only exist on this event (see spellchecker tutorial); always show
+  // cut/copy/paste for text fields so right-click works even with no misspelling.
+  win.webContents.on('context-menu', (event, params) => {
+    const isTextField =
+      params.isEditable ||
+      params.formControlType === 'text-area' ||
+      params.formControlType === 'input-text' ||
+      params.formControlType === 'input-search';
+    if (!isTextField) return;
+
+    event.preventDefault();
+    const ef = params.editFlags;
+    const suggestions = params.dictionarySuggestions ?? [];
+    const misspelledWord = params.misspelledWord ?? '';
+
+    const menu = new Menu();
+    if (suggestions.length > 0) {
+      for (const suggestion of suggestions) {
+        menu.append(
+          new MenuItem({
+            label: suggestion,
+            click: () => {
+              applySpellcheckSuggestion(
+                win,
+                suggestion,
+                misspelledWord,
+                params.selectionStartOffset,
+              );
+            },
+          }),
+        );
+      }
+      menu.append(new MenuItem({ type: 'separator' }));
+    }
+    if (misspelledWord) {
+      menu.append(
+        new MenuItem({
+          label: 'Add to dictionary',
+          click: () => {
+            void win.webContents.session.addWordToSpellCheckerDictionary(misspelledWord);
+          },
+        }),
+      );
+      menu.append(new MenuItem({ type: 'separator' }));
+    }
+    menu.append(new MenuItem({ role: 'cut', enabled: ef.canCut }));
+    menu.append(new MenuItem({ role: 'copy', enabled: ef.canCopy }));
+    menu.append(new MenuItem({ role: 'paste', enabled: ef.canPaste }));
+    menu.append(new MenuItem({ type: 'separator' }));
+    menu.append(new MenuItem({ role: 'selectAll', enabled: ef.canSelectAll }));
+
+    menu.popup({
+      window: win,
+      x: params.x,
+      y: params.y,
+      ...(params.frame ? { frame: params.frame } : {}),
+    });
+  });
+
+  // ─── Web Serial: Port Selection ────────────────────────────────────
+  // Electron requires this handler for navigator.serial.requestPort()
+  // to work. Without it, the Web Serial API throws.
+  mainWindow.webContents.session.on(
+    'select-serial-port',
+    (event, portList, _webContents, callback) => {
+      event.preventDefault();
+
+      // Warn if a previous callback is being replaced (renderer re-triggered before resolving)
+      if (pendingSerialCallback) {
+        console.warn('[IPC] select-serial-port: replacing stale pendingSerialCallback');
+      }
+
+      // Store callback so we can resolve it when the user picks a port
+      pendingSerialCallback = callback;
+      clearPendingSerialSelectionTimer();
+
+      console.debug(`[IPC] select-serial-port: discovered ${portList.length} port(s)`);
+
+      // Auto-cancel if the picker is left open too long (flashing can take longer than 60s)
+      pendingSerialSelectionTimer = setTimeout(() => {
+        if (pendingSerialCallback === callback) {
+          console.warn(
+            '[IPC] Serial port selection callback stale after timeout — auto-cancelling',
+          );
+          pendingSerialCallback('');
+          pendingSerialCallback = null;
+          lastSerialPortIds.clear();
+        }
+        pendingSerialSelectionTimer = null;
+      }, SERIAL_PORT_SELECTION_TIMEOUT_MS);
+
+      lastSerialPortIds = new Set(portList.map((p) => p.portId));
+      // Send port list to renderer for selection
+      mainWindow?.webContents.send(
+        'serial-ports-discovered',
+        portList.map((p) => ({
+          portId: p.portId,
+          displayName: p.displayName || p.portName || `Port ${p.portId}`,
+          portName: p.portName || '',
+          vendorId: p.vendorId,
+          productId: p.productId,
+        })),
+      );
+    },
+  );
+
+  // ─── Web Bluetooth: Device Selection (Linux) ───────────────────────
+  // On Linux, Electron does not show a native Bluetooth chooser. Instead it fires
+  // select-bluetooth-device on the webContents. Without a handler the request is
+  // immediately cancelled ("User cancelled the requestDevice() chooser.").
+  // Chromium multi-fires this event with a new callback each time — retain the first
+  // via linuxWebBluetoothDeviceSelection and merge device lists (do not overwrite).
+  mainWindow.webContents.on('select-bluetooth-device', (event, deviceList, callback) => {
+    event.preventDefault();
+
+    const { isNewRequest, devices, generation } =
+      linuxWebBluetoothDeviceSelection.beginOrMergeDiscovery(deviceList, callback);
+
+    if (isNewRequest) {
+      // 60s was too short and left the session empty so selectBluetoothDevice was ignored.
+      linuxWebBluetoothDeviceSelection.armStaleTimeout(
+        BLUETOOTH_DEVICE_SELECTION_TIMEOUT_MS,
+        () => {
+          console.warn(
+            `[IPC] Bluetooth device selection stale after ${BLUETOOTH_DEVICE_SELECTION_TIMEOUT_MS / MS_PER_SECOND}s — auto-cancelling`,
+          );
+        },
+      );
+    }
+
+    console.debug(`[IPC] select-bluetooth-device: ${deviceList.length} device(s) found`);
+
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      console.warn('[IPC] select-bluetooth-device: mainWindow unavailable — cancelling selection');
+      linuxWebBluetoothDeviceSelection.cancelSelection();
+      return;
+    }
+    mainWindow.webContents.send('bluetooth-devices-discovered', devices, generation);
+  });
+
+  // ─── Web Bluetooth: Pairing Handler (Linux) ───────────────────────────
+  // Required for devices that require PIN/confirmation during pairing.
+  // This is called by Chromium when a device requires pairing during GATT connect.
+  mainWindow.webContents.session.setBluetoothPairingHandler((details, callback) => {
+    console.debug('[main] bluetooth-pairing-request:', details.pairingKind, details.deviceId);
+
+    if (details.pairingKind === 'providePin') {
+      // Meshtastic devices use fixed PIN 123456. MeshCore uses a random PIN shown on the device.
+      // Only auto-submit 123456 for Meshtastic; MeshCore must prompt on first PIN request.
+      if (blePairingSessionKind === 'meshtastic' && pendingPairingRetryCount === 0) {
+        console.debug(
+          '[main] bluetooth-pairing: auto-providing default PIN (Meshtastic attempt 1)',
+        );
+        pendingPairingRetryCount++;
+        callback({ pin: '123456', confirmed: true });
+        return;
+      }
+
+      console.debug(
+        '[main] bluetooth-pairing: prompting user for PIN',
+        blePairingSessionKind === 'meshcore'
+          ? '(MeshCore or Meshtastic retry)'
+          : '(Meshtastic retry)',
+      );
+
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        console.warn('[main] bluetooth-pairing: mainWindow unavailable — aborting pairing');
+        callback({ confirmed: false });
+        return;
+      }
+
+      const pairingTimeoutId = setTimeout(() => {
+        if (pendingPairingCallback) {
+          console.warn('[main] bluetooth-pairing: PIN prompt timed out after 120s — aborting');
+          pendingPairingCallback({ pin: '', confirmed: false });
+          pendingPairingCallback = null;
+          pendingPairingRetryCount = 0;
+        }
+      }, 120_000);
+
+      pendingPairingCallback = (response: BluetoothPairingResponse) => {
+        clearTimeout(pairingTimeoutId);
+        callback(response);
+        pendingPairingCallback = null;
+      };
+      mainWindow.webContents.send('bluetooth-pin-required', {
+        deviceId: details.deviceId,
+      });
+    } else if (details.pairingKind === 'confirmPin') {
+      // Device shows a PIN, user must confirm it matches
+      console.debug('[main] bluetooth-pairing: confirming PIN match');
+      callback({ confirmed: true });
+    } else if (details.pairingKind === 'confirm') {
+      // Just confirm without PIN
+      console.debug('[main] bluetooth-pairing: confirming pairing');
+      callback({ confirmed: true });
+    } else {
+      // Unknown pairing kind - log and confirm
+      console.debug('[main] bluetooth-pairing: unknown kind, confirming', details.pairingKind);
+      callback({ confirmed: true });
+    }
+  });
+
+  // Allow serial, geolocation, and media (camera / future live audio). Deny web-app-installation etc.
+  mainWindow.webContents.session.setPermissionCheckHandler((_webContents, permission) => {
+    const granted =
+      permission === 'serial' || permission === 'geolocation' || permission === 'media';
+    console.debug(
+      `[permissions] checkHandler: ${sanitizeLogMessage(permission)} → ${granted ? 'granted' : 'denied'}`,
+    );
+    return granted;
+  });
+
+  // Grant geolocation (browser GPS fallback) and media (camera QR; microphone reserved for future LXST)
+  mainWindow.webContents.session.setPermissionRequestHandler(
+    (_webContents, permission, callback) => {
+      const grant = permission === 'geolocation' || permission === 'media';
+      console.debug(
+        `[permissions] requestHandler: ${sanitizeLogMessage(permission)} → ${grant ? 'granted' : 'denied'}`,
+      );
+      callback(grant);
+    },
+  );
+
+  // ─── Device permission (serial / HID / USB only) ───────────────────
+  // setDevicePermissionHandler covers navigator.serial / hid / usb — not Bluetooth.
+  // Bluetooth uses select-bluetooth-device above. Without a handler, Chromium can
+  // show a blank overlay for device permission prompts.
+  mainWindow.webContents.session.setDevicePermissionHandler((details) => {
+    return details.deviceType === 'serial';
+  });
+
+  if (!hasInstalledOsmReferrerHook) {
+    hasInstalledOsmReferrerHook = true;
+    mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
+      { urls: ['https://*.tile.openstreetmap.org/*'] },
+      (details, callback) => {
+        const nextHeaders = details.requestHeaders;
+        nextHeaders.Referer = OSM_HTTP_REFERRER;
+        callback({ requestHeaders: nextHeaders });
+      },
+    );
+  }
+
+  // ─── Renderer crash / load failure detection ──────────────────────
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    console.error(
+      '[main] Renderer process gone:',
+      sanitizeLogMessage(details.reason),
+      details.exitCode,
+    );
+    try {
+      dialog.showErrorBox(
+        'Mesh-Client — Renderer Stopped',
+        `The renderer process ended unexpectedly (${details.reason}, exit ${details.exitCode ?? 'n/a'}).\n\nRestart the application. If this keeps happening, export the log from the app (if still usable) or check the log file in your userData folder.`,
+      );
+    } catch {
+      // catch-no-log-ok dialog unavailable; renderer-process-gone already logged
+    }
+  });
+
+  mainWindow.webContents.on('unresponsive', () => {
+    rendererHeartbeatWatchdog.markRendererUnresponsive();
+  });
+  mainWindow.webContents.on('responsive', () => {
+    rendererHeartbeatWatchdog.markRendererResponsive();
+  });
+
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDesc, validatedURL) => {
+    console.error(
+      '[main] Failed to load:',
+      errorCode,
+      sanitizeLogMessage(errorDesc),
+      sanitizeLogMessage(validatedURL),
+    );
+    // ERR_ABORTED (-3) often means navigation was cancelled; avoid noisy dialog
+    if (errorCode === -3) return;
+    try {
+      const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
+      const hint = isDev
+        ? 'Ensure the dev server is running (pnpm run dev) and the URL is reachable.'
+        : 'The app bundle may be missing or damaged. Try reinstalling or run from source with pnpm run build && pnpm start.';
+      dialog.showErrorBox(
+        'Mesh-Client — Failed to Load',
+        `Could not load the application UI (code ${errorCode}: ${errorDesc}).\n\n${hint}\n\nURL: ${validatedURL}`,
+      );
+    } catch {
+      // catch-no-log-ok dialog unavailable; did-fail-load already logged above
+    }
+  });
+
+  setMainWindow(mainWindow);
+  mainWindow.webContents.on('console-message', (details) => {
+    forwardRendererConsoleMessage(details);
+  });
+
+  // Load the app
+  void (async () => {
+    const distIndexPath = path.join(__dirname, '../../dist/renderer/index.html');
+    const resolved = await resolveRendererLoadUrl({
+      packaged: app.isPackaged,
+      devServerUrl: process.env.VITE_DEV_SERVER_URL,
+      distIndexPath,
+    });
+    console.debug('[Startup] renderer load source:', resolved.source);
+    console.debug('[Startup] renderer URL:', sanitizeLogMessage(resolved.url));
+    console.debug('[Startup] app.isPackaged:', app.isPackaged);
+    console.debug('[Startup] userData:', sanitizeLogMessage(app.getPath('userData')));
+    if (resolved.openDevTools) {
+      mainWindow.webContents.openDevTools();
+    }
+    if (resolved.source === 'dist') {
+      await mainWindow.loadURL(resolved.url, {
+        httpReferrer: OSM_HTTP_REFERRER,
+      });
+      return;
+    }
+    await mainWindow.loadURL(resolved.url);
+  })().catch((e: unknown) => {
+    console.error(
+      '[main] Failed to load renderer:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+  });
+
+  mainWindow.on('closed', () => {
+    setMainWindow(null);
+    mainWindow = null;
+  });
+  win.on('close', () => {
+    if (windowStateSaveTimer) clearTimeout(windowStateSaveTimer);
+    if (!win.isMinimized() && !win.isMaximized()) {
+      saveWindowState(win.getBounds());
+    }
+  });
+
+  // Handle window close event (prevent-close when device connected)
+  win.on('close', (event) => {
+    if (!isQuitting && (isConnected || isAnyMqttConnected())) {
+      event.preventDefault();
+      if (process.platform === 'darwin') {
+        console.debug('[main] window close event: hiding (macOS, device connected)');
+        win.hide();
+      } else {
+        console.debug('[main] window close event: minimizing (device connected)');
+        win.minimize();
+      }
+    }
+  });
+
+  win.on('focus', () => {
+    getLongSessionNudge().onMainWindowFocus();
+    refreshUnreadAppBadge();
+  });
+
+  setupTray(mainWindow);
+
+  initUpdater(mainWindow);
+}
+
+// ─── Tray unread badge ──────────────────────────────────────────────
+let _cachedBadgeIcon: ReturnType<typeof nativeImage.createFromBuffer> | null = null;
+let _cachedTrayIconUnread: Electron.NativeImage | null = null;
+let _cachedTrayIconRead: Electron.NativeImage | null = null;
+let _lastTrayUnreadVariant: boolean | null = null;
+function refreshUnreadAppBadge(): void {
+  try {
+    updateUnreadAppBadge(lastTrayUnreadCount, {
+      platform: process.platform,
+      initializeNotifications: () => {
+        // OS-specific: Electron 44 initializes UNUserNotificationCenter and requests
+        // badge authorization here. setBadge alone does not request permission.
+        // https://github.com/electron/electron/blob/v44.1.1/shell/browser/notifications/mac/notification_presenter_mac.mm
+        Notification.isSupported();
+      },
+      suppressDockBadge: () => getLongSessionNudge().shouldSuppressUnreadDockBadge(),
+      setDockBadge: (text) => {
+        app.dock?.setBadge(text);
+      },
+      setLauncherBadge: (count) => {
+        app.setBadgeCount(count);
+      },
+      setTaskbarBadge: (count) => {
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+        if (count > 0) {
+          _cachedBadgeIcon ??= nativeImage.createFromBuffer(buildBadgePng());
+          mainWindow.setOverlayIcon(_cachedBadgeIcon, `${count} unread messages`);
+        } else {
+          mainWindow.setOverlayIcon(null, '');
+        }
+      },
+    });
+  } catch (e) {
+    console.error(
+      '[main] app unread badge update failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+  }
+}
+
+ipcMain.on('set-tray-unread', (event, count: unknown) => {
+  if (!validateIpcSender(event)) {
+    console.warn('[IPC] set-tray-unread: unauthorized sender');
+    return;
+  }
+  try {
+    const n = Math.max(0, Math.min(Math.floor(Number(count)) || 0, 99999));
+    lastTrayUnreadCount = n;
+    refreshUnreadAppBadge();
+    const hasUnread = n > 0;
+    if (_lastTrayUnreadVariant !== hasUnread) {
+      _lastTrayUnreadVariant = hasUnread;
+      let img: NativeImage;
+      if (hasUnread) {
+        _cachedTrayIconUnread ??= buildTrayIcon(true);
+        img = _cachedTrayIconUnread;
+      } else {
+        _cachedTrayIconRead ??= buildTrayIcon(false);
+        img = _cachedTrayIconRead;
+      }
+      tray?.setImage(img);
+    }
+    tray?.setToolTip(hasUnread ? `Mesh-Client (${n} unread)` : 'Mesh-Client');
+  } catch (e) {
+    console.error(
+      '[main] tray unread update failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+  }
+});
+
+function startPowerSaveBlocker(): void {
+  if (powerSaveBlockerId !== null) return;
+  try {
+    powerSaveBlockerId = powerSaveBlocker.start('prevent-app-suspension');
+    console.debug('[main] powerSaveBlocker started, id =', powerSaveBlockerId);
+  } catch (e) {
+    console.error(
+      '[main] powerSaveBlocker start failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+    powerSaveBlockerId = null;
+  }
+}
+
+function stopPowerSaveBlocker(): void {
+  if (powerSaveBlockerId === null) return;
+  try {
+    if (powerSaveBlocker.isStarted(powerSaveBlockerId)) {
+      powerSaveBlocker.stop(powerSaveBlockerId);
+      console.debug('[main] powerSaveBlocker stopped, id =', powerSaveBlockerId);
+    }
+  } catch (e) {
+    console.error(
+      '[main] powerSaveBlocker stop failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+  } finally {
+    powerSaveBlockerId = null;
+  }
+}
+
+// ─── IPC: Serial port selected by user ──────────────────────────────
+ipcMain.on('serial-port-selected', (event, portId: unknown) => {
+  if (!validateIpcSender(event)) {
+    console.warn('[IPC] serial-port-selected: unauthorized sender');
+    return;
+  }
+  if (!pendingSerialCallback) return;
+  const id = typeof portId === 'string' ? portId : '';
+  if (id !== '' && !lastSerialPortIds.has(id)) {
+    console.warn('[IPC] serial-port-selected: ignoring unknown portId');
+    return;
+  }
+  console.debug('[IPC] serial-port-selected:', sanitizeLogMessage(id || '(cancelled)'));
+  clearPendingSerialSelectionTimer();
+  pendingSerialCallback(id);
+  pendingSerialCallback = null;
+  lastSerialPortIds.clear();
+});
+
+// ─── IPC: Cancel Serial selection ───────────────────────────────────
+ipcMain.on('serial-port-cancelled', (event) => {
+  if (!validateIpcSender(event)) {
+    console.warn('[IPC] serial-port-cancelled: unauthorized sender');
+    return;
+  }
+  clearPendingSerialSelectionTimer();
+  if (pendingSerialCallback) {
+    pendingSerialCallback(''); // Empty string cancels the request
+    pendingSerialCallback = null;
+  }
+  lastSerialPortIds.clear();
+});
+
+// ─── IPC: Bluetooth device selected by user (Linux Web Bluetooth) ────
+ipcMain.on('bluetooth-device-selected', (event, deviceId: unknown) => {
+  if (!validateIpcSender(event)) {
+    console.warn('[IPC] bluetooth-device-selected: unauthorized sender');
+    return;
+  }
+  if (!linuxWebBluetoothDeviceSelection.hasPendingSelection()) {
+    console.warn(
+      '[IPC] bluetooth-device-selected: no pending selection (ignored — may have timed out or already resolved)',
+    );
+    return;
+  }
+  const id = typeof deviceId === 'string' ? deviceId : '';
+  if (id !== '' && !linuxWebBluetoothDeviceSelection.knownDeviceIds().has(id)) {
+    console.warn('[IPC] bluetooth-device-selected: ignoring unknown deviceId');
+    return;
+  }
+  console.debug('[IPC] bluetooth-device-selected:', sanitizeLogMessage(id || '(cancelled)'));
+  if (!linuxWebBluetoothDeviceSelection.resolveSelection(id)) {
+    console.warn('[IPC] bluetooth-device-selected: resolve ignored');
+  }
+});
+
+// ─── IPC: Cancel Bluetooth selection ────────────────────────────────
+registerLinuxWebBluetoothCancelIpcHandlers();
+
+// ─── IPC: Unpair Bluetooth device (Linux only — bluetoothctl remove) ──
+// Not used on routine disconnect; only ConnectionPanel manual re-pair flow.
+ipcMain.handle('bluetooth-unpair', async (event, macAddress: unknown) => {
+  assertIpcSender(event, 'bluetooth-unpair');
+  if (typeof macAddress !== 'string') {
+    throw new Error('bluetooth-unpair: macAddress must be a string');
+  }
+  // Validate MAC format (XX:XX:XX:XX:XX:XX)
+  if (!isMacAddress(macAddress)) {
+    throw new Error('bluetooth-unpair: invalid MAC address format');
+  }
+
+  console.debug('[IPC] bluetooth-unpair:', macAddress);
+
+  return new Promise<void>((resolve, reject) => {
+    const proc = spawn('bluetoothctl', ['remove', macAddress]);
+    let settled = false;
+    let stderr = '';
+    let stdout = '';
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        proc.kill();
+        reject(new Error('bluetooth-unpair: timed out after 5 s'));
+      }
+    }, 5_000);
+
+    proc.stdout.on('data', (data: Buffer) => {
+      stdout += data.toString();
+    });
+    proc.stderr.on('data', (data: Buffer) => {
+      stderr += data.toString();
+    });
+    proc.on('close', (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (code !== 0) {
+        console.error('[IPC] bluetooth-unpair failed:', sanitizeLogMessage(stderr));
+        reject(new Error(sanitizeLogMessage(stderr) || 'Failed to unpair device'));
+        return;
+      }
+      console.debug('[IPC] bluetooth-unpair success:', sanitizeLogMessage(stdout.trim()));
+      resolve();
+    });
+    proc.on('error', (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      const msg = formatBluetoothctlSpawnError(err);
+      console.error('[IPC] bluetooth-unpair error:', sanitizeLogMessage(msg));
+      reject(new Error(msg));
+    });
+  });
+});
+
+// ─── IPC: Start BLE scan (Linux) ─────────────────────────────────────
+const BLUETOOTH_START_SCAN_TIMEOUT_MS = 15_000;
+const BLUETOOTH_STOP_SCAN_TIMEOUT_MS = 5_000;
+const BLUETOOTH_GET_INFO_TIMEOUT_MS = 5_000;
+
+ipcMain.handle('bluetooth-start-scan', async (event) => {
+  assertIpcSender(event, 'bluetooth-start-scan');
+  console.debug('[IPC] bluetooth-start-scan');
+  return new Promise<void>((resolve, reject) => {
+    const proc = spawn('bluetoothctl', ['scan', 'on']);
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        proc.kill();
+        reject(new Error('bluetooth-start-scan: timed out after 15 s'));
+      }
+    }, BLUETOOTH_START_SCAN_TIMEOUT_MS);
+
+    proc.on('close', (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (code === 0) {
+        console.debug('[IPC] bluetooth-start-scan success');
+        resolve();
+      } else {
+        console.warn('[IPC] bluetooth-start-scan failed with code', code);
+        reject(new Error(`scan on failed with code ${code}`));
+      }
+    });
+    proc.on('error', (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      const msg = formatBluetoothctlSpawnError(err);
+      console.warn('[IPC] bluetooth-start-scan error:', sanitizeLogMessage(msg));
+      reject(new Error(msg));
+    });
+  });
+});
+
+// ─── IPC: Stop BLE scan (Linux) ──────────────────────────────────────
+ipcMain.handle('bluetooth-stop-scan', async (event) => {
+  assertIpcSender(event, 'bluetooth-stop-scan');
+  console.debug('[IPC] bluetooth-stop-scan');
+  return new Promise<void>((resolve) => {
+    let settled = false;
+    const finish = (): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(() => {
+      console.warn('[IPC] bluetooth-stop-scan: timed out after 5 s, killing process');
+      proc.kill();
+      finish(); // Don't reject - stop scan failure is not critical
+    }, BLUETOOTH_STOP_SCAN_TIMEOUT_MS);
+    const proc = spawn('bluetoothctl', ['scan', 'off']);
+    proc.on('close', () => {
+      console.debug('[IPC] bluetooth-stop-scan done');
+      finish();
+    });
+    proc.on('error', (err) => {
+      console.warn(
+        '[IPC] bluetooth-stop-scan error:',
+        sanitizeLogMessage(err?.message ?? String(err)),
+      );
+      finish(); // Don't reject - stop scan failure is not critical
+    });
+  });
+});
+
+// ─── IPC: Pair Bluetooth device (Linux) ───────────────────────────────
+ipcMain.handle('bluetooth-pair', async (event, macAddress: unknown, pin: unknown) => {
+  assertIpcSender(event, 'bluetooth-pair');
+  if (typeof macAddress !== 'string') {
+    throw new Error('bluetooth-pair: macAddress must be a string');
+  }
+  if (!isMacAddress(macAddress)) {
+    throw new Error('bluetooth-pair: invalid MAC address format');
+  }
+  let normalizedPin: string | undefined;
+  if (typeof pin === 'number' && Number.isInteger(pin) && pin >= 0 && pin <= 999999) {
+    normalizedPin = formatMeshtasticBluetoothPin(pin);
+  } else if (typeof pin === 'string' && pin.trim().length > 0) {
+    const parsed = parseMeshtasticBluetoothPin(pin.trim());
+    if (parsed === null) throw new Error('bluetooth-pair: pin must be exactly 6 digits');
+    normalizedPin = formatMeshtasticBluetoothPin(parsed);
+  } else if (typeof pin !== 'undefined' && pin !== null) {
+    throw new Error('bluetooth-pair: pin must be a 6-digit number');
+  }
+  console.debug('[IPC] bluetooth-pair:', macAddress);
+  return new Promise<void>((resolve, reject) => {
+    const pairTimeoutMs = 45000;
+    let settled = false;
+    const trustDeviceBestEffort = (): Promise<void> =>
+      new Promise((resolveTrust) => {
+        const trustProc = spawn('bluetoothctl', ['trust', macAddress]);
+        trustProc.stdout.on('data', () => {
+          // drain
+        });
+        trustProc.stderr.on('data', () => {
+          // drain
+        });
+        trustProc.on('close', () => {
+          resolveTrust();
+        });
+        trustProc.on('error', () => {
+          resolveTrust();
+        });
+      });
+
+    const proc = spawn('bluetoothctl', [], { stdio: ['pipe', 'pipe', 'pipe'] });
+    let stderr = '';
+    let stdout = '';
+    let pinSubmitted = false;
+    let confirmSubmitted = false;
+    let pairRequested = false;
+    let agentReady = false;
+    let targetDiscovered = false;
+    const finishReject = (err: Error): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(pairTimeout);
+      reject(err);
+    };
+    const finishResolve = (): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(pairTimeout);
+      resolve();
+    };
+    const pairTimeout = setTimeout(() => {
+      try {
+        proc.stdin.write('scan off\n');
+      } catch {
+        // catch-no-log-ok -- best-effort cleanup during timeout
+      }
+      try {
+        proc.stdin.write('quit\n');
+      } catch {
+        // catch-no-log-ok -- best-effort cleanup during timeout
+      }
+      try {
+        proc.kill('SIGTERM');
+      } catch {
+        // catch-no-log-ok -- best-effort cleanup during timeout
+      }
+      finishReject(new Error('Bluetooth pairing timed out; please retry'));
+    }, pairTimeoutMs);
+    const requestPair = (): void => {
+      if (pairRequested) return;
+      if (!agentReady || !targetDiscovered) return;
+      pairRequested = true;
+      proc.stdin.write(`pair ${macAddress}\n`);
+    };
+    const processPairingChunk = (chunk: string): void => {
+      const chunkLower = chunk.toLowerCase();
+      if (
+        normalizedPin &&
+        !pinSubmitted &&
+        (chunkLower.includes('pin code') ||
+          chunkLower.includes('request pin') ||
+          chunkLower.includes('enter passkey') ||
+          chunkLower.includes('passkey (number in 0-999999)') ||
+          chunkLower.includes('enter pass key'))
+      ) {
+        pinSubmitted = true;
+        proc.stdin.write(`${normalizedPin}\n`);
+      }
+      if (
+        !confirmSubmitted &&
+        (chunkLower.includes('confirm passkey') ||
+          chunkLower.includes('[agent] confirm') ||
+          chunkLower.includes('authorize service'))
+      ) {
+        confirmSubmitted = true;
+        proc.stdin.write('yes\n');
+      }
+      if (chunkLower.includes('pairing successful') || chunkLower.includes('failed to pair')) {
+        proc.stdin.write('scan off\n');
+        proc.stdin.write('quit\n');
+      }
+    };
+    proc.stdin.write('agent KeyboardOnly\n');
+    proc.stdin.write('default-agent\n');
+    proc.stdin.write('scan on\n');
+    proc.stdout.on('data', (data: Buffer) => {
+      const chunk = data.toString();
+      stdout += chunk;
+      const chunkLower = chunk.toLowerCase();
+      if (
+        !agentReady &&
+        (chunkLower.includes('default agent request successful') ||
+          chunkLower.includes('agent is already registered'))
+      ) {
+        agentReady = true;
+        requestPair();
+      }
+      if (!pairRequested) {
+        const discoveredTarget =
+          chunk.includes(macAddress) &&
+          (chunk.includes('Device') || chunk.includes('[NEW]') || chunk.includes('[CHG]'));
+        if (discoveredTarget) {
+          targetDiscovered = true;
+          requestPair();
+        }
+      }
+      if (chunk.includes('not available')) {
+        if (!pairRequested) {
+          requestPair();
+          return;
+        }
+        finishReject(new Error('Pairing failed: device not available. Re-scan and retry.'));
+        return;
+      }
+      processPairingChunk(chunk);
+    });
+    proc.stderr.on('data', (data: Buffer) => {
+      const chunk = data.toString();
+      stderr += chunk;
+      processPairingChunk(chunk);
+    });
+    proc.on('close', (code) => {
+      if (settled) return;
+      const pairingFailedByOutput =
+        stdout.includes('Failed to pair') ||
+        stdout.includes('AuthenticationCanceled') ||
+        stderr.includes('Failed to pair') ||
+        stderr.includes('AuthenticationCanceled');
+      const pairingSucceededByOutput = stdout.includes('Pairing successful');
+      if (!pairingFailedByOutput && (pairingSucceededByOutput || code === 0)) {
+        void trustDeviceBestEffort()
+          .then(() => {
+            if (settled) return;
+            console.debug('[IPC] bluetooth-pair success');
+            finishResolve();
+          })
+          .catch((e: unknown) => {
+            // trustDeviceBestEffort is best-effort and should not reject; finish pairing anyway.
+            console.debug(
+              '[IPC] bluetooth-pair trust settle:',
+              sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+            );
+            if (settled) return;
+            finishResolve();
+          });
+      } else {
+        console.warn(
+          '[IPC] bluetooth-pair failed:',
+          sanitizeLogMessage(stderr.trim() || `code ${code}`),
+        );
+        finishReject(
+          new Error(
+            sanitizeLogMessage(
+              stderr.trim() ||
+                (pairingFailedByOutput ? 'pair failed (bluetoothctl reported failure)' : '') ||
+                `pair failed with code ${code}`,
+            ),
+          ),
+        );
+      }
+    });
+    proc.on('error', (err) => {
+      if (settled) return;
+      console.warn(
+        '[IPC] bluetooth-pair error:',
+        sanitizeLogMessage(formatBluetoothctlSpawnError(err)),
+      );
+      finishReject(new Error(formatBluetoothctlSpawnError(err)));
+    });
+  });
+});
+
+// ─── IPC: Connect Bluetooth device (Linux) ────────────────────────────
+ipcMain.handle('bluetooth-connect', async (event, macAddress: unknown) => {
+  assertIpcSender(event, 'bluetooth-connect');
+  if (typeof macAddress !== 'string') {
+    throw new Error('bluetooth-connect: macAddress must be a string');
+  }
+  if (!isMacAddress(macAddress)) {
+    throw new Error('bluetooth-connect: invalid MAC address format');
+  }
+  console.debug('[IPC] bluetooth-connect:', macAddress);
+  return new Promise<void>((resolve, reject) => {
+    const proc = spawn('bluetoothctl', ['connect', macAddress]);
+    let stderr = '';
+    proc.stdout.on('data', () => {
+      // drain
+    });
+    proc.stderr.on('data', (data: Buffer) => {
+      stderr += data.toString();
+    });
+    proc.on('close', (code) => {
+      if (code === 0) {
+        console.debug('[IPC] bluetooth-connect success');
+        resolve();
+      } else {
+        console.warn(
+          '[IPC] bluetooth-connect failed:',
+          sanitizeLogMessage(stderr.trim() || `code ${code}`),
+        );
+        reject(new Error(sanitizeLogMessage(stderr.trim() || `connect failed with code ${code}`)));
+      }
+    });
+    proc.on('error', (err) => {
+      const msg = formatBluetoothctlSpawnError(err);
+      console.warn('[IPC] bluetooth-connect error:', sanitizeLogMessage(msg));
+      reject(new Error(msg));
+    });
+  });
+});
+
+// ─── IPC: Untrust Bluetooth device (Linux) ────────────────────────────
+// This is best-effort - failures are ignored
+ipcMain.handle('bluetooth-untrust', async (event, macAddress: unknown) => {
+  assertIpcSender(event, 'bluetooth-untrust');
+  if (typeof macAddress !== 'string') {
+    throw new Error('bluetooth-untrust: macAddress must be a string');
+  }
+  if (!isMacAddress(macAddress)) {
+    throw new Error('bluetooth-untrust: invalid MAC address format');
+  }
+  console.debug('[IPC] bluetooth-untrust:', macAddress);
+  return new Promise<void>((resolve) => {
+    const proc = spawn('bluetoothctl', ['untrust', macAddress]);
+    let stderr = '';
+    proc.stderr.on('data', (data: Buffer) => {
+      stderr += data.toString();
+    });
+    proc.on('close', (code) => {
+      // Ignore failure - untrust is best-effort, but log for debugging
+      if (code !== 0) {
+        console.debug(
+          '[IPC] bluetooth-untrust exited with code',
+          code,
+          'stderr:',
+          stderr.trim() || '(none)',
+        );
+      } else {
+        console.debug('[IPC] bluetooth-untrust done');
+      }
+      resolve();
+    });
+    proc.on('error', (err) => {
+      // Ignore error - untrust is best-effort, but log for debugging
+      console.debug(
+        '[IPC] bluetooth-untrust error:',
+        sanitizeLogMessage(err?.message ?? String(err)),
+      );
+      resolve();
+    });
+  });
+});
+
+ipcMain.handle('bluetooth-get-info', async (event, macAddress: unknown) => {
+  assertIpcSender(event, 'bluetooth-get-info');
+  if (typeof macAddress !== 'string') {
+    throw new Error('bluetooth-get-info: macAddress must be a string');
+  }
+  if (!isMacAddress(macAddress)) {
+    throw new Error('bluetooth-get-info: invalid MAC address format');
+  }
+  return new Promise<string>((resolve) => {
+    let settled = false;
+    const finish = (value: string): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const timer = setTimeout(() => {
+      console.warn('[IPC] bluetooth-get-info: timed out after 5 s, killing process');
+      proc.kill();
+      finish('bluetooth-get-info: timed out after 5 s');
+    }, BLUETOOTH_GET_INFO_TIMEOUT_MS);
+    const proc = spawn('bluetoothctl', ['info', macAddress]);
+    let stdout = '';
+    let stderr = '';
+    proc.stdout.on('data', (data: Buffer) => {
+      stdout += data.toString();
+    });
+    proc.stderr.on('data', (data: Buffer) => {
+      stderr += data.toString();
+    });
+    proc.on('close', (code) => {
+      const output = (stdout.trim() || stderr.trim() || `code ${code}`).slice(-2000);
+      finish(output);
+    });
+    proc.on('error', (err) => {
+      const msg = formatBluetoothctlSpawnError(err);
+      finish(msg);
+    });
+  });
+});
+
+// ─── IPC: Provide Bluetooth PIN (Linux) ───────────────────────────────
+ipcMain.on('bluetooth-provide-pin', (event, pin: unknown) => {
+  if (!validateIpcSender(event)) {
+    console.warn('[IPC] bluetooth-provide-pin: unauthorized sender');
+    return;
+  }
+  if (!pendingPairingCallback) {
+    console.warn('[IPC] bluetooth-provide-pin: no pending pairing callback');
+    return;
+  }
+  const pinStr = typeof pin === 'string' ? pin : '';
+  console.debug('[IPC] bluetooth-provide-pin:', pinStr.length > 0 ? '****' : '(empty)');
+  pendingPairingCallback({ pin: pinStr, confirmed: pinStr.length > 0 });
+  pendingPairingCallback = null;
+  // Reset retry count so next pairing starts fresh
+  pendingPairingRetryCount = 0;
+});
+
+// ─── IPC: Cancel Bluetooth pairing (Linux) ────────────────────────────
+ipcMain.on('bluetooth-cancel-pairing', (event) => {
+  if (!validateIpcSender(event)) {
+    console.warn('[IPC] bluetooth-cancel-pairing: unauthorized sender');
+    return;
+  }
+  if (pendingPairingCallback) {
+    console.debug('[IPC] bluetooth-cancel-pairing: cancelling');
+    pendingPairingCallback({ pin: '', confirmed: false }); // confirmed: false cancels
+    pendingPairingCallback = null;
+  }
+  // Reset retry count so next pairing starts fresh
+  pendingPairingRetryCount = 0;
+});
+
+// ─── IPC: Reset BLE pairing retry count (Linux) ───────────────────────────
+// Called when starting a new BLE connection so the first pairing attempt uses the default PIN
+ipcMain.on('ble-reset-pairing-retry-count', (event, sessionKind?: unknown) => {
+  if (!validateIpcSender(event)) {
+    console.warn('[IPC] ble-reset-pairing-retry-count: unauthorized sender');
+    return;
+  }
+  pendingPairingRetryCount = 0;
+  blePairingSessionKind = sessionKind === 'meshcore' ? 'meshcore' : 'meshtastic';
+});
+
+// ─── IPC: Connection status tracking (module-scope, not per-window) ─
+ipcMain.on('device-connected', (event) => {
+  if (!validateIpcSender(event)) {
+    console.warn('[IPC] device-connected: unauthorized sender');
+    return;
+  }
+  console.debug('[main] device-connected: isConnected = true');
+  isConnected = true;
+  startPowerSaveBlocker();
+});
+ipcMain.on('device-disconnected', (event) => {
+  if (!validateIpcSender(event)) {
+    console.warn('[IPC] device-disconnected: unauthorized sender');
+    return;
+  }
+  console.debug('[main] device-disconnected: isConnected = false');
+  isConnected = false;
+  stopPowerSaveBlocker();
+});
+
+// ─── Noble BLE: Forward manager events to renderer ──────────────────
+nobleBleManager.on('adapterState', (state: string) => {
+  mainWindow?.webContents.send('noble-ble-adapter-state', state);
+});
+nobleBleManager.on('deviceDiscovered', (device: NobleBleDevice) => {
+  mainWindow?.webContents.send('noble-ble-device-discovered', device);
+});
+nobleBleManager.on(
+  'linkRssi',
+  ({ sessionId, rssi }: { sessionId: NobleSessionId; rssi: number | null }) => {
+    mainWindow?.webContents.send('noble-ble-link-rssi', { sessionId, rssi });
+  },
+);
+nobleBleManager.on('connected', ({ sessionId }: { sessionId: NobleSessionId }) => {
+  mainWindow?.webContents.send('noble-ble-connected', { sessionId });
+});
+nobleBleManager.on('disconnected', ({ sessionId }: { sessionId: NobleSessionId }) => {
+  mainWindow?.webContents.send('noble-ble-disconnected', { sessionId });
+});
+nobleBleManager.on(
+  'connect-aborted',
+  ({ sessionId, message }: { sessionId: NobleSessionId; message: string }) => {
+    mainWindow?.webContents.send('noble-ble-connect-aborted', { sessionId, message });
+  },
+);
+nobleBleManager.on(
+  'fromRadio',
+  ({ sessionId, bytes }: { sessionId: NobleSessionId; bytes: Uint8Array }) => {
+    mainWindow?.webContents.send('noble-ble-from-radio', { sessionId, bytes });
+  },
+);
+
+// ─── Noble BLE: IPC command handlers ────────────────────────────────
+const BLE_PERIPHERAL_OWNERS = new Set<BlePeripheralOwner>([
+  'noble:meshtastic',
+  'noble:meshcore',
+  'webbt:meshtastic',
+  'webbt:meshcore',
+  'reticulum',
+]);
+const BLE_SCAN_OWNERS = new Set<BleScanOwner>(['noble', 'reticulum', 'webbt']);
+
+ipcMain.handle('bleCoexistence:register', (event, mac: unknown, owner: unknown) => {
+  assertIpcSender(event, 'bleCoexistence:register');
+  if (
+    typeof mac !== 'string' ||
+    typeof owner !== 'string' ||
+    !BLE_PERIPHERAL_OWNERS.has(owner as BlePeripheralOwner)
+  ) {
+    throw new Error('bleCoexistence:register: invalid mac or owner');
+  }
+  bleCoexistenceCoordinator.register(mac, owner as BlePeripheralOwner);
+  return bleCoexistenceCoordinator.getState();
+});
+ipcMain.handle('bleCoexistence:unregister', (event, mac: unknown, owner: unknown) => {
+  assertIpcSender(event, 'bleCoexistence:unregister');
+  if (
+    typeof mac !== 'string' ||
+    typeof owner !== 'string' ||
+    !BLE_PERIPHERAL_OWNERS.has(owner as BlePeripheralOwner)
+  ) {
+    throw new Error('bleCoexistence:unregister: invalid mac or owner');
+  }
+  bleCoexistenceCoordinator.unregister(mac, owner as BlePeripheralOwner);
+  return bleCoexistenceCoordinator.getState();
+});
+ipcMain.handle('bleCoexistence:assertCanConnect', (event, owner: unknown, mac: unknown) => {
+  assertIpcSender(event, 'bleCoexistence:assertCanConnect');
+  if (
+    typeof mac !== 'string' ||
+    typeof owner !== 'string' ||
+    !BLE_PERIPHERAL_OWNERS.has(owner as BlePeripheralOwner)
+  ) {
+    throw new Error('bleCoexistence:assertCanConnect: invalid mac or owner');
+  }
+  bleCoexistenceCoordinator.assertCanConnect(owner as BlePeripheralOwner, mac);
+  return bleCoexistenceCoordinator.getState();
+});
+ipcMain.handle('bleCoexistence:getState', (event) => {
+  assertIpcSender(event, 'bleCoexistence:getState');
+  return bleCoexistenceCoordinator.getState();
+});
+ipcMain.handle('bleCoexistence:acquireScan', async (event, owner: unknown) => {
+  assertIpcSender(event, 'bleCoexistence:acquireScan');
+  if (typeof owner !== 'string' || !BLE_SCAN_OWNERS.has(owner as BleScanOwner)) {
+    throw new Error('bleCoexistence:acquireScan: owner must be noble, reticulum, or webbt');
+  }
+  try {
+    await bleCoexistenceCoordinator.acquireScan(owner as BleScanOwner);
+    return bleCoexistenceCoordinator.getState();
+  } catch (err) {
+    console.error(
+      '[main] bleCoexistence:acquireScan failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+ipcMain.handle('bleCoexistence:releaseScan', (event, owner: unknown) => {
+  assertIpcSender(event, 'bleCoexistence:releaseScan');
+  if (typeof owner !== 'string' || !BLE_SCAN_OWNERS.has(owner as BleScanOwner)) {
+    throw new Error('bleCoexistence:releaseScan: owner must be noble, reticulum, or webbt');
+  }
+  bleCoexistenceCoordinator.releaseScan(owner as BleScanOwner);
+  return bleCoexistenceCoordinator.getState();
+});
+ipcMain.handle('bleCoexistence:pauseNobleScan', async (event) => {
+  assertIpcSender(event, 'bleCoexistence:pauseNobleScan');
+  try {
+    await bleCoexistenceCoordinator.pauseNobleScan();
+    return bleCoexistenceCoordinator.getState();
+  } catch (err) {
+    console.error(
+      '[main] bleCoexistence:pauseNobleScan failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+ipcMain.handle('bleCoexistence:suspendNobleForReticulumBleConnect', async (event) => {
+  assertIpcSender(event, 'bleCoexistence:suspendNobleForReticulumBleConnect');
+  try {
+    await bleCoexistenceCoordinator.suspendNobleForReticulumBleConnect();
+    return bleCoexistenceCoordinator.getState();
+  } catch (err) {
+    console.error(
+      '[main] bleCoexistence:suspendNobleForReticulumBleConnect failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('noble-ble-start-scan', async (event, sessionId: unknown) => {
+  assertIpcSender(event, 'noble-ble-start-scan');
+  if (sessionId !== 'meshtastic' && sessionId !== 'meshcore') {
+    throw new Error('noble-ble-start-scan: sessionId must be meshtastic or meshcore');
+  }
+  if (process.platform === 'linux') {
+    throw new Error(
+      'BLE scanning is not supported on Linux via Noble — use Web Bluetooth in the renderer',
+    );
+  }
+  if (isQuitting) {
+    console.debug('[main] noble-ble-start-scan: ignoring (app is quitting)');
+    return { ok: true as const };
+  }
+  try {
+    await nobleBleManager.startScanning(sessionId);
+    return { ok: true as const };
+  } catch (err) {
+    if (err instanceof BleScanBusyError) {
+      console.debug(
+        `[main] noble-ble-start-scan: scan busy (owner=${err.scanOwner}) session=${sessionId}`,
+      );
+      return { ok: false as const, code: 'scan_busy' as const, owner: err.scanOwner };
+    }
+    throw err;
+  }
+});
+ipcMain.handle('noble-ble-stop-scan', async (event, sessionId: unknown) => {
+  assertIpcSender(event, 'noble-ble-stop-scan');
+  if (sessionId !== 'meshtastic' && sessionId !== 'meshcore') {
+    throw new Error('noble-ble-stop-scan: sessionId must be meshtastic or meshcore');
+  }
+  try {
+    await nobleBleManager.stopScanning(sessionId);
+  } catch (err) {
+    console.error(
+      `[main] noble-ble-stop-scan failed: session=${sessionId} message=${sanitizeLogMessage(err instanceof Error ? err.message : String(err))}`,
+    );
+    throw err;
+  }
+});
+ipcMain.handle('noble-ble-connect', async (event, sessionId: unknown, peripheralId: unknown) => {
+  assertIpcSender(event, 'noble-ble-connect');
+  if (sessionId !== 'meshtastic' && sessionId !== 'meshcore') {
+    throw new Error('noble-ble-connect: sessionId must be meshtastic or meshcore');
+  }
+  if (typeof peripheralId !== 'string')
+    throw new Error('noble-ble-connect: peripheralId must be a string');
+  if (isQuitting) {
+    console.debug(`[main] noble-ble-connect: ignoring session=${sessionId} (app is quitting)`);
+    return { ok: false as const, error: 'App is quitting' };
+  }
+  try {
+    await nobleBleManager.connect(sessionId, peripheralId);
+    return { ok: true as const };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.debug(
+      `[main] noble-ble-connect failed: session=${sessionId} peripheral=${peripheralId} message=${sanitizeLogMessage(message)}`,
+    );
+    return { ok: false as const, error: sanitizeLogMessage(message) };
+  }
+});
+ipcMain.handle('noble-ble-disconnect', async (event, sessionId: unknown) => {
+  assertIpcSender(event, 'noble-ble-disconnect');
+  if (sessionId !== 'meshtastic' && sessionId !== 'meshcore') {
+    throw new Error('noble-ble-disconnect: sessionId must be meshtastic or meshcore');
+  }
+  try {
+    await nobleBleManager.disconnect(sessionId);
+  } catch (err) {
+    console.error(
+      `[main] noble-ble-disconnect failed: session=${sessionId} message=${sanitizeLogMessage(err instanceof Error ? err.message : String(err))}`,
+    );
+    throw err;
+  }
+});
+ipcMain.handle('noble-ble-is-connected', (event, sessionId: unknown) => {
+  assertIpcSender(event, 'noble-ble-is-connected');
+  if (sessionId !== 'meshtastic' && sessionId !== 'meshcore') {
+    throw new Error('noble-ble-is-connected: sessionId must be meshtastic or meshcore');
+  }
+  return nobleBleManager.isConnected(sessionId);
+});
+ipcMain.handle('noble-ble-to-radio', async (event, sessionId: unknown, bytes: unknown) => {
+  assertIpcSender(event, 'noble-ble-to-radio');
+  if (sessionId !== 'meshtastic' && sessionId !== 'meshcore') {
+    throw new Error('noble-ble-to-radio: sessionId must be meshtastic or meshcore');
+  }
+  const result = await handleNobleBleToRadioWrite({
+    sessionId,
+    bytes,
+    isQuitting,
+    maxBytes: NOBLE_BLE_TO_RADIO_MAX_BYTES,
+    manager: nobleBleManager,
+  });
+  if (result === 'ignored-quitting') {
+    console.debug(`[main] noble-ble-to-radio: ignoring session=${sessionId} (app is quitting)`);
+    return;
+  }
+  if (result === 'ignored-disconnected') {
+    console.debug(`[main] noble-ble-to-radio: session=${sessionId} not connected, ignoring`);
+    return;
+  }
+  if (result === 'ignored-expected-disconnect') {
+    console.debug(
+      '[main] noble-ble-to-radio: disconnected during write, ignoring session=',
+      sanitizeLogMessage(sessionId),
+    );
+  }
+});
+
+// ─── MQTT: Forward manager events to renderer ───────────────────────
+mqttManager.on('status', (s: string) => {
+  if (mainWindow) mainWindow.webContents.send('mqtt:status', { status: s, protocol: 'meshtastic' });
+  else console.debug('[main] mqtt:status dropped (mainWindow not ready)', sanitizeLogMessage(s));
+});
+mqttManager.on('error', (msg: string) => {
+  if (mainWindow) mainWindow.webContents.send('mqtt:error', { error: msg, protocol: 'meshtastic' });
+  else console.debug('[main] mqtt:error dropped (mainWindow not ready)', sanitizeLogMessage(msg));
+});
+mqttManager.on('clientId', (id: string) => {
+  if (mainWindow)
+    mainWindow.webContents.send('mqtt:clientId', { clientId: id, protocol: 'meshtastic' });
+  else console.debug('[main] mqtt:clientId dropped (mainWindow not ready)', sanitizeLogMessage(id));
+});
+mqttManager.on('nodeUpdate', (n: CachedNode) => {
+  if (mainWindow)
+    mainWindow.webContents.send('mqtt:node-update', { ...n, protocol: 'meshtastic' as const });
+  else console.debug('[main] mqtt:node-update dropped (mainWindow not ready)');
+  takServerManager?.onNodeUpdate({ ...n, altitude: n.altitude ?? undefined });
+});
+mqttManager.on(
+  'traceRouteReply',
+  (p: { meshFrom: number; route: number[]; routeBack: number[] }) => {
+    if (mainWindow)
+      mainWindow.webContents.send('mqtt:trace-route-reply', {
+        ...p,
+        protocol: 'meshtastic' as const,
+      });
+    else console.debug('[main] mqtt:trace-route-reply dropped (mainWindow not ready)');
+  },
+);
+mqttManager.on('message', (m) => {
+  if (mainWindow) mainWindow.webContents.send('mqtt:message', m);
+  else console.debug('[main] mqtt:message dropped (mainWindow not ready)');
+});
+mqttManager.on('brokerRaw', (payload: { topic: string; payload: Buffer; retained: boolean }) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('mqtt:brokerRaw', {
+      topic: payload.topic,
+      payload: new Uint8Array(payload.payload),
+      retained: payload.retained,
+    });
+  } else {
+    console.debug('[main] mqtt:brokerRaw dropped (mainWindow not ready)');
+  }
+});
+
+meshcoreMqttAdapter.on('status', (s: string) => {
+  if (mainWindow) mainWindow.webContents.send('mqtt:status', { status: s, protocol: 'meshcore' });
+  else
+    console.debug(
+      '[main] mqtt:status (meshcore) dropped (mainWindow not ready)',
+      sanitizeLogMessage(s),
+    );
+});
+meshcoreMqttAdapter.on('error', (msg: string) => {
+  if (mainWindow) mainWindow.webContents.send('mqtt:error', { error: msg, protocol: 'meshcore' });
+  else
+    console.debug(
+      '[main] mqtt:error (meshcore) dropped (mainWindow not ready)',
+      sanitizeLogMessage(msg),
+    );
+});
+meshcoreMqttAdapter.on('clientId', (id: string) => {
+  if (mainWindow)
+    mainWindow.webContents.send('mqtt:clientId', { clientId: id, protocol: 'meshcore' });
+  else
+    console.debug(
+      '[main] mqtt:clientId (meshcore) dropped (mainWindow not ready)',
+      sanitizeLogMessage(id),
+    );
+});
+meshcoreMqttAdapter.on('subscribeWarning', (msg: string) => {
+  if (mainWindow)
+    mainWindow.webContents.send('mqtt:warning', { warning: msg, protocol: 'meshcore' });
+  else
+    console.debug(
+      '[main] mqtt:warning (meshcore) dropped (mainWindow not ready)',
+      sanitizeLogMessage(msg),
+    );
+});
+meshcoreMqttAdapter.on('chatMessage', (m) => {
+  if (mainWindow) mainWindow.webContents.send('mqtt:meshcore-chat', m);
+  else console.debug('[main] mqtt:meshcore-chat dropped (mainWindow not ready)');
+});
+
+meshcoreMqttAdapter.on(MeshcoreMqttAdapter.EVENT_PROACTIVE_TOKEN_REFRESH, (serverHost: string) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('mqtt:requestTokenRefresh', serverHost);
+  } else {
+    console.warn('[main] proactive token refresh: mainWindow not ready');
+  }
+});
+
+meshcoreMqttAdapter.on(MeshcoreMqttAdapter.EVENT_TOKEN_REFRESH_NEEDED, (serverHost: string) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('mqtt:requestTokenRefresh', serverHost);
+  } else {
+    console.warn('[main] token refresh needed: mainWindow not ready');
+  }
+});
+
+// ─── IPC: MQTT connect/disconnect ───────────────────────────────────
+ipcMain.handle('mqtt:connect', (event, settings) => {
+  assertIpcSender(event, 'mqtt:connect');
+  try {
+    console.debug('[IPC] mqtt:connect');
+    validateMqttSettings(settings);
+    const s = settings as { mqttTransportProtocol?: string };
+    const mode = s.mqttTransportProtocol === 'meshcore' ? 'meshcore' : 'meshtastic';
+    // Dual-mode: only disconnect the target manager before reconnecting it.
+    // The other manager stays connected independently.
+    const mqttSettings = settings as MQTTSettings;
+    const clientId = resolveMqttBrokerClientId(mode, mqttSettings);
+    const settingsWithClientId: MQTTSettings = { ...mqttSettings, clientId };
+    if (mode === 'meshcore') {
+      meshcoreMqttAdapter.disconnect();
+      meshcoreMqttAdapter.connect(settingsWithClientId);
+    } else {
+      mqttManager.disconnect();
+      mqttManager.connect(settingsWithClientId);
+    }
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:connect failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+ipcMain.handle('mqtt:disconnect', (event, protocol?: MeshProtocol) => {
+  assertIpcSender(event, 'mqtt:disconnect');
+  try {
+    console.debug('[IPC] mqtt:disconnect', protocol ?? 'both');
+    if (!protocol || protocol === 'meshtastic') mqttManager.disconnect();
+    if (!protocol || protocol === 'meshcore') meshcoreMqttAdapter.disconnect();
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:disconnect failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+ipcMain.handle('mqtt:powerResume', (event) => {
+  assertIpcSender(event, 'mqtt:powerResume');
+  try {
+    console.debug('[IPC] mqtt:powerResume');
+    mqttManager.handlePowerResume();
+    meshcoreMqttAdapter.handlePowerResume();
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:powerResume failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+ipcMain.handle('mqtt:powerSuspend', (event) => {
+  assertIpcSender(event, 'mqtt:powerSuspend');
+  try {
+    console.debug('[IPC] mqtt:powerSuspend');
+    mqttManager.handlePowerSuspend();
+    meshcoreMqttAdapter.handlePowerSuspend();
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:powerSuspend failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+ipcMain.handle('mqtt:getClientId', (event, protocol?: MeshProtocol) => {
+  assertIpcSender(event, 'mqtt:getClientId');
+  try {
+    console.debug('[IPC] mqtt:getClientId', protocol);
+    if (protocol === 'meshcore') return meshcoreMqttAdapter.getClientId();
+    if (protocol === 'meshtastic') return mqttManager.getClientId();
+    // Fallback: return whichever is connected
+    if (meshcoreMqttAdapter.getStatus() === 'connected') return meshcoreMqttAdapter.getClientId();
+    return mqttManager.getClientId();
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:getClientId failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+const MQTT_MESHCORE_TOKEN_MAX_LENGTH = 8192;
+
+ipcMain.handle('mqtt:refreshMeshcoreToken', (event, serverHost: string) => {
+  assertIpcSender(event, 'mqtt:refreshMeshcoreToken');
+  try {
+    console.debug('[IPC] mqtt:refreshMeshcoreToken', sanitizeLogMessage(serverHost));
+    return meshcoreMqttAdapter.getTokenInfo(serverHost);
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:refreshMeshcoreToken failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+ipcMain.handle(
+  'mqtt:updateMeshcoreToken',
+  (event, { token, expiresAt }: { token: string; expiresAt: number }) => {
+    assertIpcSender(event, 'mqtt:updateMeshcoreToken');
+    try {
+      if (typeof token !== 'string' || token.length === 0) {
+        throw new Error('mqtt:updateMeshcoreToken: token must be a non-empty string');
+      }
+      if (token.length > MQTT_MESHCORE_TOKEN_MAX_LENGTH) {
+        throw new Error('mqtt:updateMeshcoreToken: token too long');
+      }
+      if (typeof expiresAt !== 'number' || !Number.isFinite(expiresAt)) {
+        throw new Error('mqtt:updateMeshcoreToken: expiresAt must be a finite number');
+      }
+      console.debug('[IPC] mqtt:updateMeshcoreToken', expiresAt);
+      meshcoreMqttAdapter.updateToken(token, expiresAt);
+    } catch (err) {
+      console.error(
+        '[IPC] mqtt:updateMeshcoreToken failed:',
+        sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+      );
+      throw err;
+    }
+  },
+);
+ipcMain.handle('mqtt:updateChannelKeys', (event, args) => {
+  assertIpcSender(event, 'mqtt:updateChannelKeys');
+  try {
+    console.debug('[IPC] mqtt:updateChannelKeys');
+    validateMqttUpdateChannelKeysArgs(args);
+    const a = args as { entries: { name: string; pskBase64: string }[] };
+    mqttManager.updateChannelKeys(a.entries);
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:updateChannelKeys failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+ipcMain.handle('mqtt:updateTopicPrefix', (event, args) => {
+  assertIpcSender(event, 'mqtt:updateTopicPrefix');
+  try {
+    console.debug('[IPC] mqtt:updateTopicPrefix');
+    validateMqttUpdateTopicPrefixArgs(args);
+    const a = args as { topicPrefix: string };
+    mqttManager.updateTopicPrefix(a.topicPrefix);
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:updateTopicPrefix failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+ipcMain.handle('mqtt:publish', (event, args) => {
+  assertIpcSender(event, 'mqtt:publish');
+  try {
+    console.debug('[IPC] mqtt:publish');
+    validateMqttPublishArgs(args);
+    const a = args as {
+      text: string;
+      from: number;
+      channel: number;
+      destination?: number;
+      channelName?: string;
+      pskBase64?: string;
+      emoji?: number;
+      replyId?: number;
+      publishJsonMirror: boolean;
+    };
+    return mqttManager.publish({
+      text: a.text,
+      from: a.from,
+      channel: a.channel,
+      destination: a.destination,
+      channelName: a.channelName,
+      pskBase64: a.pskBase64,
+      emoji: a.emoji,
+      replyId: a.replyId,
+      publishJsonMirror: a.publishJsonMirror,
+    });
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:publish failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('mqtt:publishProxy', (event, args) => {
+  assertIpcSender(event, 'mqtt:publishProxy');
+  try {
+    console.debug('[IPC] mqtt:publishProxy');
+    validateMqttPublishProxyArgs(args);
+    const a = args as {
+      topic: string;
+      data?: Uint8Array;
+      text?: string;
+      retained?: boolean;
+    };
+    mqttManager.publishProxyRaw({
+      topic: a.topic,
+      data: a.data,
+      text: a.text,
+      retained: a.retained,
+    });
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:publishProxy failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('mqtt:publishMeshcore', (event, args) => {
+  assertIpcSender(event, 'mqtt:publishMeshcore');
+  try {
+    console.debug('[IPC] mqtt:publishMeshcore');
+    validateMqttPublishMeshcoreArgs(args);
+    const a = args as {
+      text: string;
+      channelIdx: number;
+      senderName?: string;
+      senderNodeId?: number;
+      timestamp?: number;
+    };
+    meshcoreMqttAdapter.publishChat({
+      v: 1,
+      text: a.text,
+      channelIdx: a.channelIdx,
+      senderName: a.senderName,
+      senderNodeId: a.senderNodeId,
+      timestamp: a.timestamp,
+    });
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:publishMeshcore failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('mqtt:publishMeshcorePacketLog', (event, args) => {
+  assertIpcSender(event, 'mqtt:publishMeshcorePacketLog');
+  try {
+    validateMqttPublishMeshcorePacketLogArgs(args);
+    const a = args as {
+      origin: string;
+      snr: number;
+      rssi: number;
+      rawHex?: string;
+      len?: number;
+      packetType?: number;
+      route?: string;
+      payloadLen?: number;
+      hash?: string;
+      direction?: 'rx' | 'tx';
+    };
+    meshcoreMqttAdapter.publishPacketLog({
+      origin: a.origin,
+      snr: a.snr,
+      rssi: a.rssi,
+      rawHex: a.rawHex,
+      len: a.len,
+      packetType: a.packetType,
+      route: a.route,
+      payloadLen: a.payloadLen,
+      hash: a.hash,
+      direction: a.direction,
+    });
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:publishMeshcorePacketLog failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('mqtt:getCachedNodes', (event) => {
+  assertIpcSender(event, 'mqtt:getCachedNodes');
+  try {
+    return mqttManager.getCachedNodes();
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:getCachedNodes failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+ipcMain.handle('mqtt:getChannelNameToIndex', (event) => {
+  assertIpcSender(event, 'mqtt:getChannelNameToIndex');
+  try {
+    return mqttManager.getChannelNameToIndex();
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:getChannelNameToIndex failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+ipcMain.handle('mqtt:publishNodeInfo', (event, args) => {
+  assertIpcSender(event, 'mqtt:publishNodeInfo');
+  try {
+    const a = args as {
+      from: number;
+      longName: string;
+      shortName: string;
+      channelName?: string;
+      hwModel?: number;
+      pskBase64?: string;
+      publishJsonMirror: boolean;
+    };
+    if (
+      typeof a.from !== 'number' ||
+      typeof a.longName !== 'string' ||
+      typeof a.shortName !== 'string' ||
+      typeof a.publishJsonMirror !== 'boolean'
+    ) {
+      throw new Error(
+        'mqtt:publishNodeInfo requires from (number), longName (string), shortName (string), publishJsonMirror (boolean)',
+      );
+    }
+    validateOptionalPskBase64(a.pskBase64, 'mqtt:publishNodeInfo');
+    return mqttManager.publishNodeInfo(
+      a.from,
+      a.longName,
+      a.shortName,
+      a.channelName ?? 'LongFast',
+      a.hwModel,
+      a.publishJsonMirror,
+      a.pskBase64,
+    );
+  } catch (err) {
+    // Presence broadcast is fire-and-forget; silently ignore if MQTT just disconnected
+    if (err instanceof Error && err.message === 'MQTT not connected') {
+      return null;
+    }
+    console.error(
+      '[IPC] mqtt:publishNodeInfo failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+ipcMain.handle('mqtt:publishPosition', (event, args) => {
+  assertIpcSender(event, 'mqtt:publishPosition');
+  try {
+    const a = args as {
+      from: number;
+      channel: number;
+      channelName: string;
+      latitudeI: number;
+      longitudeI: number;
+      altitude?: number;
+      pskBase64?: string;
+      publishJsonMirror: boolean;
+    };
+    if (
+      typeof a.from !== 'number' ||
+      typeof a.channel !== 'number' ||
+      typeof a.channelName !== 'string' ||
+      typeof a.latitudeI !== 'number' ||
+      typeof a.longitudeI !== 'number' ||
+      typeof a.publishJsonMirror !== 'boolean'
+    ) {
+      throw new Error(
+        'mqtt:publishPosition requires from, channel, channelName, latitudeI, longitudeI, publishJsonMirror',
+      );
+    }
+    validateOptionalPskBase64(a.pskBase64, 'mqtt:publishPosition');
+    return mqttManager.publishPosition(
+      a.from,
+      a.channel,
+      a.channelName,
+      a.latitudeI,
+      a.longitudeI,
+      a.altitude,
+      a.publishJsonMirror,
+      a.pskBase64,
+    );
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:publishPosition failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('mqtt:publishWaypoint', (event, args) => {
+  assertIpcSender(event, 'mqtt:publishWaypoint');
+  try {
+    console.debug('[IPC] mqtt:publishWaypoint');
+    validateMqttPublishWaypointArgs(args);
+    const a = args as {
+      from: number;
+      to: number;
+      channel: number;
+      channelName: string;
+      pskBase64?: string;
+      publishJsonMirror: boolean;
+      waypoint: {
+        id: number;
+        latitudeI: number;
+        longitudeI: number;
+        name: string;
+        description?: string;
+        icon?: number;
+        lockedTo?: number;
+        expire?: number;
+      };
+    };
+    return mqttManager.publishWaypoint(
+      a.from,
+      a.to,
+      a.channel,
+      a.channelName,
+      a.waypoint,
+      a.publishJsonMirror,
+      a.pskBase64,
+    );
+  } catch (err) {
+    console.error(
+      '[IPC] mqtt:publishWaypoint failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+registerGpsIpcHandlers();
+
+// ─── IPC: Force quit (disconnect all, then quit) ────────────────────
+// ─── IPC: Native OS notification ───────────────────────────────────
+ipcMain.handle('notify:message', (event, title: unknown, body: unknown) => {
+  assertIpcSender(event, 'notify:message');
+  if (typeof title !== 'string' || title.length > 128) return;
+  if (typeof body !== 'string' || body.length > 512) return;
+  try {
+    if (Notification.isSupported()) {
+      new Notification({ title, body }).show();
+    }
+  } catch (e) {
+    console.warn(
+      '[IPC] notify:message failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+  }
+});
+
+ipcMain.handle('notify:longSessionRestart', (event, payload: unknown) => {
+  assertIpcSender(event, 'notify:longSessionRestart');
+  const parsed = parseLongSessionRestartPayload(payload);
+  if (!parsed) return;
+  getLongSessionNudge().show(parsed);
+});
+
+ipcMain.handle('notify:clearLongSessionNudge', (event) => {
+  assertIpcSender(event, 'notify:clearLongSessionNudge');
+  getLongSessionNudge().clear();
+});
+
+// ─── IPC: Safe storage (OS-keychain-backed encryption) ─────────────
+/** Export / import dialogs — max 5 / 60s. */
+const exportIpcRateLimit = createIpcRateLimiter({
+  max: 5,
+  windowMs: MS_PER_MINUTE,
+  label: 'export',
+});
+/** storage:encrypt / storage:decrypt — max 30 / 60s. */
+const storageCryptoIpcRateLimit = createIpcRateLimiter({
+  max: 30,
+  windowMs: MS_PER_MINUTE,
+  label: 'storage:crypto',
+});
+
+ipcMain.handle('storage:isAvailable', (event) => {
+  assertIpcSender(event, 'storage:isAvailable');
+  try {
+    return safeStorage.isEncryptionAvailable();
+  } catch (e) {
+    console.warn(
+      '[IPC] storage:isAvailable failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+    return false;
+  }
+});
+
+ipcMain.handle('storage:encrypt', (event, plaintext: unknown) => {
+  assertIpcSender(event, 'storage:encrypt');
+  storageCryptoIpcRateLimit.checkOrThrow();
+  if (typeof plaintext !== 'string' || plaintext.length > 4096)
+    throw new Error('storage:encrypt: invalid input');
+  try {
+    if (!safeStorage.isEncryptionAvailable()) return null;
+    return safeStorage.encryptString(plaintext).toString('base64');
+  } catch (e) {
+    console.warn(
+      '[IPC] storage:encrypt failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+    return null;
+  }
+});
+
+ipcMain.handle('storage:decrypt', (event, ciphertext: unknown) => {
+  assertIpcSender(event, 'storage:decrypt');
+  storageCryptoIpcRateLimit.checkOrThrow();
+  if (typeof ciphertext !== 'string' || ciphertext.length > 8192)
+    throw new Error('storage:decrypt: invalid input');
+  try {
+    if (!safeStorage.isEncryptionAvailable()) return null;
+    return safeStorage.decryptString(Buffer.from(ciphertext, 'base64'));
+  } catch (e) {
+    console.warn(
+      '[IPC] storage:decrypt failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+    return null;
+  }
+});
+
+// ─── IPC: Login item (launch at startup) ───────────────────────────
+ipcMain.handle('app:getProcessUptimeSec', (event) => {
+  assertIpcSender(event, 'app:getProcessUptimeSec');
+  return Math.floor(process.uptime());
+});
+
+ipcMain.handle('app:getRendererLiveness', (event) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  const mem = process.memoryUsage();
+  const hb = rendererHeartbeatWatchdog.getLivenessSnapshot();
+  return {
+    mainUptimeSec: Math.floor(process.uptime()),
+    lastRendererHeartbeatAgeMs: hb.lastRendererHeartbeatAgeMs,
+    rendererUnresponsiveSeen: hb.rendererUnresponsiveSeen,
+    rss: mem.rss,
+    heapUsed: mem.heapUsed,
+  };
+});
+
+ipcMain.handle('app:getLoginItem', (event) => {
+  assertIpcSender(event, 'app:getLoginItem');
+  try {
+    const settings = app.getLoginItemSettings();
+    return { openAtLogin: settings.openAtLogin };
+  } catch (e) {
+    console.error(
+      '[IPC] app:getLoginItem failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+    throw e;
+  }
+});
+
+ipcMain.handle('app:setLoginItem', (event, openAtLogin: unknown) => {
+  assertIpcSender(event, 'app:setLoginItem');
+  if (typeof openAtLogin !== 'boolean')
+    throw new Error('app:setLoginItem: openAtLogin must be a boolean');
+  try {
+    app.setLoginItemSettings({ openAtLogin });
+  } catch (e) {
+    console.error(
+      '[IPC] app:setLoginItem failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+    throw e;
+  }
+});
+
+// ─── IPC: Persistent app settings (SQLite-backed key/value) ────────
+// Allow-list keys to prevent arbitrary writes from a compromised renderer.
+const APP_SETTINGS_ALLOWED_KEYS: ReadonlySet<string> = new Set([
+  'meshtasticMessageRetentionEnabled',
+  'meshtasticMessageRetentionCount',
+  'meshcoreMessageRetentionEnabled',
+  'meshcoreMessageRetentionCount',
+  'reticulumMessageRetentionEnabled',
+  'reticulumMessageRetentionCount',
+  'rrcMessageRetentionEnabled',
+  'rrcMessageRetentionCount',
+  'locale',
+  'mapBasemapId',
+  'meshtasticMqttClientId',
+  'meshcoreMqttClientId',
+  'meshtasticConfigureTargetNodeNum',
+  'meshtasticLastRfSelfNodeId',
+  'meshcoreLastSelfNodeId',
+  'storeForwardAutoFetchHistory',
+  'reduceMotion',
+  'use24HourTime',
+  'alwaysShowMessageActions',
+  'reticulumAutostart',
+  'reticulumAutoResendOnAnnounce',
+  'reticulumLastSelfLxmfHash',
+  'reticulumRmapAnnounceIntervalMin',
+  'reticulumRmapReachableOn',
+  'reticulumRmapHeightMeters',
+  /** Legacy blob; prefer meshtasticRemoteAdminKey:<nodeNum> per-node keys. */
+  'meshtasticRemoteAdminKeyByNode',
+]);
+const APP_SETTINGS_MAX_VALUE_LENGTH = 256;
+
+function isAppSettingsKeyAllowed(key: string): boolean {
+  return (
+    APP_SETTINGS_ALLOWED_KEYS.has(key) ||
+    key.startsWith(MESHTASTIC_REMOTE_ADMIN_KEY_SETTING_PREFIX) ||
+    key.startsWith(MESHCORE_ROOM_SYNC_SETTING_PREFIX) ||
+    key.startsWith(MESHCORE_ROOM_LAST_POST_SETTING_PREFIX) ||
+    key.startsWith(MESHCORE_ROOM_CREDENTIAL_SETTING_PREFIX) ||
+    key.startsWith(MESHCORE_REPEATER_CREDENTIAL_SETTING_PREFIX)
+  );
+}
+
+function appSettingsMaxValueLengthForKey(key: string): number {
+  if (
+    key.startsWith(MESHCORE_ROOM_CREDENTIAL_SETTING_PREFIX) ||
+    key.startsWith(MESHCORE_REPEATER_CREDENTIAL_SETTING_PREFIX)
+  ) {
+    return 512;
+  }
+  return APP_SETTINGS_MAX_VALUE_LENGTH;
+}
+
+ipcMain.handle('app:rendererHeartbeat', (event, payload?: { ts?: number }) => {
+  if (!validateIpcSender(event)) return;
+  if (!mainWindow) return;
+  rendererHeartbeatWatchdog.recordHeartbeat(payload?.ts);
+});
+
+ipcMain.handle('appSettings:get', (event) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    const rows = getDatabase().prepareOnce('SELECT key, value FROM app_settings').all() as {
+      key: string;
+      value: string;
+    }[];
+    const out: Record<string, string> = {};
+    for (const row of rows) {
+      if (typeof row.key === 'string' && typeof row.value === 'string') {
+        out[row.key] = row.value;
+      }
+    }
+    return out;
+  } catch (err) {
+    console.error(
+      '[IPC] appSettings:get failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('appSettings:set', (event, key: unknown, value: unknown) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  if (typeof key !== 'string' || !isAppSettingsKeyAllowed(key)) {
+    throw new Error('appSettings:set: key not allowed');
+  }
+  const maxValueLength = appSettingsMaxValueLengthForKey(key);
+  if (typeof value !== 'string' || value.length > maxValueLength) {
+    throw new Error(`appSettings:set: value must be a string under ${maxValueLength} chars`);
+  }
+  try {
+    const result = getDatabase()
+      .prepareOnce('INSERT OR REPLACE INTO app_settings(key, value) VALUES (?, ?)')
+      .run(key, value);
+    console.debug(`[IPC] appSettings:set: ${sanitizeLogMessage(key)} (${result.changes} rows)`);
+    return { changes: Number(result.changes) };
+  } catch (err) {
+    console.error(
+      '[IPC] appSettings:set failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('app:showEmojiPanel', (event) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  if (process.platform === 'darwin' || process.platform === 'win32') {
+    try {
+      app.showEmojiPanel();
+    } catch (e) {
+      console.error(
+        '[IPC] app:showEmojiPanel failed:',
+        sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+      );
+      throw e;
+    }
+  }
+});
+
+const CLIPBOARD_WRITE_TEXT_MAX_CHARS = 256 * 1024;
+
+ipcMain.handle('clipboard:writeText', async (event, text: unknown) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  if (typeof text !== 'string') {
+    throw new Error('clipboard:writeText: text must be a string');
+  }
+  if (text.length > CLIPBOARD_WRITE_TEXT_MAX_CHARS) {
+    throw new Error('clipboard:writeText: text too long');
+  }
+  try {
+    await clipboard.writeText(text);
+  } catch (e) {
+    console.warn(
+      '[IPC] clipboard:writeText failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+    throw e;
+  }
+});
+
+ipcMain.handle('media:ensureMicrophoneAccess', async (event) => {
+  assertIpcSender(event, 'media:ensureMicrophoneAccess');
+  try {
+    return await ensureMicrophoneAccess({
+      platform: process.platform,
+      getMediaAccessStatus: (mediaType) => systemPreferences.getMediaAccessStatus(mediaType),
+      askForMediaAccess: (mediaType) => systemPreferences.askForMediaAccess(mediaType),
+      openExternal: (url) => {
+        const validateUrl = isAllowedMicrophonePrivacySettingsUrl;
+        if (!validateUrl(url)) {
+          return Promise.reject(new Error('Blocked unexpected microphone privacy settings URL'));
+        }
+        return shell.openExternal(url);
+      },
+    });
+  } catch (e) {
+    console.warn(
+      '[IPC] media:ensureMicrophoneAccess failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+    return { granted: false, status: 'denied' };
+  }
+});
+
+ipcMain.handle('media:ensureCameraAccess', async (event) => {
+  assertIpcSender(event, 'media:ensureCameraAccess');
+  try {
+    return await ensureCameraAccess({
+      platform: process.platform,
+      getMediaAccessStatus: (mediaType) => systemPreferences.getMediaAccessStatus(mediaType),
+      askForMediaAccess: (mediaType) => systemPreferences.askForMediaAccess(mediaType),
+      openExternal: (url) => {
+        const validateUrl = isAllowedCameraPrivacySettingsUrl;
+        if (!validateUrl(url)) {
+          return Promise.reject(new Error('Blocked unexpected camera privacy settings URL'));
+        }
+        return shell.openExternal(url);
+      },
+    });
+  } catch (e) {
+    console.warn(
+      '[IPC] media:ensureCameraAccess failed:',
+      sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+    );
+    return { granted: false, status: 'denied' };
+  }
+});
+
+ipcMain.handle('app:quit', async (event) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  await quitMainProcess({ relaunch: false });
+});
+
+ipcMain.handle('app:relaunch', async (event) => {
+  assertIpcSender(event, 'app:relaunch');
+  await quitMainProcess({ relaunch: true });
+});
+
+// ─── IPC: Database operations ──────────────────────────────────────
+ipcMain.handle('db:saveMessage', (event, message) => {
+  if (!validateIpcSender(event)) throw new Error('db:saveMessage: unauthorized sender');
+  try {
+    validateSaveMessage(message);
+    const db = getDbForIpc('db:saveMessage');
+    if (!db) return { changes: 0 };
+    const stmt = db.prepareOnce(`
+      INSERT OR IGNORE INTO messages (sender_id, sender_name, payload, channel, timestamp, packet_id, status, error, emoji, reply_id, to_node, mqtt_status, received_via, reply_preview_text, reply_preview_sender, rx_hops, via_store_forward)
+      VALUES (@sender_id, @sender_name, @payload, @channel, @timestamp, @packet_id, @status, @error, @emoji, @reply_id, @to_node, @mqtt_status, @received_via, @reply_preview_text, @reply_preview_sender, @rx_hops, @via_store_forward)
+    `);
+    const validReceivedVia = ['rf', 'mqtt', 'both'];
+    return stmt.run({
+      sender_id: safeNonNegativeInt(message.sender_id),
+      sender_name: message.sender_name,
+      payload: message.payload,
+      channel: safeNonNegativeInt(message.channel),
+      timestamp: message.timestamp,
+      packet_id: message.packetId != null ? safeNonNegativeInt(message.packetId) : null,
+      status: message.status ?? 'acked',
+      error: message.error ?? null,
+      emoji: message.emoji != null ? (sanitizeUnicodeReactionScalar(message.emoji) ?? null) : null,
+      reply_id: message.replyId != null ? safeNonNegativeInt(message.replyId) : null,
+      to_node: message.to != null ? safeNonNegativeInt(message.to) : null,
+      mqtt_status: message.mqttStatus ?? null,
+      received_via:
+        message.receivedVia != null && validReceivedVia.includes(message.receivedVia)
+          ? message.receivedVia
+          : null,
+      reply_preview_text: message.replyPreviewText ?? null,
+      reply_preview_sender: message.replyPreviewSender ?? null,
+      rx_hops:
+        message.rxHops != null &&
+        typeof message.rxHops === 'number' &&
+        Number.isFinite(message.rxHops)
+          ? Math.trunc(message.rxHops)
+          : null,
+      via_store_forward: message.viaStoreForward ? 1 : 0,
+    });
+  } catch (err) {
+    finishDbIpcHandler('db:saveMessage', err);
+  }
+});
+
+ipcMain.handle('db:getMessages', (event, channel?: number, limit = 200) => {
+  if (!validateIpcSender(event)) throw new Error('db:getMessages: unauthorized sender');
+  try {
+    const safeLimit = clampQueryLimit(limit, { default: 1000, max: 10000 });
+    const db = getDbForIpc('db:getMessages');
+    if (!db) return [];
+    const columns = `id, sender_id, sender_name, payload, channel, timestamp,
+         packet_id AS packetId, status, error, emoji, reply_id AS replyId, to_node,
+         mqtt_status AS mqttStatus, received_via AS receivedVia,
+         reply_preview_text AS replyPreviewText, reply_preview_sender AS replyPreviewSender,
+         rx_hops AS rxHops, via_store_forward AS viaStoreForward`;
+    let rows: Record<string, unknown>[];
+    if (channel != null) {
+      const ch = safeNonNegativeInt(channel);
+      rows = db
+        .prepareOnce(
+          `SELECT ${columns} FROM messages WHERE channel = ? ORDER BY timestamp DESC LIMIT ?`,
+        )
+        .all(ch, safeLimit) as Record<string, unknown>[];
+    } else {
+      rows = db
+        .prepareOnce(`SELECT ${columns} FROM messages ORDER BY timestamp DESC LIMIT ?`)
+        .all(safeLimit) as Record<string, unknown>[];
+    }
+
+    // Map to_node back to `to` for the renderer; drop invalid reaction scalars from legacy rows
+    return rows.map((r) => {
+      const { to_node, emoji: emojiRaw, viaStoreForward: viaSfRaw, ...rest } = r;
+      const emoji =
+        emojiRaw != null ? (sanitizeUnicodeReactionScalar(emojiRaw) ?? undefined) : undefined;
+      const viaStoreForward = viaSfRaw === 1 || viaSfRaw === true;
+      return {
+        ...rest,
+        emoji,
+        to: to_node ?? undefined,
+        ...(viaStoreForward ? { viaStoreForward: true } : {}),
+      };
+    });
+  } catch (err) {
+    finishDbIpcHandler('db:getMessages', err);
+  }
+});
+
+ipcMain.handle('db:listMeshtasticDmPeers', (event, ownNodeId: unknown, limit?: unknown) => {
+  try {
+    assertIpcSender(event, 'db:listMeshtasticDmPeers');
+    if (typeof ownNodeId !== 'number' || !Number.isFinite(ownNodeId)) return [];
+    const db = getDbForIpc('db:listMeshtasticDmPeers');
+    if (!db) return [];
+    return listMeshtasticDmPeersFromDb(db, ownNodeId, limit);
+  } catch (err) {
+    return finishDbIpcReadHandler('db:listMeshtasticDmPeers', err, []);
+  }
+});
+
+ipcMain.handle('db:listMeshcoreDmPeers', (event, ownNodeId: unknown, limit?: unknown) => {
+  try {
+    assertIpcSender(event, 'db:listMeshcoreDmPeers');
+    if (typeof ownNodeId !== 'number' || !Number.isFinite(ownNodeId)) return [];
+    const db = getDbForIpc('db:listMeshcoreDmPeers');
+    if (!db) return [];
+    return listMeshcoreDmPeersFromDb(db, ownNodeId, limit);
+  } catch (err) {
+    return finishDbIpcReadHandler('db:listMeshcoreDmPeers', err, []);
+  }
+});
+
+ipcMain.handle('db:saveNode', (event, node) => {
+  if (!validateIpcSender(event)) throw new Error('db:saveNode: unauthorized sender');
+  try {
+    validateSaveNode(node);
+    if (node.path != null) {
+      const pathJson = JSON.stringify(node.path);
+      if (pathJson.length > DB_SAVE_NODE_PATH_MAX_BYTES) {
+        throw new Error('db:saveNode: path too large');
+      }
+    }
+    const db = getDbForIpc('db:saveNode');
+    if (!db) return { changes: 0 };
+    const stmt = db.prepareOnce(`
+      INSERT INTO nodes (node_id, long_name, short_name, hw_model, snr, rssi, battery, last_heard, latitude, longitude, role, hops_away, via_mqtt, voltage, channel_utilization, air_util_tx, altitude, favorited, source, num_packets_rx_bad, num_rx_dupe, num_packets_rx, num_packets_tx, hops, path)
+      VALUES (@node_id, @long_name, @short_name, @hw_model, @snr, @rssi, @battery, @last_heard, @latitude, @longitude, @role, @hops_away, @via_mqtt, @voltage, @channel_utilization, @air_util_tx, @altitude,
+        COALESCE((SELECT favorited FROM nodes WHERE node_id = @node_id), 0),
+        @source, @num_packets_rx_bad, @num_rx_dupe, @num_packets_rx, @num_packets_tx, @hops, @path)
+      ON CONFLICT(node_id) DO UPDATE SET
+        long_name = COALESCE(NULLIF(excluded.long_name, ''), nodes.long_name),
+        short_name = COALESCE(NULLIF(excluded.short_name, ''), nodes.short_name),
+        hw_model = COALESCE(NULLIF(excluded.hw_model, ''), nodes.hw_model),
+        snr = COALESCE(excluded.snr, nodes.snr),
+        rssi = COALESCE(excluded.rssi, nodes.rssi),
+        battery = COALESCE(excluded.battery, nodes.battery),
+        last_heard = CASE WHEN excluded.last_heard IS NOT NULL AND excluded.last_heard > 0 THEN excluded.last_heard ELSE nodes.last_heard END,
+        latitude = CASE WHEN excluded.latitude IS NOT NULL AND excluded.latitude != 0 THEN excluded.latitude ELSE nodes.latitude END,
+        longitude = CASE WHEN excluded.longitude IS NOT NULL AND excluded.longitude != 0 THEN excluded.longitude ELSE nodes.longitude END,
+        role = COALESCE(excluded.role, nodes.role),
+        hops_away = CASE
+          WHEN excluded.hops_away IS NOT NULL AND (nodes.hops_away IS NULL OR excluded.hops_away < nodes.hops_away) THEN excluded.hops_away
+          ELSE nodes.hops_away
+        END,
+        via_mqtt = COALESCE(excluded.via_mqtt, nodes.via_mqtt),
+        voltage = COALESCE(excluded.voltage, nodes.voltage),
+        channel_utilization = COALESCE(excluded.channel_utilization, nodes.channel_utilization),
+        air_util_tx = COALESCE(excluded.air_util_tx, nodes.air_util_tx),
+        altitude = COALESCE(excluded.altitude, nodes.altitude),
+        source = CASE
+          WHEN nodes.source = 'mqtt' AND excluded.source = 'rf' AND COALESCE(excluded.via_mqtt, 0) = 1 THEN 'mqtt'
+          ELSE COALESCE(excluded.source, nodes.source, 'rf')
+        END,
+        num_packets_rx_bad = COALESCE(excluded.num_packets_rx_bad, num_packets_rx_bad),
+        num_rx_dupe = COALESCE(excluded.num_rx_dupe, num_rx_dupe),
+        num_packets_rx = COALESCE(excluded.num_packets_rx, num_packets_rx),
+        num_packets_tx = COALESCE(excluded.num_packets_tx, num_packets_tx),
+        hops = CASE
+          WHEN excluded.hops IS NOT NULL AND (nodes.hops IS NULL OR excluded.hops < nodes.hops) THEN excluded.hops
+          ELSE nodes.hops
+        END,
+        path = COALESCE(excluded.path, nodes.path)
+    `);
+    return stmt.run({
+      role: null,
+      hops_away: node.hops_away ?? null,
+      rssi: null,
+      voltage: null,
+      channel_utilization: null,
+      air_util_tx: null,
+      altitude: null,
+      source: 'rf',
+      num_packets_rx_bad: null,
+      num_rx_dupe: null,
+      num_packets_rx: null,
+      num_packets_tx: null,
+      ...node,
+      last_heard:
+        node.last_heard != null && Number(node.last_heard) > 0
+          ? normalizeLastHeardToUnixSec(Number(node.last_heard))
+          : node.last_heard,
+      via_mqtt: node.via_mqtt != null ? (node.via_mqtt ? 1 : 0) : null,
+      hops: node.hops ?? node.hops_away ?? null,
+      path: node.path != null ? JSON.stringify(node.path) : null,
+    });
+  } catch (err) {
+    finishDbIpcHandler('db:saveNode', err);
+  }
+});
+
+ipcMain.handle('db:saveNodePath', (event, nodeId: number, lastHeard: number, buffer: Buffer) => {
+  if (!validateIpcSender(event)) throw new Error('db:saveNodePath: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:saveNodePath')) return undefined;
+    if (!isPathPacket(buffer)) {
+      throw new Error('Not a PATH packet');
+    }
+    const { hops, path } = decodePathPayload(buffer);
+    upsertNodePath(nodeId, normalizeLastHeardToUnixSec(lastHeard), hops, path);
+    return { success: true, hops, path };
+  } catch (err) {
+    finishDbIpcHandler('db:saveNodePath', err);
+  }
+});
+
+ipcMain.handle('db:setNodeFavorited', (event, nodeId: number, favorited: boolean) => {
+  if (!validateIpcSender(event)) throw new Error('db:setNodeFavorited: unauthorized sender');
+  try {
+    const id = safeNonNegativeInt(nodeId);
+    if (typeof favorited !== 'boolean')
+      throw new Error('db:setNodeFavorited: favorited must be a boolean');
+    const db = getDbForIpc('db:setNodeFavorited');
+    if (!db) return { changes: 0 };
+    return db
+      .prepareOnce('UPDATE nodes SET favorited = ? WHERE node_id = ?')
+      .run(favorited ? 1 : 0, id);
+  } catch (err) {
+    finishDbIpcHandler('db:setNodeFavorited', err);
+  }
+});
+
+ipcMain.handle('db:getNodeNote', (event, nodeId: number) => {
+  try {
+    assertIpcSender(event, 'db:getNodeNote');
+    const id = safeNonNegativeInt(nodeId);
+    const db = getDbForIpc('db:getNodeNote');
+    if (!db) return null;
+    const row = db.prepareOnce('SELECT notes FROM node_notes WHERE node_id = ?').get(id) as
+      { notes: string } | undefined;
+    return row?.notes ?? null;
+  } catch (err) {
+    finishDbIpcHandler('db:getNodeNote', err);
+  }
+});
+
+ipcMain.handle('db:setNodeNote', (event, nodeId: number, note: string) => {
+  if (!validateIpcSender(event)) throw new Error('db:setNodeNote: unauthorized sender');
+  try {
+    const id = safeNonNegativeInt(nodeId);
+    if (typeof note !== 'string') throw new Error('db:setNodeNote: note must be a string');
+    if (note.length > 4000) throw new Error('db:setNodeNote: note too long (max 4000 chars)');
+    const db = getDbForIpc('db:setNodeNote');
+    if (!db) return { changes: 0 };
+    db.prepareOnce(
+      'INSERT INTO node_notes (node_id, notes, updated_at) VALUES (?, ?, ?) ON CONFLICT(node_id) DO UPDATE SET notes = excluded.notes, updated_at = excluded.updated_at',
+    ).run(id, note, Date.now());
+  } catch (err) {
+    finishDbIpcHandler('db:setNodeNote', err);
+  }
+});
+
+ipcMain.handle('db:getNodes', (event) => {
+  try {
+    assertIpcSender(event, 'db:getNodes');
+    const db = getDbForIpc('db:getNodes');
+    if (!db) return [];
+    return db.prepareOnce('SELECT * FROM nodes ORDER BY last_heard DESC').all();
+  } catch (err) {
+    finishDbIpcHandler('db:getNodes', err);
+  }
+});
+
+ipcMain.handle('db:clearMessages', (event) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    const db = getDbForIpc('db:clearMessages');
+    if (!db) return { changes: 0 };
+    const result = db.prepareOnce('DELETE FROM messages').run();
+    console.debug(`[IPC] db:clearMessages: deleted ${result.changes} messages`);
+    return result;
+  } catch (err) {
+    finishDbIpcHandler('db:clearMessages', err);
+  }
+});
+
+ipcMain.handle('db:clearNodes', (event) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    const db = getDbForIpc('db:clearNodes');
+    if (!db) return { changes: 0 };
+    const result = db.prepareOnce('DELETE FROM nodes').run();
+    console.debug(`[IPC] db:clearNodes: deleted ${result.changes} nodes`);
+    return result;
+  } catch (err) {
+    finishDbIpcHandler('db:clearNodes', err);
+  }
+});
+
+ipcMain.handle('db:clearNodePositions', (event) => {
+  if (!validateIpcSender(event)) throw new Error('db:clearNodePositions: unauthorized sender');
+  try {
+    const db = getDbForIpc('db:clearNodePositions');
+    if (!db) return { changes: 0 };
+    const result = db
+      .prepareOnce('UPDATE nodes SET latitude = NULL, longitude = NULL, altitude = NULL')
+      .run();
+    console.debug(`[IPC] db:clearNodePositions: cleared positions for ${result.changes} nodes`);
+    return result;
+  } catch (err) {
+    finishDbIpcHandler('db:clearNodePositions', err);
+  }
+});
+
+ipcMain.handle('db:deleteNode', (event, nodeId: number) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    const id = safeNonNegativeInt(nodeId);
+    const db = getDbForIpc('db:deleteNode');
+    if (!db) return { changes: 0 };
+    const result = db.prepareOnce('DELETE FROM nodes WHERE node_id = ?').run(id);
+    console.debug(
+      `[IPC] db:deleteNode: deleted node 0x${id.toString(16).toUpperCase()} (${result.changes} rows)`,
+    );
+    return result;
+  } catch (err) {
+    finishDbIpcHandler('db:deleteNode', err);
+  }
+});
+
+ipcMain.handle('db:deleteNodesNeverHeard', (event) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    const db = getDbForIpc('db:deleteNodesNeverHeard');
+    if (!db) return { changes: 0 };
+    const result = db
+      .prepareOnce(
+        "DELETE FROM nodes WHERE (last_heard IS NULL OR last_heard = 0) AND (favorited IS NULL OR favorited = 0) AND source != 'meshcore'",
+      )
+      .run();
+    if (result.changes > 0) {
+      console.debug(`[IPC] db:deleteNodesNeverHeard: pruned ${result.changes} never-heard nodes`);
+    }
+    return result;
+  } catch (err) {
+    finishDbIpcHandler('db:deleteNodesNeverHeard', err);
+  }
+});
+
+ipcMain.handle('db:deleteNodesByAge', (event, days: number) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    const db = getDbForIpc('db:deleteNodesByAge');
+    if (!db) return 0;
+    if (typeof days !== 'number' || days < 1 || !isFinite(days)) return { changes: 0 };
+    const cutoff = Math.floor(Date.now() / 1000) - days * 86400;
+    const result = db
+      .prepareOnce(
+        `DELETE FROM nodes WHERE (${NODES_LAST_HEARD_SEC_SQL} < ? OR last_heard IS NULL OR last_heard = 0) AND (favorited IS NULL OR favorited = 0) AND source != 'meshcore'`,
+      )
+      .run(cutoff);
+    if (result.changes > 0) {
+      console.debug(
+        `[IPC] db:deleteNodesByAge: pruned ${result.changes} nodes older than ${days}d`,
+      );
+    }
+    return result;
+  } catch (err) {
+    finishDbIpcHandler('db:deleteNodesByAge', err);
+  }
+});
+
+ipcMain.handle('db:pruneNodesByCount', (event, maxCount: number) => {
+  if (!validateIpcSender(event)) throw new Error('db:pruneNodesByCount: unauthorized sender');
+  try {
+    const db = getDbForIpc('db:pruneNodesByCount');
+    if (!db) return 0;
+    if (typeof maxCount !== 'number' || maxCount < 1 || !isFinite(maxCount)) return { changes: 0 };
+    const total = (db.prepareOnce('SELECT COUNT(*) as cnt FROM nodes').get() as { cnt: number })
+      .cnt;
+    if (total <= maxCount) return { changes: 0 };
+    const deletable = (
+      db
+        .prepareOnce('SELECT COUNT(*) as cnt FROM nodes WHERE (favorited IS NULL OR favorited = 0)')
+        .get() as { cnt: number }
+    ).cnt;
+    const toDelete = Math.min(total - maxCount, deletable);
+    if (toDelete <= 0) return { changes: 0 };
+    const result = db
+      .prepareOnce(
+        `DELETE FROM nodes
+         WHERE (favorited IS NULL OR favorited = 0)
+           AND node_id IN (
+             SELECT node_id FROM nodes
+             WHERE (favorited IS NULL OR favorited = 0)
+             ORDER BY ${NODES_LAST_HEARD_SEC_SQL} ASC
+             LIMIT ?
+           )`,
+      )
+      .run(toDelete);
+    if (result.changes > 0) {
+      console.debug(
+        `[IPC] db:pruneNodesByCount: pruned ${result.changes} nodes, keeping top ${maxCount}`,
+      );
+    }
+    return { changes: Number(result.changes) };
+  } catch (err) {
+    finishDbIpcHandler('db:pruneNodesByCount', err);
+  }
+});
+
+ipcMain.handle('db:pruneMessagesByCount', (event, maxCount: number) => {
+  if (!validateIpcSender(event)) throw new Error('db:pruneMessagesByCount: unauthorized sender');
+  try {
+    const db = getDbForIpc('db:pruneMessagesByCount');
+    if (!db) return 0;
+    if (typeof maxCount !== 'number' || maxCount < 100 || !isFinite(maxCount))
+      return { changes: 0 };
+    const cap = Math.floor(maxCount);
+    const result = db
+      .prepareOnce(
+        'DELETE FROM messages WHERE id NOT IN (SELECT id FROM messages ORDER BY timestamp DESC, id DESC LIMIT ?)',
+      )
+      .run(cap);
+    if (result.changes > 0) {
+      console.debug(
+        `[IPC] db:pruneMessagesByCount: pruned ${result.changes} messages, keeping newest ${cap}`,
+      );
+    }
+    return { changes: Number(result.changes) };
+  } catch (err) {
+    finishDbIpcHandler('db:pruneMessagesByCount', err);
+  }
+});
+
+ipcMain.handle('db:pruneMeshcoreMessagesByCount', (event, maxCount: number) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:pruneMeshcoreMessagesByCount: unauthorized sender');
+  try {
+    const db = getDbForIpc('db:pruneMeshcoreMessagesByCount');
+    if (!db) return 0;
+    if (typeof maxCount !== 'number' || maxCount < 100 || !isFinite(maxCount))
+      return { changes: 0 };
+    const cap = Math.floor(maxCount);
+    const result = db
+      .prepareOnce(
+        'DELETE FROM meshcore_messages WHERE id NOT IN (SELECT id FROM meshcore_messages ORDER BY timestamp DESC, id DESC LIMIT ?)',
+      )
+      .run(cap);
+    if (result.changes > 0) {
+      console.debug(
+        `[IPC] db:pruneMeshcoreMessagesByCount: pruned ${result.changes} messages, keeping newest ${cap}`,
+      );
+    }
+    return { changes: Number(result.changes) };
+  } catch (err) {
+    finishDbIpcHandler('db:pruneMeshcoreMessagesByCount', err);
+  }
+});
+
+ipcMain.handle('db:deleteNodesBatch', (event, nodeIds: number[]) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    const db = getDbForIpc('db:deleteNodesBatch');
+    if (!db) return 0;
+    if (!Array.isArray(nodeIds) || nodeIds.length === 0) return 0;
+    const safe = nodeIds
+      .filter((id) => typeof id === 'number' && Number.isInteger(id) && id > 0)
+      .slice(0, 10_000);
+    if (safe.length === 0) return 0;
+    const placeholders = safe.map(() => '?').join(', ');
+    const result = db
+      .prepareOnce(`DELETE FROM nodes WHERE node_id IN (${placeholders})`)
+      .run(...safe);
+    console.debug(`[IPC] db:deleteNodesBatch: deleted ${result.changes} nodes`);
+    return result.changes;
+  } catch (err) {
+    finishDbIpcHandler('db:deleteNodesBatch', err);
+  }
+});
+
+ipcMain.handle('db:clearMessagesByChannel', (event, channel: number) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    const db = getDbForIpc('db:clearMessagesByChannel');
+    if (!db) return { changes: 0 };
+    const ch = safeNonNegativeInt(channel);
+    const result = db.prepareOnce('DELETE FROM messages WHERE channel = ?').run(ch);
+    console.debug(
+      `[IPC] db:clearMessagesByChannel: deleted ${result.changes} messages from channel ${ch}`,
+    );
+    return result;
+  } catch (err) {
+    finishDbIpcHandler('db:clearMessagesByChannel', err);
+  }
+});
+
+ipcMain.handle('db:getMessageChannels', (event) => {
+  try {
+    assertIpcSender(event, 'db:getMessageChannels');
+    const db = getDbForIpc('db:getMessageChannels');
+    if (!db) return [];
+    return db.prepareOnce('SELECT DISTINCT channel FROM messages ORDER BY channel').all();
+  } catch (err) {
+    finishDbIpcHandler('db:getMessageChannels', err);
+  }
+});
+
+ipcMain.handle('db:deleteNodesBySource', (event, source: string) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    if (!getDbForIpc('db:deleteNodesBySource')) return 0;
+    if (typeof source !== 'string')
+      throw new Error('db:deleteNodesBySource: source must be a string');
+    if (source.length > 64) throw new Error('db:deleteNodesBySource: source string too long');
+    const changes = deleteNodesBySource(source);
+    console.debug(
+      `[IPC] db:deleteNodesBySource(${sanitizeLogMessage(source)}): pruned ${changes} nodes`,
+    );
+    return changes;
+  } catch (err) {
+    finishDbIpcHandler('db:deleteNodesBySource', err);
+  }
+});
+
+ipcMain.handle('db:migrateRfStubNodes', (event) => {
+  if (!validateIpcSender(event)) throw new Error('db:migrateRfStubNodes: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:migrateRfStubNodes')) return 0;
+    const changes = migrateRfStubNodes();
+    if (changes > 0) {
+      console.debug(`[IPC] db:migrateRfStubNodes: renamed ${changes} RF stub nodes`);
+    }
+    return changes;
+  } catch (err) {
+    finishDbIpcHandler('db:migrateRfStubNodes', err);
+  }
+});
+
+ipcMain.handle('db:deleteNodesWithoutLongname', (event) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    if (!getDbForIpc('db:deleteNodesWithoutLongname')) return 0;
+    const changes = deleteNodesWithoutLongname();
+    if (changes > 0) {
+      console.debug(`[IPC] db:deleteNodesWithoutLongname: pruned ${changes} unnamed nodes`);
+    }
+    return changes;
+  } catch (err) {
+    finishDbIpcHandler('db:deleteNodesWithoutLongname', err);
+  }
+});
+
+ipcMain.handle('db:prunePositionHistory', (event, days: number) => {
+  if (!validateIpcSender(event)) throw new Error('db:prunePositionHistory: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:prunePositionHistory')) return 0;
+    const safeDays = typeof days === 'number' && days > 0 ? Math.floor(days) : 30;
+    const changes = prunePositionHistory(safeDays);
+    if (changes > 0) {
+      console.debug(
+        `[IPC] db:prunePositionHistory: pruned ${changes} rows older than ${safeDays}d`,
+      );
+    }
+    return changes;
+  } catch (err) {
+    finishDbIpcHandler('db:prunePositionHistory', err);
+  }
+});
+
+ipcMain.handle('db:prunePositionHistoryPerNode', (event, maxPerNode: number) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:prunePositionHistoryPerNode: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:prunePositionHistoryPerNode')) return 0;
+    const cap = typeof maxPerNode === 'number' && maxPerNode > 0 ? Math.floor(maxPerNode) : 2000;
+    const changes = prunePositionHistoryPerNode(cap);
+    if (changes > 0) {
+      console.debug(
+        `[IPC] db:prunePositionHistoryPerNode: pruned ${changes} rows, keeping ${cap} per node`,
+      );
+    }
+    return changes;
+  } catch (err) {
+    finishDbIpcHandler('db:prunePositionHistoryPerNode', err);
+  }
+});
+
+ipcMain.handle('db:deleteMeshcoreContactsNeverAdvertised', (event) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:deleteMeshcoreContactsNeverAdvertised: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:deleteMeshcoreContactsNeverAdvertised')) return 0;
+    const changes = deleteMeshcoreContactsNeverAdvertised();
+    if (changes > 0) {
+      console.debug(`[IPC] db:deleteMeshcoreContactsNeverAdvertised: removed ${changes} contacts`);
+    }
+    return changes;
+  } catch (err) {
+    finishDbIpcHandler('db:deleteMeshcoreContactsNeverAdvertised', err);
+  }
+});
+
+ipcMain.handle('db:deleteMeshcoreContactsByAge', (event, days: number) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:deleteMeshcoreContactsByAge: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:deleteMeshcoreContactsByAge')) return 0;
+    const safeDays = typeof days === 'number' && days > 0 ? Math.floor(days) : 30;
+    const changes = deleteMeshcoreContactsByAge(safeDays);
+    if (changes > 0) {
+      console.debug(
+        `[IPC] db:deleteMeshcoreContactsByAge: removed ${changes} contacts older than ${safeDays}d`,
+      );
+    }
+    return changes;
+  } catch (err) {
+    finishDbIpcHandler('db:deleteMeshcoreContactsByAge', err);
+  }
+});
+
+ipcMain.handle('db:pruneMeshcoreContactsByCount', (event, maxCount: number) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:pruneMeshcoreContactsByCount: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:pruneMeshcoreContactsByCount')) return 0;
+    const safeMax = typeof maxCount === 'number' && maxCount > 0 ? Math.floor(maxCount) : 5000;
+    const changes = pruneMeshcoreContactsByCount(safeMax);
+    if (changes > 0) {
+      console.debug(`[IPC] db:pruneMeshcoreContactsByCount: removed ${changes} excess contacts`);
+    }
+    return { changes };
+  } catch (err) {
+    finishDbIpcHandler('db:pruneMeshcoreContactsByCount', err);
+  }
+});
+
+function capStatusString(label: string, value: string | undefined | null): string | null {
+  if (value == null) return null;
+  if (value.length > MAX_STATUS_STRING)
+    throw new Error(`${label} exceeds maximum length (${MAX_STATUS_STRING})`);
+  return value;
+}
+
+// ─── IPC: Update message delivery status ────────────────────────────
+ipcMain.handle(
+  'db:updateMessageStatus',
+  (event, packetId: number, status: string, error?: string, mqttStatus?: string) => {
+    if (!validateIpcSender(event)) throw new Error('db:updateMessageStatus: unauthorized sender');
+    try {
+      const pid = safeNonNegativeInt(packetId);
+      if (typeof status !== 'string')
+        throw new Error('db:updateMessageStatus: status must be a string');
+      const statusSafe = capStatusString('db:updateMessageStatus: status', status)!;
+      const errorSafe = capStatusString('db:updateMessageStatus: error', error);
+      const db = getDbForIpc('db:updateMessageStatus');
+      if (!db) return { changes: 0 };
+      if (mqttStatus !== undefined) {
+        if (typeof mqttStatus !== 'string')
+          throw new Error('db:updateMessageStatus: mqttStatus must be a string');
+        const mqttSafe = capStatusString('db:updateMessageStatus: mqttStatus', mqttStatus)!;
+        return db
+          .prepareOnce(
+            'UPDATE messages SET status = ?, error = ?, mqtt_status = ? WHERE packet_id = ?',
+          )
+          .run(statusSafe, errorSafe, mqttSafe, pid);
+      }
+      return db
+        .prepareOnce('UPDATE messages SET status = ?, error = ? WHERE packet_id = ?')
+        .run(statusSafe, errorSafe, pid);
+    } catch (err) {
+      finishDbIpcHandler('db:updateMessageStatus', err);
+    }
+  },
+);
+
+// ─── IPC: Upgrade received_via to 'both' when packet arrives on second transport ─
+ipcMain.handle('db:updateMessageReceivedVia', (event, packetId: number, rxHops?: number | null) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:updateMessageReceivedVia: unauthorized sender');
+  try {
+    const pid = safeNonNegativeInt(packetId);
+    const db = getDbForIpc('db:updateMessageReceivedVia');
+    if (!db) return { changes: 0 };
+    const hopBind =
+      rxHops != null && typeof rxHops === 'number' && Number.isFinite(rxHops)
+        ? Math.trunc(rxHops)
+        : null;
+    return db
+      .prepareOnce(
+        "UPDATE messages SET received_via = 'both', rx_hops = COALESCE(?, rx_hops) WHERE packet_id = ? AND received_via != 'both'",
+      )
+      .run(hopBind, pid);
+  } catch (err) {
+    finishDbIpcHandler('db:updateMessageReceivedVia', err);
+  }
+});
+
+/** Replace optimistic temp `packet_id` with the real mesh id from `sendText()` (tapbacks key on `reply_id`). */
+ipcMain.handle(
+  'db:updateMessagePacketId',
+  (event, oldPacketId: number, newPacketId: number, senderId?: number) => {
+    if (!validateIpcSender(event)) throw new Error('db:updateMessagePacketId: unauthorized sender');
+    const oldPid = safeNonNegativeInt(oldPacketId);
+    const newPid = safeNonNegativeInt(newPacketId);
+    if (oldPid === newPid) return;
+    const db = getDbForIpc('db:updateMessagePacketId');
+    if (!db) return;
+    const deleteByPacketId = db.prepareOnce('DELETE FROM messages WHERE packet_id = ?');
+    try {
+      const scopedSenderId =
+        senderId != null && Number.isFinite(senderId) ? safeNonNegativeInt(senderId) : undefined;
+      const updated =
+        scopedSenderId != null
+          ? db
+              .prepareOnce(
+                'UPDATE messages SET packet_id = ? WHERE packet_id = ? AND sender_id = ?',
+              )
+              .run(newPid, oldPid, scopedSenderId)
+          : db
+              .prepareOnce('UPDATE messages SET packet_id = ? WHERE packet_id = ?')
+              .run(newPid, oldPid);
+      if (updated.changes > 0) return;
+      // RF echo may have inserted the real packet_id before this runs; drop orphan temp row.
+      deleteByPacketId.run(oldPid);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('UNIQUE constraint failed')) {
+        deleteByPacketId.run(oldPid);
+        return;
+      }
+      finishDbIpcHandler('db:updateMessagePacketId', err);
+    }
+  },
+);
+
+// ─── IPC: Export database ───────────────────────────────────────────
+ipcMain.handle('db:export', async (event) => {
+  if (!validateIpcSender(event)) throw new Error('db:export: unauthorized sender');
+  exportIpcRateLimit.checkOrThrow();
+  try {
+    if (!getDbForIpc('db:export')) return null;
+    if (!mainWindow) return null;
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export Database',
+      defaultPath: `mesh-client-backup-${new Date().toISOString().slice(0, 10)}.db`,
+      filters: [{ name: 'SQLite Database', extensions: ['db'] }],
+    });
+    if (!result.canceled && result.filePath) {
+      exportDatabase(result.filePath);
+      return result.filePath;
+    }
+    return null;
+  } catch (err) {
+    finishDbIpcHandler('db:export', err);
+  }
+});
+
+// ─── IPC: Import / merge database ───────────────────────────────────
+ipcMain.handle('db:import', async (event) => {
+  if (!validateIpcSender(event)) throw new Error('db:import: unauthorized sender');
+  exportIpcRateLimit.checkOrThrow();
+  try {
+    if (!getDbForIpc('db:import')) return null;
+    if (!mainWindow) return null;
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Import Database',
+      filters: [{ name: 'SQLite Database', extensions: ['db'] }],
+      properties: ['openFile'],
+    });
+    if (!result.canceled && result.filePaths.length > 0) {
+      return mergeDatabase(result.filePaths[0]);
+    }
+    return null;
+  } catch (err) {
+    if (isDatabaseSchemaTooNewError(err)) {
+      showFatalStartupError('Mesh-Client — Import Blocked', formatDatabaseSchemaTooNewMessage(err));
+    }
+    finishDbIpcHandler('db:import', err);
+  }
+});
+
+// ─── IPC: Clear Chromium session data (BLE cache, cookies, etc.) ──
+ipcMain.handle('session:clearData', async (event) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (!win) return;
+    await win.webContents.session.clearStorageData({
+      storages: ['cookies', 'localstorage', 'cachestorage', 'shadercache', 'serviceworkers'],
+    });
+    await win.webContents.session.clearCache();
+  } catch (err) {
+    console.error(
+      '[IPC] session:clearData failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+// ─── IPC: Log panel ─────────────────────────────────────────────────
+ipcMain.handle('log:getPath', (event) => {
+  assertIpcSender(event, 'log:getPath');
+  try {
+    return getLogPath();
+  } catch (err) {
+    console.error(
+      '[IPC] log:getPath failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('log:getRecentLines', (event) => {
+  assertIpcSender(event, 'log:getRecentLines');
+  try {
+    return getRecentLines();
+  } catch (err) {
+    console.error(
+      '[IPC] log:getRecentLines failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('log:clear', (event) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    clearLogFile();
+  } catch (err) {
+    console.error(
+      '[IPC] log:clear failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('log:device-connection', (event, detail: unknown) => {
+  if (!validateIpcSender(event)) return;
+  if (typeof detail !== 'string' || detail.length > 8192) return;
+  logDeviceConnection(detail);
+});
+
+ipcMain.handle('log:export', async (event) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  exportIpcRateLimit.checkOrThrow();
+  try {
+    if (!mainWindow) return null;
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export log',
+      defaultPath: `mesh-client-log-${new Date().toISOString().slice(0, 10)}.log`,
+      filters: [{ name: 'Log file', extensions: ['log', 'txt'] }],
+    });
+    if (!result.canceled && result.filePath) {
+      const src = getLogPath();
+      if (!fs.existsSync(src)) {
+        await fs.promises.writeFile(result.filePath, '', 'utf8');
+      } else {
+        await exportLogTo(result.filePath);
+      }
+      return result.filePath;
+    }
+    return null;
+  } catch (err) {
+    console.error(
+      '[IPC] log:export failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('support:exportBundle', async (event, mode: unknown, debugSnapshotJson: unknown) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  exportIpcRateLimit.checkOrThrow();
+  if (!isSupportBundleMode(mode)) {
+    throw new Error('support:exportBundle: invalid mode');
+  }
+  if (typeof debugSnapshotJson !== 'string') {
+    throw new Error('support:exportBundle: debugSnapshotJson must be a string');
+  }
+  try {
+    if (mode === 'developer' && !getDbForIpc('support:exportBundle')) return null;
+    if (!mainWindow) return null;
+    const title =
+      mode === 'github'
+        ? 'Export support bundle for GitHub'
+        : 'Export support bundle for developer';
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title,
+      defaultPath: defaultSupportBundleFilename(mode),
+      filters: [{ name: 'ZIP archive', extensions: ['zip'] }],
+    });
+    if (!result.canceled && result.filePath) {
+      await buildSupportBundleZip(result.filePath, mode, debugSnapshotJson);
+      return result.filePath;
+    }
+    return null;
+  } catch (err) {
+    console.error(
+      '[IPC] support:exportBundle failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('chat:export', async (event, messages: unknown) => {
+  if (!validateIpcSender(event)) throw new Error('IPC sender validation failed');
+  exportIpcRateLimit.checkOrThrow();
+  if (!Array.isArray(messages)) throw new Error('messages must be an array');
+  if (messages.length > CHAT_EXPORT_MAX_MESSAGES) {
+    throw new Error(`chat:export: too many messages (max ${CHAT_EXPORT_MAX_MESSAGES})`);
+  }
+  assertChatExportMessageSizes(messages);
+  if (!mainWindow) return { success: false };
+  try {
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export chat',
+      defaultPath: `mesh-chat-${new Date().toISOString().slice(0, 10)}.txt`,
+      filters: [{ name: 'Text file', extensions: ['txt'] }],
+    });
+    if (result.canceled || !result.filePath) return { success: false };
+    const text = formatChatExportLinesWithTotalCap(messages);
+    await fs.promises.writeFile(result.filePath, text, 'utf8');
+    return { success: true, path: result.filePath };
+  } catch (err) {
+    console.error(
+      '[IPC] chat:export failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('gps:exportGpx', async (event, opts: unknown) => {
+  if (!validateIpcSender(event)) throw new Error('IPC sender validation failed');
+  const o = opts && typeof opts === 'object' ? (opts as Record<string, unknown>) : {};
+  const nodeId = typeof o.nodeId === 'number' && Number.isFinite(o.nodeId) ? o.nodeId : undefined;
+  const sinceMs =
+    typeof o.sinceMs === 'number' && Number.isFinite(o.sinceMs) && o.sinceMs >= 0 ? o.sinceMs : 0;
+  try {
+    const db = getDbForIpc('gps:exportGpx');
+    if (!db) return { success: false, reason: 'no_db' as const };
+    if (!mainWindow) return { success: false, reason: 'no_window' as const };
+    let rows: {
+      node_id: number;
+      latitude: number;
+      longitude: number;
+      recorded_at: number;
+      source: string;
+    }[];
+    if (nodeId !== undefined) {
+      rows = db
+        .prepareOnce(
+          'SELECT node_id, latitude, longitude, recorded_at, source FROM position_history WHERE recorded_at >= ? AND node_id = ? ORDER BY recorded_at ASC LIMIT ?',
+        )
+        .all(sinceMs, nodeId, GPX_EXPORT_MAX_POINTS) as typeof rows;
+    } else {
+      rows = db
+        .prepareOnce(
+          'SELECT node_id, latitude, longitude, recorded_at, source FROM position_history WHERE recorded_at >= ? ORDER BY node_id, recorded_at ASC LIMIT ?',
+        )
+        .all(sinceMs, GPX_EXPORT_MAX_POINTS) as typeof rows;
+    }
+    if (rows.length === 0) return { success: false, reason: 'empty' as const };
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export GPX',
+      defaultPath: `mesh-track-${new Date().toISOString().slice(0, 10)}.gpx`,
+      filters: [{ name: 'GPX', extensions: ['gpx'] }],
+    });
+    if (result.canceled || !result.filePath)
+      return { success: false, reason: 'cancelled' as const };
+    const xml = formatGpxTracks(rows);
+    await fs.promises.writeFile(result.filePath, xml, 'utf8');
+    return { success: true, path: result.filePath };
+  } catch (err) {
+    console.error(
+      '[IPC] gps:exportGpx failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('chat:saveReticulumAttachment', async (event, opts: unknown) => {
+  if (!validateIpcSender(event)) throw new Error('IPC sender validation failed');
+  if (!opts || typeof opts !== 'object') throw new Error('opts must be an object');
+  const o = opts as Record<string, unknown>;
+  const fileName = typeof o.fileName === 'string' ? path.basename(o.fileName) : 'attachment';
+  const dataBase64 = typeof o.dataBase64 === 'string' ? o.dataBase64 : '';
+  const promptSave = o.promptSave !== false;
+  if (!dataBase64 || dataBase64.length > 16 * 1024 * 1024) {
+    throw new Error('dataBase64 invalid or too large');
+  }
+  try {
+    const buf = Buffer.from(dataBase64, 'base64');
+    if (buf.length > 16 * 1024 * 1024) throw new Error('decoded attachment too large');
+    let targetPath: string;
+    if (promptSave) {
+      if (!mainWindow) return { success: false };
+      const ext = path.extname(fileName) || '';
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: 'Save attachment',
+        defaultPath: fileName,
+        filters: ext ? [{ name: ext.slice(1), extensions: [ext.slice(1)] }] : undefined,
+      });
+      if (result.canceled || !result.filePath) return { success: false };
+      targetPath = result.filePath;
+    } else {
+      const dir = path.join(app.getPath('userData'), 'reticulum', 'attachments');
+      await fs.promises.mkdir(dir, { recursive: true });
+      const safeName = fileName.replace(/[^\w.-]+/g, '_').slice(0, 120) || 'attachment';
+      targetPath = path.join(dir, `${Date.now()}-${safeName}`);
+    }
+    await fs.promises.writeFile(targetPath, buf);
+    return { success: true, path: targetPath };
+  } catch (err) {
+    console.error(
+      '[IPC] chat:saveReticulumAttachment failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('chat:showItemInFolder', (event, filePath: unknown) => {
+  if (!validateIpcSender(event)) throw new Error('IPC sender validation failed');
+  if (typeof filePath !== 'string' || !filePath.trim()) {
+    throw new Error('filePath must be a non-empty string');
+  }
+  try {
+    shell.showItemInFolder(assertReticulumAttachmentPathJailed(filePath));
+    return { ok: true };
+  } catch (err) {
+    console.error(
+      '[IPC] chat:showItemInFolder failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('chat:readReticulumAttachmentAsDataUrl', async (event, opts: unknown) => {
+  if (!validateIpcSender(event)) throw new Error('IPC sender validation failed');
+  if (!opts || typeof opts !== 'object') throw new Error('opts must be an object');
+  const o = opts as Record<string, unknown>;
+  if (typeof o.filePath !== 'string' || !o.filePath.trim() || o.filePath.length > 512) {
+    throw new Error('filePath must be a non-empty string');
+  }
+  // Optional mimeType on the wire is ignored — magic bytes alone decide embed MIME.
+  if (!takeReticulumAttachmentImageRateToken()) {
+    console.debug('[IPC] chat:readReticulumAttachmentAsDataUrl rate limited');
+    return { dataUrl: null };
+  }
+  try {
+    const dataUrl = await readReticulumAttachmentAsDataUrl(o.filePath);
+    return { dataUrl };
+  } catch (err) {
+    console.error(
+      '[IPC] chat:readReticulumAttachmentAsDataUrl failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('chat:readReticulumAttachmentBytes', async (event, filePath: unknown) => {
+  if (!validateIpcSender(event)) throw new Error('IPC sender validation failed');
+  if (typeof filePath !== 'string' || !filePath.trim() || filePath.length > 512) {
+    throw new Error('filePath must be a non-empty string');
+  }
+  if (!takeReticulumAttachmentAudioRateToken()) {
+    console.debug('[IPC] chat:readReticulumAttachmentBytes rate limited');
+    return { dataBase64: null };
+  }
+  try {
+    const dataBase64 = await readReticulumAttachmentBytes(filePath);
+    return { dataBase64 };
+  } catch (err) {
+    console.error(
+      '[IPC] chat:readReticulumAttachmentBytes failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('meshtastic:xmodemPickUpload', async (event) => {
+  if (!validateIpcSender(event)) throw new Error('IPC sender validation failed');
+  if (!mainWindow) return null;
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Select file to upload',
+      properties: ['openFile'],
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    const filePath = result.filePaths[0];
+    let data: Buffer;
+    try {
+      data = await readFileUpTo(filePath, MESHTASTIC_XMODEM_UPLOAD_MAX_BYTES);
+    } catch (err) {
+      if (err instanceof Error && err.message === 'File too large') {
+        throw new Error(
+          `File too large (max ${MESHTASTIC_XMODEM_UPLOAD_MAX_BYTES / (1024 * 1024)} MB)`,
+        );
+      }
+      throw err;
+    }
+    const filename = path.basename(filePath);
+    return { filename, data: new Uint8Array(data) };
+  } catch (err) {
+    console.error(
+      '[IPC] meshtastic:xmodemPickUpload failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle('meshtastic:xmodemSaveDownload', async (event, filename: unknown, data: unknown) => {
+  if (!validateIpcSender(event)) throw new Error('IPC sender validation failed');
+  if (typeof filename !== 'string' || filename.length === 0 || filename.length > 256) {
+    throw new Error('meshtastic:xmodemSaveDownload: invalid filename');
+  }
+  if (!(data instanceof Uint8Array) || data.length === 0) {
+    throw new Error('meshtastic:xmodemSaveDownload: data must be non-empty Uint8Array');
+  }
+  if (!mainWindow) return { success: false };
+  try {
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Save downloaded file',
+      defaultPath: path.basename(filename),
+    });
+    if (result.canceled || !result.filePath) return { success: false };
+    await fs.promises.writeFile(result.filePath, data);
+    return { success: true, path: result.filePath };
+  } catch (err) {
+    console.error(
+      '[IPC] meshtastic:xmodemSaveDownload failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+// ─── IPC: Chat link preview ──────────────────────────────────────────
+ipcMain.handle('chat:fetchLinkPreview', async (event, url: unknown) => {
+  if (!validateIpcSender(event)) throw new Error('chat:fetchLinkPreview: unauthorized sender');
+  if (typeof url !== 'string' || url.length === 0 || url.length > 2048) return null;
+  return await fetchLinkPreview(url);
+});
+
+// ─── IPC: Chat outbox ─────────────────────────────────────────────────
+const OUTBOX_VALID_PROTOCOLS = MESH_PROTOCOL_SET;
+const OUTBOX_VALID_STATUSES = new Set(['queued', 'sending', 'blocked', 'failed']);
+
+ipcMain.handle('chat:outbox:list', (event, protocol: unknown) => {
+  try {
+    assertIpcSender(event, 'chat:outbox:list');
+    if (typeof protocol !== 'string' || !OUTBOX_VALID_PROTOCOLS.has(protocol)) {
+      throw new Error('chat:outbox:list: invalid protocol');
+    }
+    const db = getDbForIpc('chat:outbox:list');
+    if (!db) return [];
+    const rows = db
+      .prepareOnce('SELECT * FROM chat_outbox WHERE protocol = ? ORDER BY created_at ASC')
+      .all(protocol) as Record<string, unknown>[];
+    return rows.map(rowToOutboxEntry);
+  } catch (err) {
+    return finishDbIpcReadHandler('chat:outbox:list', err, []);
+  }
+});
+
+ipcMain.handle('chat:outbox:add', (event, entry: unknown) => {
+  try {
+    assertIpcSender(event, 'chat:outbox:add');
+    if (!entry || typeof entry !== 'object') throw new Error('chat:outbox:add: invalid entry');
+    const e = entry as Record<string, unknown>;
+    if (typeof e.protocol !== 'string' || !OUTBOX_VALID_PROTOCOLS.has(e.protocol))
+      throw new Error('chat:outbox:add: invalid protocol');
+    if (typeof e.viewKey !== 'string') throw new Error('chat:outbox:add: invalid viewKey');
+    if (typeof e.channel !== 'number') throw new Error('chat:outbox:add: invalid channel');
+    if (typeof e.payload !== 'string' || e.payload.length === 0 || e.payload.length > 2048)
+      throw new Error('chat:outbox:add: invalid payload');
+    const now = Date.now();
+    const db = getDbForIpc('chat:outbox:add');
+    if (!db) throw new Error('chat:outbox:add: database closed');
+    const result = db
+      .prepareOnce(
+        `INSERT INTO chat_outbox
+        (protocol, view_key, channel, to_node, payload, reply_id, status, error,
+         attempt_count, next_retry_at, created_at, updated_at, group_id, group_index, group_total)
+       VALUES (?,?,?,?,?,?,?,?,0,?,?,?,?,?,?)`,
+      )
+      .run(
+        e.protocol,
+        e.viewKey,
+        e.channel,
+        e.toNode ?? null,
+        e.payload,
+        e.replyId ?? null,
+        typeof e.status === 'string' && OUTBOX_VALID_STATUSES.has(e.status) ? e.status : 'queued',
+        e.error ?? null,
+        e.nextRetryAt ?? null,
+        e.createdAt ?? now,
+        now,
+        e.groupId ?? null,
+        e.groupIndex ?? null,
+        e.groupTotal ?? null,
+      );
+    const row = db
+      .prepareOnce('SELECT * FROM chat_outbox WHERE id = ?')
+      .get(result.lastInsertRowid) as Record<string, unknown>;
+    return rowToOutboxEntry(row);
+  } catch (err) {
+    finishDbIpcHandler('chat:outbox:add', err);
+  }
+});
+
+ipcMain.handle(
+  'chat:outbox:updateStatus',
+  (
+    event,
+    id: unknown,
+    status: unknown,
+    error?: unknown,
+    nextRetryAt?: unknown,
+    attemptCount?: unknown,
+  ) => {
+    try {
+      assertIpcSender(event, 'chat:outbox:updateStatus');
+      if (typeof id !== 'number' || !Number.isInteger(id))
+        throw new Error('chat:outbox:updateStatus: invalid id');
+      if (typeof status !== 'string' || !OUTBOX_VALID_STATUSES.has(status))
+        throw new Error('chat:outbox:updateStatus: invalid status');
+      const db = getDbForIpc('chat:outbox:updateStatus');
+      if (!db) return;
+      if (typeof attemptCount === 'number' && Number.isInteger(attemptCount)) {
+        db.prepareOnce(
+          'UPDATE chat_outbox SET status = ?, error = ?, next_retry_at = ?, attempt_count = ?, updated_at = ? WHERE id = ?',
+        ).run(
+          status,
+          typeof error === 'string' ? error : null,
+          typeof nextRetryAt === 'number' ? nextRetryAt : null,
+          attemptCount,
+          Date.now(),
+          id,
+        );
+      } else {
+        db.prepareOnce(
+          'UPDATE chat_outbox SET status = ?, error = ?, next_retry_at = ?, updated_at = ? WHERE id = ?',
+        ).run(
+          status,
+          typeof error === 'string' ? error : null,
+          typeof nextRetryAt === 'number' ? nextRetryAt : null,
+          Date.now(),
+          id,
+        );
+      }
+    } catch (err) {
+      finishDbIpcHandler('chat:outbox:updateStatus', err);
+    }
+  },
+);
+
+ipcMain.handle('chat:outbox:remove', (event, id: unknown) => {
+  try {
+    assertIpcSender(event, 'chat:outbox:remove');
+    if (typeof id !== 'number' || !Number.isInteger(id))
+      throw new Error('chat:outbox:remove: invalid id');
+    const db = getDbForIpc('chat:outbox:remove');
+    if (!db) return;
+    db.prepareOnce('DELETE FROM chat_outbox WHERE id = ?').run(id);
+  } catch (err) {
+    finishDbIpcHandler('chat:outbox:remove', err);
+  }
+});
+
+function rowToOutboxEntry(row: Record<string, unknown>) {
+  return {
+    id: row.id as number,
+    protocol: row.protocol as string,
+    viewKey: row.view_key as string,
+    channel: row.channel as number,
+    toNode: (row.to_node as number | null) ?? null,
+    payload: row.payload as string,
+    replyId: (row.reply_id as number | null) ?? null,
+    status: row.status as string,
+    error: (row.error as string | null) ?? null,
+    attemptCount: (row.attempt_count as number) ?? 0,
+    nextRetryAt: (row.next_retry_at as number | null) ?? null,
+    createdAt: row.created_at as number,
+    updatedAt: row.updated_at as number,
+    groupId: (row.group_id as string | null) ?? null,
+    groupIndex: (row.group_index as number | null) ?? null,
+    groupTotal: (row.group_total as number | null) ?? null,
+  };
+}
+
+// ─── IPC: MeshCore database operations ──────────────────────────────
+ipcMain.handle('db:getMeshcoreMessages', (event, channelIdx?: number, limit = 200) => {
+  try {
+    assertIpcSender(event, 'db:getMeshcoreMessages');
+    const safeLimit = clampQueryLimit(limit, { default: 200, max: 10000 });
+    const db = getDbForIpc('db:getMeshcoreMessages');
+    if (!db) return [];
+    // Order by row id (insert order at this client), not `timestamp`:
+    // outgoing messages use Date.now() while RF inbound uses the radio's clock; if the device
+    // time lags, ORDER BY timestamp DESC kept "recent" sends but dropped inbound rows from the
+    // LIMIT window. Reversed DESC→ASC yields oldest-first within the N most recently stored rows.
+    if (channelIdx != null) {
+      const ch = typeof channelIdx === 'number' ? Math.trunc(channelIdx) : 0;
+      const rows = db
+        .prepareOnce(
+          'SELECT * FROM meshcore_messages WHERE channel_idx = ? ORDER BY id DESC LIMIT ?',
+        )
+        .all(ch, safeLimit) as Record<string, unknown>[];
+      rows.reverse();
+      return rows.map((row) => ({
+        ...row,
+        timestamp: effectiveMessageTimestampMs(Number(row.timestamp)),
+      }));
+    }
+    const rows = db
+      .prepareOnce('SELECT * FROM meshcore_messages ORDER BY id DESC LIMIT ?')
+      .all(safeLimit) as Record<string, unknown>[];
+    rows.reverse();
+    return rows.map((row) => ({
+      ...row,
+      timestamp: effectiveMessageTimestampMs(Number(row.timestamp)),
+    }));
+  } catch (err) {
+    finishDbIpcHandler('db:getMeshcoreMessages', err);
+  }
+});
+
+ipcMain.handle('db:searchMessages', (event, query: string, limit?: number) => {
+  try {
+    assertIpcSender(event, 'db:searchMessages');
+    if (!getDbForIpc('db:searchMessages')) return [];
+    if (typeof query !== 'string' || query.length > 500) return [];
+    return searchMessages(query, Math.min(limit ?? 50, 200));
+  } catch (err) {
+    finishDbIpcHandler('db:searchMessages', err);
+  }
+});
+
+ipcMain.handle('db:searchMeshcoreMessages', (event, query: string, limit?: number) => {
+  try {
+    assertIpcSender(event, 'db:searchMeshcoreMessages');
+    if (!getDbForIpc('db:searchMeshcoreMessages')) return [];
+    if (typeof query !== 'string' || query.length > 500) return [];
+    return searchMeshcoreMessages(query, Math.min(limit ?? 50, 200));
+  } catch (err) {
+    finishDbIpcHandler('db:searchMeshcoreMessages', err);
+  }
+});
+
+ipcMain.handle('db:getMeshcoreContacts', (event) => {
+  try {
+    assertIpcSender(event, 'db:getMeshcoreContacts');
+    const db = getDbForIpc('db:getMeshcoreContacts');
+    if (!db) return [];
+    return db.prepareOnce('SELECT * FROM meshcore_contacts').all();
+  } catch (err) {
+    finishDbIpcHandler('db:getMeshcoreContacts', err);
+  }
+});
+
+ipcMain.handle('db:saveMeshcoreMessage', (event, message) => {
+  if (!validateIpcSender(event)) throw new Error('db:saveMeshcoreMessage: unauthorized sender');
+  try {
+    validateSaveMeshcoreMessage(message);
+    const m = message as Record<string, unknown>;
+    const replyId = m.reply_id != null ? Number(m.reply_id) : null;
+    if (replyId != null && (!Number.isFinite(replyId) || replyId < 0)) {
+      throw new Error('db:saveMeshcoreMessage: reply_id must be a non-negative finite number');
+    }
+    const db = getDbForIpc('db:saveMeshcoreMessage');
+    if (!db) return { changes: 0 };
+    const validReceivedVia = ['rf', 'mqtt', 'both'] as const;
+    const receivedViaRaw = m.received_via;
+    const received_via =
+      typeof receivedViaRaw === 'string' &&
+      (validReceivedVia as readonly string[]).includes(receivedViaRaw)
+        ? receivedViaRaw
+        : null;
+    const rxFp =
+      typeof m.rx_packet_fingerprint === 'string' ? m.rx_packet_fingerprint.toUpperCase() : null;
+    const replyPreviewText =
+      typeof m.reply_preview_text === 'string' ? m.reply_preview_text.slice(0, 50) : null;
+    const replyPreviewSender =
+      typeof m.reply_preview_sender === 'string' ? m.reply_preview_sender.slice(0, 64) : null;
+    const rowParams = {
+      sender_id: m.sender_id != null ? Number(m.sender_id) >>> 0 : null,
+      sender_name: typeof m.sender_name === 'string' ? m.sender_name : null,
+      payload: m.payload as string,
+      channel_idx: m.channel_idx != null ? Math.trunc(Number(m.channel_idx)) : 0,
+      timestamp: effectiveMessageTimestampMs(Number(m.timestamp)),
+      status: typeof m.status === 'string' ? m.status : 'acked',
+      packet_id: m.packet_id != null ? Number(m.packet_id) : null,
+      emoji: m.emoji != null ? (sanitizeUnicodeReactionScalar(m.emoji) ?? null) : null,
+      reply_id: replyId,
+      to_node: m.to_node != null ? Number(m.to_node) >>> 0 : null,
+      received_via,
+      rx_packet_fingerprint: rxFp,
+      reply_preview_text: replyPreviewText,
+      reply_preview_sender: replyPreviewSender,
+      rx_hops:
+        m.rx_hops != null && Number.isFinite(Number(m.rx_hops))
+          ? Math.trunc(Number(m.rx_hops))
+          : null,
+      room_server_id:
+        m.room_server_id != null && Number.isFinite(Number(m.room_server_id))
+          ? Math.trunc(Number(m.room_server_id))
+          : null,
+    };
+
+    // idx_mc_msg_dedup is a partial UNIQUE index (sender_id IS NOT NULL); SQLite cannot
+    // target it with INSERT ON CONFLICT(columns). Update by natural key, then insert.
+    const senderId = rowParams.sender_id;
+    if (senderId != null && Number.isFinite(senderId) && senderId >= 0) {
+      const updated = db
+        .prepareOnce(
+          'UPDATE meshcore_messages SET ' +
+            'sender_name = COALESCE(@sender_name, sender_name), ' +
+            'status = CASE ' +
+            "WHEN @status IN ('acked', 'failed') THEN @status " +
+            "WHEN status = 'acked' THEN status " +
+            'ELSE @status END, ' +
+            'packet_id = COALESCE(@packet_id, packet_id), ' +
+            'emoji = COALESCE(@emoji, emoji), ' +
+            'reply_id = COALESCE(@reply_id, reply_id), ' +
+            'to_node = COALESCE(@to_node, to_node), ' +
+            'received_via = COALESCE(@received_via, received_via), ' +
+            'rx_packet_fingerprint = COALESCE(@rx_packet_fingerprint, rx_packet_fingerprint), ' +
+            'reply_preview_text = COALESCE(@reply_preview_text, reply_preview_text), ' +
+            'reply_preview_sender = COALESCE(@reply_preview_sender, reply_preview_sender), ' +
+            'rx_hops = COALESCE(@rx_hops, rx_hops), ' +
+            'room_server_id = COALESCE(@room_server_id, room_server_id) ' +
+            'WHERE sender_id = @sender_id AND timestamp = @timestamp AND channel_idx = @channel_idx AND payload = @payload',
+        )
+        .run(rowParams);
+      if (updated.changes > 0) {
+        return updated;
+      }
+    }
+
+    return db
+      .prepareOnce(
+        'INSERT OR IGNORE INTO meshcore_messages ' +
+          '(sender_id, sender_name, payload, channel_idx, timestamp, status, packet_id, emoji, reply_id, to_node, received_via, rx_packet_fingerprint, reply_preview_text, reply_preview_sender, rx_hops, room_server_id) ' +
+          'VALUES (@sender_id, @sender_name, @payload, @channel_idx, @timestamp, @status, @packet_id, @emoji, @reply_id, @to_node, @received_via, @rx_packet_fingerprint, @reply_preview_text, @reply_preview_sender, @rx_hops, @room_server_id)',
+      )
+      .run(rowParams);
+  } catch (err) {
+    finishDbIpcHandler('db:saveMeshcoreMessage', err);
+  }
+});
+
+ipcMain.handle('db:saveMeshcoreContact', (event, contact) => {
+  if (!validateIpcSender(event)) throw new Error('db:saveMeshcoreContact: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:saveMeshcoreContact')) return { changes: 0 };
+    validateSaveMeshcoreContact(contact);
+    return saveMeshcoreContactsBatch([meshcoreContactInputToUpsertParams(contact)]);
+  } catch (err) {
+    finishDbIpcHandler('db:saveMeshcoreContact', err);
+  }
+});
+
+ipcMain.handle('db:saveMeshcoreContactsBatch', (event, contacts: unknown) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:saveMeshcoreContactsBatch: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:saveMeshcoreContactsBatch')) return { changes: 0 };
+    if (!Array.isArray(contacts)) {
+      throw new Error('db:saveMeshcoreContactsBatch: contacts must be an array');
+    }
+    const rows: MeshcoreContactUpsertParams[] = [];
+    for (let i = 0; i < contacts.length; i += MESHCORE_CONTACTS_BATCH_MAX) {
+      const slice = contacts.slice(i, i + MESHCORE_CONTACTS_BATCH_MAX);
+      for (const contact of slice) {
+        validateSaveMeshcoreContact(contact);
+        rows.push(meshcoreContactInputToUpsertParams(contact));
+      }
+    }
+    return saveMeshcoreContactsBatch(rows);
+  } catch (err) {
+    finishDbIpcHandler('db:saveMeshcoreContactsBatch', err);
+  }
+});
+
+ipcMain.handle(
+  'db:updateMeshcoreContactRfTransport',
+  (event, nodeId: number, transportScope: unknown, transportReturn: unknown) => {
+    if (!validateIpcSender(event))
+      throw new Error('db:updateMeshcoreContactRfTransport: unauthorized sender');
+    try {
+      const db = getDbForIpc('db:updateMeshcoreContactRfTransport');
+      if (!db) return { changes: 0 };
+      const id = safeNonNegativeInt(nodeId);
+      const ts =
+        transportScope != null &&
+        typeof transportScope === 'number' &&
+        Number.isFinite(transportScope)
+          ? Math.trunc(transportScope) & 0xffff
+          : null;
+      const tr =
+        transportReturn != null &&
+        typeof transportReturn === 'number' &&
+        Number.isFinite(transportReturn)
+          ? Math.trunc(transportReturn) & 0xffff
+          : null;
+      db.prepareOnce(
+        'UPDATE meshcore_contacts SET last_rf_transport_scope = ?, last_rf_transport_return = ? WHERE node_id = ?',
+      ).run(ts, tr, id);
+    } catch (err) {
+      finishDbIpcHandler('db:updateMeshcoreContactRfTransport', err);
+    }
+  },
+);
+
+ipcMain.handle(
+  'db:updateMeshcoreContactNickname',
+  (event, nodeId: number, nickname: string | null) => {
+    if (!validateIpcSender(event))
+      throw new Error('db:updateMeshcoreContactNickname: unauthorized sender');
+    try {
+      const db = getDbForIpc('db:updateMeshcoreContactNickname');
+      if (!db) return { changes: 0 };
+      const id = safeNonNegativeInt(nodeId);
+      if (nickname != null && (typeof nickname !== 'string' || nickname.length > MAX_NODE_STRING))
+        throw new Error('db:updateMeshcoreContactNickname: invalid nickname');
+      db.prepareOnce('UPDATE meshcore_contacts SET nickname = ? WHERE node_id = ?').run(
+        nickname ?? null,
+        id,
+      );
+    } catch (err) {
+      finishDbIpcHandler('db:updateMeshcoreContactNickname', err);
+    }
+  },
+);
+
+ipcMain.handle(
+  'db:updateMeshcoreContactFavorited',
+  (event, nodeId: number, favorited: boolean, publicKeyHex?: string | null) => {
+    if (!validateIpcSender(event))
+      throw new Error('db:updateMeshcoreContactFavorited: unauthorized sender');
+    try {
+      const id = safeNonNegativeInt(nodeId);
+      if (typeof favorited !== 'boolean') {
+        throw new Error('db:updateMeshcoreContactFavorited: favorited must be a boolean');
+      }
+      if (publicKeyHex != null && typeof publicKeyHex !== 'string') {
+        throw new Error('db:updateMeshcoreContactFavorited: publicKeyHex must be a string or null');
+      }
+      if (publicKeyHex != null && publicKeyHex.length > 128) {
+        throw new Error('db:updateMeshcoreContactFavorited: publicKeyHex too long');
+      }
+      const db = getDbForIpc('db:updateMeshcoreContactFavorited');
+      if (!db) return null;
+      const run = db
+        .prepareOnce('UPDATE meshcore_contacts SET favorited = ? WHERE node_id = ?')
+        .run(favorited ? 1 : 0, id);
+      if (run.changes > 0) return run;
+      const hex = publicKeyHex?.replace(/\s/g, '') ?? '';
+      if (!hex) {
+        throw new Error(
+          'db:updateMeshcoreContactFavorited: contact not in database; public_key required to create row',
+        );
+      }
+      db.prepareOnce(
+        `INSERT INTO meshcore_contacts (node_id, public_key, favorited)
+         VALUES (?, ?, ?)
+         ON CONFLICT(node_id) DO UPDATE SET favorited = excluded.favorited`,
+      ).run(id, hex, favorited ? 1 : 0);
+      return { changes: 1 };
+    } catch (err) {
+      finishDbIpcHandler('db:updateMeshcoreContactFavorited', err);
+    }
+  },
+);
+
+ipcMain.handle('meshcore:openJsonFile', async (event) => {
+  assertIpcSender(event, 'meshcore:openJsonFile');
+  try {
+    if (!mainWindow) return null;
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Import Contacts JSON',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      properties: ['openFile'],
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    const raw = await fs.promises.readFile(result.filePaths[0], 'utf-8');
+    if (raw.length > 5 * 1024 * 1024) throw new Error('File too large (max 5 MB)');
+    return raw;
+  } catch (err) {
+    console.error(
+      '[IPC] meshcore:openJsonFile failed:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle(
+  'db:updateMeshcoreMessageSender',
+  (event, messageId: number, senderId: number, senderName: string) => {
+    if (!validateIpcSender(event))
+      throw new Error('db:updateMeshcoreMessageSender: unauthorized sender');
+    try {
+      const id = messageId;
+      const sid = senderId;
+      if (!Number.isFinite(id) || id < 1) {
+        throw new Error('db:updateMeshcoreMessageSender: invalid messageId');
+      }
+      if (!Number.isFinite(sid) || sid < 1) {
+        throw new Error('db:updateMeshcoreMessageSender: invalid senderId');
+      }
+      const name = typeof senderName === 'string' ? senderName.trim().slice(0, 64) : '';
+      if (!name) throw new Error('db:updateMeshcoreMessageSender: senderName required');
+      const db = getDbForIpc('db:updateMeshcoreMessageSender');
+      if (!db) return { changes: 0 };
+      return db
+        .prepareOnce(
+          'UPDATE meshcore_messages SET sender_id = @sender_id, sender_name = @sender_name WHERE id = @id',
+        )
+        .run({ id, sender_id: sid, sender_name: name });
+    } catch (err) {
+      finishDbIpcHandler('db:updateMeshcoreMessageSender', err);
+    }
+  },
+);
+
+ipcMain.handle('db:updateMeshcoreMessageStatus', (event, packetId: number, status: string) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:updateMeshcoreMessageStatus: unauthorized sender');
+  try {
+    const db = getDbForIpc('db:updateMeshcoreMessageStatus');
+    if (!db) return { changes: 0 };
+    const pid = packetId;
+    if (!Number.isFinite(pid)) throw new Error('db:updateMeshcoreMessageStatus: invalid packetId');
+    if (typeof status !== 'string' || status.length > MAX_STATUS_STRING)
+      throw new Error('db:updateMeshcoreMessageStatus: invalid status');
+    return db
+      .prepareOnce('UPDATE meshcore_messages SET status = ? WHERE packet_id = ?')
+      .run(status, pid);
+  } catch (err) {
+    finishDbIpcHandler('db:updateMeshcoreMessageStatus', err);
+  }
+});
+
+ipcMain.handle(
+  'db:updateMeshcoreMessageStatusByKey',
+  (
+    event,
+    senderId: number,
+    timestamp: number,
+    channelIdx: number,
+    payload: string,
+    status: string,
+  ) => {
+    if (!validateIpcSender(event))
+      throw new Error('db:updateMeshcoreMessageStatusByKey: unauthorized sender');
+    try {
+      const db = getDbForIpc('db:updateMeshcoreMessageStatusByKey');
+      if (!db) return { changes: 0 };
+      const sid = senderId;
+      const ts = timestamp;
+      const ch = Math.trunc(channelIdx);
+      if (!Number.isFinite(sid) || sid < 0)
+        throw new Error('db:updateMeshcoreMessageStatusByKey: invalid senderId');
+      if (!Number.isFinite(ts))
+        throw new Error('db:updateMeshcoreMessageStatusByKey: invalid timestamp');
+      if (!Number.isFinite(ch))
+        throw new Error('db:updateMeshcoreMessageStatusByKey: invalid channelIdx');
+      if (typeof payload !== 'string')
+        throw new Error('db:updateMeshcoreMessageStatusByKey: payload must be a string');
+      if (payload.length > MAX_PAYLOAD_LENGTH)
+        throw new Error('db:updateMeshcoreMessageStatusByKey: payload too long');
+      if (typeof status !== 'string' || status.length > MAX_STATUS_STRING)
+        throw new Error('db:updateMeshcoreMessageStatusByKey: invalid status');
+      return db
+        .prepareOnce(
+          `UPDATE meshcore_messages SET status = ?
+           WHERE sender_id = ? AND timestamp = ? AND channel_idx = ? AND payload = ?`,
+        )
+        .run(status, sid, ts, ch, payload);
+    } catch (err) {
+      finishDbIpcHandler('db:updateMeshcoreMessageStatusByKey', err);
+    }
+  },
+);
+
+ipcMain.handle('db:deleteMeshcoreContact', (event, nodeId: number) => {
+  if (!validateIpcSender(event)) throw new Error('db:deleteMeshcoreContact: unauthorized sender');
+  try {
+    const db = getDbForIpc('db:deleteMeshcoreContact');
+    if (!db) return { changes: 0 };
+    const id = safeNonNegativeInt(nodeId);
+    return deleteMeshcoreContactOn(db, id);
+  } catch (err) {
+    finishDbIpcHandler('db:deleteMeshcoreContact', err);
+  }
+});
+
+ipcMain.handle('db:clearMeshcoreMessages', (event) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    const db = getDbForIpc('db:clearMeshcoreMessages');
+    if (!db) return { changes: 0 };
+    return db.prepareOnce('DELETE FROM meshcore_messages').run();
+  } catch (err) {
+    finishDbIpcHandler('db:clearMeshcoreMessages', err);
+  }
+});
+
+ipcMain.handle('db:getMeshcoreMessageChannels', (event) => {
+  try {
+    assertIpcSender(event, 'db:getMeshcoreMessageChannels');
+    const db = getDbForIpc('db:getMeshcoreMessageChannels');
+    if (!db) return [];
+    return db
+      .prepareOnce(
+        'SELECT DISTINCT channel_idx AS channel FROM meshcore_messages ORDER BY channel_idx',
+      )
+      .all();
+  } catch (err) {
+    finishDbIpcHandler('db:getMeshcoreMessageChannels', err);
+  }
+});
+
+ipcMain.handle('db:clearMeshcoreMessagesByChannel', (event, channelIdx: number) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    const db = getDbForIpc('db:clearMeshcoreMessagesByChannel');
+    if (!db) return { changes: 0 };
+    const ch = safeMeshcoreChannelIndex(channelIdx);
+    const result = db.prepareOnce('DELETE FROM meshcore_messages WHERE channel_idx = ?').run(ch);
+    console.debug(
+      `[IPC] db:clearMeshcoreMessagesByChannel: deleted ${result.changes} messages from channel_idx ${ch}`,
+    );
+    return result;
+  } catch (err) {
+    finishDbIpcHandler('db:clearMeshcoreMessagesByChannel', err);
+  }
+});
+
+ipcMain.handle('db:clearMeshcoreContacts', (event) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    const db = getDbForIpc('db:clearMeshcoreContacts');
+    if (!db) return { changes: 0 };
+    return db.prepareOnce('DELETE FROM meshcore_contacts').run();
+  } catch (err) {
+    finishDbIpcHandler('db:clearMeshcoreContacts', err);
+  }
+});
+
+// Deletes only Repeater-type contacts (contact_type = 2), leaving Chat and Room contacts intact.
+ipcMain.handle('db:clearMeshcoreRepeaters', (event) => {
+  if (!validateIpcSender(event)) {
+    throw new Error('IPC sender validation failed');
+  }
+  try {
+    const db = getDbForIpc('db:clearMeshcoreRepeaters');
+    if (!db) return { changes: 0 };
+    return db.prepareOnce('DELETE FROM meshcore_contacts WHERE contact_type = 2').run();
+  } catch (err) {
+    finishDbIpcHandler('db:clearMeshcoreRepeaters', err);
+  }
+});
+
+// Marks all contacts as not on radio (on_radio = 0).
+ipcMain.handle('db:markAllMeshcoreContactsOffRadio', (event) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:markAllMeshcoreContactsOffRadio: unauthorized sender');
+  try {
+    const db = getDbForIpc('db:markAllMeshcoreContactsOffRadio');
+    if (!db) return { changes: 0 };
+    return db.prepareOnce('UPDATE meshcore_contacts SET on_radio = 0').run();
+  } catch (err) {
+    finishDbIpcHandler('db:markAllMeshcoreContactsOffRadio', err);
+  }
+});
+
+// Returns count of contacts currently marked as on_radio = 1.
+ipcMain.handle('db:getMeshcoreContactCount', (event) => {
+  try {
+    assertIpcSender(event, 'db:getMeshcoreContactCount');
+    const db = getDbForIpc('db:getMeshcoreContactCount');
+    if (!db) return 0;
+    const result = db
+      .prepareOnce('SELECT COUNT(*) as cnt FROM meshcore_contacts WHERE on_radio = 1')
+      .get() as { cnt: number };
+    return result.cnt;
+  } catch (err) {
+    finishDbIpcHandler('db:getMeshcoreContactCount', err);
+  }
+});
+
+// Deletes contacts without pubkey, excluding chat stub nodes. Returns { deleted, excludedStubCount }.
+ipcMain.handle('db:deleteMeshcoreContactsWithoutPubkey', (event) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:deleteMeshcoreContactsWithoutPubkey: unauthorized sender');
+  try {
+    const db = getDbForIpc('db:deleteMeshcoreContactsWithoutPubkey');
+    if (!db) return { changes: 0 };
+    // Count stubs that would be excluded (for reporting)
+    const stubCountResult = db
+      .prepareOnce(
+        `SELECT COUNT(*) as cnt FROM meshcore_contacts
+         WHERE (public_key IS NULL OR public_key = '')
+         AND node_id >= ? AND node_id <= ?`,
+      )
+      .get(MESHCORE_CHAT_STUB_ID_MIN, MESHCORE_CHAT_STUB_ID_MAX) as { cnt: number };
+    const excludedStubCount = stubCountResult.cnt;
+    // Delete non-stub contacts without pubkey
+    const result = db
+      .prepareOnce(
+        `DELETE FROM meshcore_contacts
+         WHERE (public_key IS NULL OR public_key = '')
+         AND NOT (node_id >= ? AND node_id <= ?)`,
+      )
+      .run(MESHCORE_CHAT_STUB_ID_MIN, MESHCORE_CHAT_STUB_ID_MAX);
+    return { deleted: result.changes, excludedStubCount };
+  } catch (err) {
+    finishDbIpcHandler('db:deleteMeshcoreContactsWithoutPubkey', err);
+  }
+});
+
+// Offloads all contacts with pubkey from radio (sets on_radio = 0). Returns count offloaded.
+ipcMain.handle('db:offloadAllMeshcoreContacts', (event) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:offloadAllMeshcoreContacts: unauthorized sender');
+  try {
+    const db = getDbForIpc('db:offloadAllMeshcoreContacts');
+    if (!db) return { changes: 0 };
+    const result = db
+      .prepareOnce(
+        `UPDATE meshcore_contacts SET on_radio = 0
+         WHERE on_radio = 1 AND public_key IS NOT NULL AND public_key != ''`,
+      )
+      .run();
+    return result.changes;
+  } catch (err) {
+    finishDbIpcHandler('db:offloadAllMeshcoreContacts', err);
+  }
+});
+
+// Mark a single contact off-radio by public_key (CONTACT_DELETED push). Returns { changes }.
+ipcMain.handle('db:markMeshcoreContactOffRadio', (event, publicKeyHex: unknown) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:markMeshcoreContactOffRadio: unauthorized sender');
+  try {
+    if (typeof publicKeyHex !== 'string' || !/^[0-9a-fA-F]{64}$/.test(publicKeyHex)) {
+      throw new Error('db:markMeshcoreContactOffRadio: public_key must be 64 hex chars');
+    }
+    const db = getDbForIpc('db:markMeshcoreContactOffRadio');
+    if (!db) return { changes: 0 };
+    const key = publicKeyHex.toLowerCase();
+    const result = db
+      .prepareOnce(
+        `UPDATE meshcore_contacts SET on_radio = 0
+         WHERE lower(public_key) = ? AND on_radio = 1`,
+      )
+      .run(key);
+    return { changes: result.changes };
+  } catch (err) {
+    return finishDbIpcReadHandler('db:markMeshcoreContactOffRadio', err, { changes: 0 });
+  }
+});
+
+// Get a single contact by node_id (returns on_radio status).
+ipcMain.handle('db:getMeshcoreContactById', (event, nodeId: number) => {
+  try {
+    assertIpcSender(event, 'db:getMeshcoreContactById');
+    const db = getDbForIpc('db:getMeshcoreContactById');
+    if (!db) return null;
+    const id = safeNonNegativeInt(nodeId);
+    return db
+      .prepareOnce('SELECT node_id, public_key, on_radio FROM meshcore_contacts WHERE node_id = ?')
+      .get(id);
+  } catch (err) {
+    finishDbIpcHandler('db:getMeshcoreContactById', err);
+  }
+});
+
+// ─── IPC: Contact groups ──────────────────────────────────────────────────────
+
+ipcMain.handle('db:getContactGroups', (event, selfNodeId: number) => {
+  try {
+    assertIpcSender(event, 'db:getContactGroups');
+    if (!getDbForIpc('db:getContactGroups')) return [];
+    return getContactGroups(safeNonNegativeInt(selfNodeId));
+  } catch (err) {
+    finishDbIpcHandler('db:getContactGroups', err);
+  }
+});
+
+ipcMain.handle('db:createContactGroup', (event, selfNodeId: number, name: string) => {
+  if (!validateIpcSender(event)) throw new Error('db:createContactGroup: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:createContactGroup')) return null;
+    const id = safeNonNegativeInt(selfNodeId);
+    if (typeof name !== 'string' || name.trim().length === 0)
+      throw new Error('db:createContactGroup: name must be a non-empty string');
+    if (name.length > MAX_GROUP_NAME) throw new Error('db:createContactGroup: name too long');
+    return createContactGroup(id, name.trim());
+  } catch (err) {
+    finishDbIpcHandler('db:createContactGroup', err);
+  }
+});
+
+ipcMain.handle('db:updateContactGroup', (event, groupId: number, name: string) => {
+  if (!validateIpcSender(event)) throw new Error('db:updateContactGroup: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:updateContactGroup')) return;
+    const id = safeNonNegativeInt(groupId);
+    if (typeof name !== 'string' || name.trim().length === 0)
+      throw new Error('db:updateContactGroup: name must be a non-empty string');
+    if (name.length > MAX_GROUP_NAME) throw new Error('db:updateContactGroup: name too long');
+    updateContactGroup(id, name.trim());
+  } catch (err) {
+    finishDbIpcHandler('db:updateContactGroup', err);
+  }
+});
+
+ipcMain.handle('db:deleteContactGroup', (event, groupId: number) => {
+  if (!validateIpcSender(event)) throw new Error('db:deleteContactGroup: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:deleteContactGroup')) return;
+    deleteContactGroup(safeNonNegativeInt(groupId));
+  } catch (err) {
+    finishDbIpcHandler('db:deleteContactGroup', err);
+  }
+});
+
+ipcMain.handle('db:addContactToGroup', (event, groupId: number, contactNodeId: number) => {
+  if (!validateIpcSender(event)) throw new Error('db:addContactToGroup: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:addContactToGroup')) return;
+    addContactToGroup(safeNonNegativeInt(groupId), safeNonNegativeInt(contactNodeId));
+  } catch (err) {
+    finishDbIpcHandler('db:addContactToGroup', err);
+  }
+});
+
+ipcMain.handle('db:removeContactFromGroup', (event, groupId: number, contactNodeId: number) => {
+  if (!validateIpcSender(event)) throw new Error('db:removeContactFromGroup: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:removeContactFromGroup')) return;
+    removeContactFromGroup(safeNonNegativeInt(groupId), safeNonNegativeInt(contactNodeId));
+  } catch (err) {
+    finishDbIpcHandler('db:removeContactFromGroup', err);
+  }
+});
+
+ipcMain.handle('db:getContactGroupMembers', (event, groupId: number) => {
+  try {
+    assertIpcSender(event, 'db:getContactGroupMembers');
+    if (!getDbForIpc('db:getContactGroupMembers')) return [];
+    return getContactGroupMembers(safeNonNegativeInt(groupId));
+  } catch (err) {
+    finishDbIpcHandler('db:getContactGroupMembers', err);
+  }
+});
+
+ipcMain.handle(
+  'db:updateMeshcoreContactAdvert',
+  (
+    event,
+    nodeId: number,
+    lastAdvert: number | null,
+    advLat: number | null,
+    advLon: number | null,
+    advName?: string | null,
+  ) => {
+    if (!validateIpcSender(event))
+      throw new Error('db:updateMeshcoreContactAdvert: unauthorized sender');
+    try {
+      const safeNodeId = safeNonNegativeInt(nodeId);
+      if (advName != null && (typeof advName !== 'string' || advName.length > MAX_NODE_STRING)) {
+        throw new Error('db:updateMeshcoreContactAdvert: invalid adv_name');
+      }
+      const db = getDbForIpc('db:updateMeshcoreContactAdvert');
+      if (!db) return { changes: 0 };
+      const safeLastAdvert = sanitizeMeshcoreLastAdvertForDb(lastAdvert);
+      const coords = sanitizeMeshcoreAdvLatLonForDb(advLat, advLon);
+      if (advName !== undefined) {
+        db.prepareOnce(
+          'UPDATE meshcore_contacts SET last_advert = ?, adv_lat = ?, adv_lon = ?, adv_name = ? WHERE node_id = ?',
+        ).run(safeLastAdvert, coords.adv_lat, coords.adv_lon, advName ?? null, safeNodeId);
+      } else {
+        db.prepareOnce(
+          'UPDATE meshcore_contacts SET last_advert = ?, adv_lat = ?, adv_lon = ? WHERE node_id = ?',
+        ).run(safeLastAdvert, coords.adv_lat, coords.adv_lon, safeNodeId);
+      }
+    } catch (err) {
+      console.error(
+        '[IPC] db:updateMeshcoreContactAdvert error:',
+        sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+      );
+      throw err;
+    }
+  },
+);
+
+ipcMain.handle('db:updateMeshcoreContactType', (event, nodeId: number, contactType: number) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:updateMeshcoreContactType: unauthorized sender');
+  try {
+    const db = getDbForIpc('db:updateMeshcoreContactType');
+    if (!db) return { changes: 0 };
+    const safeNodeId = safeNonNegativeInt(nodeId);
+    const safeType = safeNonNegativeInt(contactType);
+    db.prepareOnce('UPDATE meshcore_contacts SET contact_type = ? WHERE node_id = ?').run(
+      safeType,
+      safeNodeId,
+    );
+  } catch (err) {
+    console.error(
+      '[IPC] db:updateMeshcoreContactType error:',
+      sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+    );
+    throw err;
+  }
+});
+
+ipcMain.handle(
+  'db:updateMeshcoreContactLastRf',
+  (
+    event,
+    nodeId: number,
+    lastSnr: number,
+    lastRssi: number,
+    hops?: number | null,
+    timestamp?: number | null,
+  ) => {
+    if (!validateIpcSender(event))
+      throw new Error('db:updateMeshcoreContactLastRf: unauthorized sender');
+    try {
+      const db = getDbForIpc('db:updateMeshcoreContactLastRf');
+      if (!db) return { changes: 0 };
+      const safeNodeId = safeNonNegativeInt(nodeId);
+      if (typeof lastSnr !== 'number' || !Number.isFinite(lastSnr)) {
+        throw new Error('db:updateMeshcoreContactLastRf: lastSnr must be a finite number');
+      }
+      if (typeof lastRssi !== 'number' || !Number.isFinite(lastRssi)) {
+        throw new Error('db:updateMeshcoreContactLastRf: lastRssi must be a finite number');
+      }
+      const safeTimestamp = sanitizeMeshcoreLastAdvertForDb(timestamp ?? null);
+      db.prepareOnce(
+        'UPDATE meshcore_contacts SET ' +
+          'last_snr = ?, ' +
+          'last_rssi = ?, ' +
+          'hops_away = CASE WHEN ? IS NOT NULL AND (hops_away IS NULL OR ? < hops_away) THEN ? ELSE hops_away END, ' +
+          'last_advert = CASE WHEN ? IS NOT NULL AND ? > COALESCE(last_advert, 0) THEN ? ELSE last_advert END ' +
+          'WHERE node_id = ?',
+      ).run(
+        lastSnr,
+        lastRssi,
+        hops ?? null,
+        hops ?? null,
+        hops ?? null,
+        safeTimestamp,
+        safeTimestamp,
+        safeTimestamp,
+        safeNodeId,
+      );
+    } catch (err) {
+      console.error(
+        '[IPC] db:updateMeshcoreContactLastRf error:',
+        sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+      );
+      throw err;
+    }
+  },
+);
+
+// ─── IPC: Position history ────────────────────────────────────────
+ipcMain.handle(
+  'db:savePositionHistory',
+  (event, nodeId: number, lat: number, lon: number, recordedAt: number, source: string) => {
+    if (!validateIpcSender(event)) throw new Error('db:savePositionHistory: unauthorized sender');
+    try {
+      const db = getDbForIpc('db:savePositionHistory');
+      if (!db) return { changes: 0 };
+      const id = safeNonNegativeInt(nodeId);
+      if (
+        typeof lat !== 'number' ||
+        !isFinite(lat) ||
+        typeof lon !== 'number' ||
+        !isFinite(lon) ||
+        typeof recordedAt !== 'number' ||
+        !isFinite(recordedAt)
+      )
+        return;
+      const src = typeof source === 'string' ? source.slice(0, 16) : 'rf';
+      db.prepareOnce(
+        'INSERT INTO position_history (node_id, latitude, longitude, recorded_at, source) VALUES (?, ?, ?, ?, ?)',
+      ).run(id, lat, lon, recordedAt, src);
+    } catch (err) {
+      finishDbIpcHandler('db:savePositionHistory', err);
+    }
+  },
+);
+
+ipcMain.handle('db:getPositionHistory', (event, sinceMs: number) => {
+  try {
+    assertIpcSender(event, 'db:getPositionHistory');
+    const db = getDbForIpc('db:getPositionHistory');
+    if (!db) return [];
+    const since = typeof sinceMs === 'number' && isFinite(sinceMs) ? sinceMs : 0;
+    return db
+      .prepareOnce(
+        'SELECT node_id, latitude, longitude, recorded_at, source FROM position_history WHERE recorded_at >= ? ORDER BY node_id, recorded_at',
+      )
+      .all(since);
+  } catch (err) {
+    return finishDbIpcReadHandler('db:getPositionHistory', err, []);
+  }
+});
+
+ipcMain.handle('db:clearPositionHistory', (event) => {
+  if (!validateIpcSender(event)) throw new Error('db:clearPositionHistory: unauthorized sender');
+  try {
+    const db = getDbForIpc('db:clearPositionHistory');
+    if (!db) return { changes: 0 };
+    return db.prepareOnce('DELETE FROM position_history').run();
+  } catch (err) {
+    finishDbIpcHandler('db:clearPositionHistory', err);
+  }
+});
+
+// ─── MeshCore Path History ───────────────────────────────────────────────
+
+ipcMain.handle(
+  'db:saveMeshcoreHopHistory',
+  (
+    event,
+    nodeId: number,
+    timestamp: number,
+    hops: number | null,
+    snr: number | null,
+    rssi: number | null,
+  ) => {
+    if (!validateIpcSender(event))
+      throw new Error('db:saveMeshcoreHopHistory: unauthorized sender');
+    try {
+      if (!getDbForIpc('db:saveMeshcoreHopHistory')) return false;
+      saveMeshcoreHopHistory(nodeId, timestamp, hops, snr, rssi);
+      return true;
+    } catch (err) {
+      finishDbIpcHandler('db:saveMeshcoreHopHistory', err);
+    }
+  },
+);
+
+ipcMain.handle('db:getMeshcoreHopHistory', (event, nodeId: number) => {
+  try {
+    assertIpcSender(event, 'db:getMeshcoreHopHistory');
+    if (!getDbForIpc('db:getMeshcoreHopHistory')) return [];
+    return getMeshcoreHopHistory(nodeId);
+  } catch (err) {
+    finishDbIpcHandler('db:getMeshcoreHopHistory', err);
+  }
+});
+
+ipcMain.handle('db:getAllMeshcoreHopHistory', (event) => {
+  try {
+    assertIpcSender(event, 'db:getAllMeshcoreHopHistory');
+    if (!getDbForIpc('db:getAllMeshcoreHopHistory')) return [];
+    return getAllMeshcoreHopHistoryRows();
+  } catch (err) {
+    finishDbIpcHandler('db:getAllMeshcoreHopHistory', err);
+  }
+});
+
+ipcMain.handle(
+  'db:saveMeshcoreTraceHistory',
+  (
+    event,
+    nodeId: number,
+    timestamp: number,
+    pathLen: number | null,
+    pathSnrs: number[],
+    lastSnr: number | null,
+    tag: number,
+  ) => {
+    if (!validateIpcSender(event))
+      throw new Error('db:saveMeshcoreTraceHistory: unauthorized sender');
+    try {
+      if (!getDbForIpc('db:saveMeshcoreTraceHistory')) return false;
+      saveMeshcoreTraceHistory(nodeId, timestamp, pathLen, pathSnrs, lastSnr, tag);
+      return true;
+    } catch (err) {
+      finishDbIpcHandler('db:saveMeshcoreTraceHistory', err);
+    }
+  },
+);
+
+ipcMain.handle('db:getMeshcoreTraceHistory', (event, nodeId: number) => {
+  try {
+    assertIpcSender(event, 'db:getMeshcoreTraceHistory');
+    if (!getDbForIpc('db:getMeshcoreTraceHistory')) return [];
+    return getMeshcoreTraceHistory(nodeId);
+  } catch (err) {
+    finishDbIpcHandler('db:getMeshcoreTraceHistory', err);
+  }
+});
+
+ipcMain.handle('db:pruneMeshcorePathHistory', (event, nodeId: number) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:pruneMeshcorePathHistory: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:pruneMeshcorePathHistory')) return false;
+    pruneMeshcorePathHistory(nodeId);
+    return true;
+  } catch (err) {
+    finishDbIpcHandler('db:pruneMeshcorePathHistory', err);
+  }
+});
+
+ipcMain.handle(
+  'db:upsertMeshcorePathHistory',
+  (
+    event,
+    nodeId: number,
+    pathHash: string,
+    hopCount: number,
+    pathBytes: number[],
+    wasFloodDiscovery: boolean,
+    routeWeight: number,
+  ) => {
+    if (!validateIpcSender(event))
+      throw new Error('db:upsertMeshcorePathHistory: unauthorized sender');
+    try {
+      if (!getDbForIpc('db:upsertMeshcorePathHistory')) return false;
+      upsertMeshcorePathHistory(
+        nodeId,
+        pathHash,
+        hopCount,
+        pathBytes,
+        wasFloodDiscovery,
+        routeWeight,
+      );
+      return true;
+    } catch (err) {
+      finishDbIpcHandler('db:upsertMeshcorePathHistory', err);
+    }
+  },
+);
+
+ipcMain.handle(
+  'db:recordMeshcorePathOutcome',
+  (event, nodeId: number, pathHash: string, success: boolean, tripTimeMs?: number) => {
+    if (!validateIpcSender(event))
+      throw new Error('db:recordMeshcorePathOutcome: unauthorized sender');
+    try {
+      if (!getDbForIpc('db:recordMeshcorePathOutcome')) return false;
+      recordMeshcorePathOutcome(nodeId, pathHash, success, tripTimeMs);
+      return true;
+    } catch (err) {
+      finishDbIpcHandler('db:recordMeshcorePathOutcome', err);
+    }
+  },
+);
+
+ipcMain.handle('db:getAllMeshcorePathHistory', (event) => {
+  try {
+    assertIpcSender(event, 'db:getAllMeshcorePathHistory');
+    if (!getDbForIpc('db:getAllMeshcorePathHistory')) return [];
+    return getAllMeshcorePathHistory();
+  } catch (err) {
+    finishDbIpcHandler('db:getAllMeshcorePathHistory', err);
+  }
+});
+
+ipcMain.handle('db:getMeshcorePathHistory', (event, nodeId: number) => {
+  try {
+    assertIpcSender(event, 'db:getMeshcorePathHistory');
+    if (!getDbForIpc('db:getMeshcorePathHistory')) return [];
+    return getMeshcorePathHistory(nodeId);
+  } catch (err) {
+    finishDbIpcHandler('db:getMeshcorePathHistory', err);
+  }
+});
+
+ipcMain.handle('db:deleteMeshcorePathHistoryForNode', (event, nodeId: number) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:deleteMeshcorePathHistoryForNode: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:deleteMeshcorePathHistoryForNode')) return false;
+    deleteMeshcorePathHistoryForNode(nodeId);
+    return true;
+  } catch (err) {
+    finishDbIpcHandler('db:deleteMeshcorePathHistoryForNode', err);
+  }
+});
+
+ipcMain.handle('db:deleteAllMeshcorePathHistory', (event) => {
+  if (!validateIpcSender(event))
+    throw new Error('db:deleteAllMeshcorePathHistory: unauthorized sender');
+  try {
+    if (!getDbForIpc('db:deleteAllMeshcorePathHistory')) return false;
+    deleteAllMeshcorePathHistory();
+    return true;
+  } catch (err) {
+    finishDbIpcHandler('db:deleteAllMeshcorePathHistory', err);
+  }
+});
+
+// ─── MeshCore / Meshtastic TCP bridges ─────────────────────────────
+// Independent sockets (two createTcpBridge instances). writeMissing is the
+// only protocol fork: MeshCore rejects; Meshtastic returns 'no-socket'.
+registerTcpBridgeIpcHandlers({
+  getMainWindow: () => mainWindow,
+  validateHost: validateHttpHost,
+});
+
+// ─── Meshtastic HTTP bridge ─────────────────────────────────────────
+let httpDevice: {
+  host: string;
+  tls: boolean;
+  intervalId: NodeJS.Timeout;
+  fetchInFlight: boolean;
+} | null = null;
+
+const HTTP_FETCH_INTERVAL_MS = 3000;
+const HTTP_FETCH_TIMEOUT_MS = 10_000;
+/** Meshtastic protobuf frames over HTTP are small (<= a few KB); a well-behaved
+ * radio never approaches this. Caps main-process memory against a misbehaving
+ * or malicious HTTP peer streaming an unbounded fromradio response body. */
+const HTTP_FROMRADIO_MAX_RESPONSE_BYTES = 1 * 1024 * 1024;
+
+/** Reads a fetch Response body up to `maxBytes`; throws if the stream exceeds
+ * the cap instead of silently truncating (a truncated protobuf frame would
+ * corrupt downstream parsing). Falls back to `arrayBuffer()` when the
+ * environment lacks a streamable body (defense-in-depth, not expected in Electron/Node). */
+class ResponseSizeCapExceededError extends Error {}
+
+async function readBoundedArrayBuffer(response: Response, maxBytes: number): Promise<ArrayBuffer> {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const buf = await response.arrayBuffer();
+    if (buf.byteLength > maxBytes) {
+      throw new ResponseSizeCapExceededError(`response body exceeded ${maxBytes} byte cap`);
+    }
+    return buf;
+  }
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done || !value) break;
+      total += value.length;
+      if (total > maxBytes) {
+        throw new ResponseSizeCapExceededError(`response body exceeded ${maxBytes} byte cap`);
+      }
+      chunks.push(value);
+    }
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {
+      // catch-no-log-ok: stream may already be closed/aborted by this point
+    }
+  }
+  const merged = new Uint8Array(total);
+  let pos = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, pos);
+    pos += chunk.length;
+  }
+  return merged.buffer;
+}
+const CHAT_EXPORT_MAX_MESSAGES = 10_000;
+const DB_SAVE_NODE_PATH_MAX_BYTES = 16 * 1024;
+/** Max Meshtastic HTTP toRadio payload (aligned with meshcore:tcp-write cap). */
+const HTTP_WRITE_TO_RADIO_MAX_BYTES = 256 * 1024;
+const MAX_HOST_LENGTH = 253;
+
+function validateHttpHost(host: unknown): asserts host is string {
+  if (typeof host !== 'string' || host.length === 0 || host.length > MAX_HOST_LENGTH) {
+    throw new Error('Invalid host');
+  }
+  // http:preflight/http:connect pass an authority string with a port already
+  // appended (formatHostForUrl); meshcore:tcp-connect passes a bare host.
+  // Strip a trailing port before validating so both call sites work.
+  const bareHost = parseConnectHostPort(host, 0).host;
+  if (!isValidHttpHostname(bareHost)) {
+    throw new Error('Invalid host format');
+  }
+}
+
+async function httpPreflight(host: string, tls: boolean): Promise<void> {
+  const protocol = tls ? 'https' : 'http';
+  const url = `${protocol}://${host}/json/report`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+}
+
+async function httpWriteToRadio(host: string, tls: boolean, data: Uint8Array): Promise<void> {
+  const protocol = tls ? 'https' : 'http';
+  await fetch(`${protocol}://${host}/api/v1/toradio`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/x-protobuf',
+    },
+    body: Buffer.from(data),
+    signal: AbortSignal.timeout(10_000),
+  });
+}
+
+ipcMain.handle('http:preflight', async (event, host: unknown, tls: unknown) => {
+  if (!validateIpcSender(event)) throw new Error('http:preflight: unauthorized sender');
+  validateHttpHost(host);
+  if (typeof tls !== 'boolean') {
+    throw new Error('Invalid tls');
+  }
+  await httpPreflight(host, tls);
+});
+
+ipcMain.handle('hostLink:probeHttpRtt', async (event, host: unknown, tls: unknown) => {
+  assertIpcSender(event, 'hostLink:probeHttpRtt');
+  validateHttpHost(host);
+  if (typeof tls !== 'boolean') {
+    throw new Error('Invalid tls');
+  }
+  return probeHttpRttMs(host, tls);
+});
+
+ipcMain.handle('hostLink:probeTcpRtt', async (event, host: unknown, port: unknown) => {
+  assertIpcSender(event, 'hostLink:probeTcpRtt');
+  validateHttpHost(host);
+  if (!Number.isInteger(port) || (port as number) < 1 || (port as number) > 65535) {
+    throw new Error('Invalid port');
+  }
+  return probeTcpRttMs(host, port as number);
+});
+
+ipcMain.handle('hostLink:getSessionMeter', (event, protocol: unknown) => {
+  assertIpcSender(event, 'hostLink:getSessionMeter');
+  if (protocol !== 'meshtastic' && protocol !== 'meshcore') {
+    throw new Error('Invalid protocol');
+  }
+  return snapshotLiveSessionMeter(protocol);
+});
+
+ipcMain.handle('http:connect', async (event, host: unknown, tls: unknown) => {
+  if (!validateIpcSender(event)) throw new Error('http:connect: unauthorized sender');
+  validateHttpHost(host);
+  if (typeof tls !== 'boolean') {
+    throw new Error('Invalid tls');
+  }
+  if (httpDevice) {
+    clearInterval(httpDevice.intervalId);
+    httpDevice = null;
+  }
+  await httpPreflight(host, tls);
+  const intervalId = setInterval(() => {
+    if (httpDevice?.fetchInFlight) return;
+    void (async () => {
+      if (httpDevice) httpDevice.fetchInFlight = true;
+      try {
+        const protocol = tls ? 'https' : 'http';
+        let readBuffer = new ArrayBuffer(1);
+        while (readBuffer.byteLength > 0) {
+          const response = await fetch(`${protocol}://${host}/api/v1/fromradio?all=false`, {
+            method: 'GET',
+            headers: {
+              Accept: 'application/x-protobuf',
+            },
+            signal: AbortSignal.timeout(HTTP_FETCH_TIMEOUT_MS),
+          });
+          readBuffer = await readBoundedArrayBuffer(response, HTTP_FROMRADIO_MAX_RESPONSE_BYTES);
+          if (readBuffer.byteLength > 0) {
+            const data = new Uint8Array(readBuffer);
+            mainWindow?.webContents.send('http:data', data);
+          }
+        }
+      } catch (err) {
+        console.debug(
+          '[IPC] http:connect read error:',
+          sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+        );
+        // Fail closed only for an oversized/garbled fromradio body — the peer is
+        // misbehaving and a truncated protobuf frame would corrupt downstream
+        // parsing. Transient network/timeout errors keep retrying as before.
+        if (err instanceof ResponseSizeCapExceededError) {
+          console.error('[IPC] http:connect: fromradio response exceeded size cap, disconnecting');
+          if (httpDevice) {
+            clearInterval(httpDevice.intervalId);
+            httpDevice = null;
+          }
+        }
+      } finally {
+        if (httpDevice) httpDevice.fetchInFlight = false;
+      }
+    })();
+  }, HTTP_FETCH_INTERVAL_MS);
+  httpDevice = { host, tls, intervalId, fetchInFlight: false };
+  logDeviceConnection(
+    `transport=http stack=meshtastic host=${sanitizeLogMessage(host)} tls=${tls}`,
+  );
+});
+
+ipcMain.handle('http:write', async (event, data: number[]) => {
+  assertIpcSender(event, 'http:write');
+  if (!httpDevice) {
+    throw new Error('http:write: no active connection');
+  }
+  if (!Array.isArray(data) || data.length > HTTP_WRITE_TO_RADIO_MAX_BYTES) {
+    throw new Error(
+      `http:write: invalid or oversized payload (max ${HTTP_WRITE_TO_RADIO_MAX_BYTES} bytes)`,
+    );
+  }
+  if (!data.every((b) => Number.isInteger(b) && b >= 0 && b <= 255)) {
+    throw new Error('http:write: byte values must be integers 0-255');
+  }
+  await httpWriteToRadio(httpDevice.host, httpDevice.tls, new Uint8Array(data));
+});
+
+ipcMain.handle('http:disconnect', (event) => {
+  assertIpcSender(event, 'http:disconnect');
+  if (httpDevice) {
+    console.debug('[IPC] http:disconnect');
+    clearInterval(httpDevice.intervalId);
+    httpDevice = null;
+  }
+});
+
+registerTakIpcHandlers({
+  idleTakStatus: IDLE_TAK_STATUS,
+  ensureTakServerManager,
+  getTakServerManager: () => takServerManager,
+  validateTakSettings,
+});
+
+registerReticulumIpcHandlers({
+  idleStatus: IDLE_RETICULUM_STATUS,
+  ensureManager: ensureReticulumSidecarManager,
+  getManager: () => reticulumSidecarManager,
+  getMainWindow: () => mainWindow,
+});
+registerReticulumDbIpcHandlers({ ipcMain });
+registerRrcDbIpcHandlers({ ipcMain });
+registerReticulumIdentityIpcHandlers({ ipcMain });
+
+// ─── App lifecycle ─────────────────────────────────────────────────
+/** Pending lxm:// URL until mainWindow is ready (cold start / race). */
+let pendingOpenUrl: string | null = null;
+
+function forwardOpenUrlToRenderer(url: string): void {
+  const trimmed = url.trim();
+  if (!trimmed) return;
+  if (!isForwardableMeshClientOpenUrl(trimmed)) {
+    console.debug('[main] ignoring non-mesh open URL:', sanitizeLogMessage(trimmed.slice(0, 120)));
+    return;
+  }
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('mesh-client:openUrl', trimmed);
+    return;
+  }
+  pendingOpenUrl = trimmed;
+}
+
+function flushPendingOpenUrl(): void {
+  if (!pendingOpenUrl || !mainWindow || mainWindow.isDestroyed()) return;
+  const url = pendingOpenUrl;
+  pendingOpenUrl = null;
+  mainWindow.webContents.send('mesh-client:openUrl', url);
+}
+
+// macOS: custom protocol open-url (must register before ready).
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  forwardOpenUrlToRenderer(url);
+});
+
+// ─── Second-instance handler ────────────────────────────────────────
+// Registered here (before whenReady) so it's ready before any second
+// instance can send its data.
+app.on('second-instance', (_event, argv) => {
+  const url = findLxmUrlInArgv(argv);
+  if (url) forwardOpenUrlToRenderer(url);
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  }
+});
+
+app.on('child-process-gone', (_event, details) => {
+  console.error(
+    '[main] child-process-gone:',
+    sanitizeLogMessage(
+      `${details.type} ${details.reason ?? ''} exit=${String(details.exitCode ?? 'n/a')}`,
+    ),
+  );
+});
+
+void app
+  .whenReady()
+  .then(() => {
+    try {
+      initLogFile();
+      console.debug(`[Startup] runtime ${formatRuntimeLogTag()}`);
+      try {
+        console.debug('[main] crashDumps path:', sanitizeLogMessage(app.getPath('crashDumps')));
+      } catch (e: unknown) {
+        console.warn(
+          '[main] crashDumps path unavailable:',
+          sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+        );
+      }
+
+      // Register lxm:// deep links (dev + packaged). OS-specific: argv in defaultApp.
+      if (process.defaultApp) {
+        if (process.argv.length >= 2) {
+          app.setAsDefaultProtocolClient('lxm', process.execPath, [path.resolve(process.argv[1])]);
+        }
+      } else {
+        app.setAsDefaultProtocolClient('lxm');
+      }
+      const coldStartUrl = findLxmUrlInArgv(process.argv);
+      if (coldStartUrl) pendingOpenUrl = coldStartUrl;
+
+      initDatabase();
+
+      // Auto-restore TAK server if auto-start is enabled
+      const takSettingsPath = path.join(app.getPath('userData'), 'tak-settings.json');
+      try {
+        if (fs.existsSync(takSettingsPath)) {
+          const raw: unknown = JSON.parse(fs.readFileSync(takSettingsPath, 'utf-8'));
+          // Backfill autoStart for settings files saved before the field was added.
+          if (
+            raw != null &&
+            typeof raw === 'object' &&
+            typeof (raw as Record<string, unknown>).autoStart !== 'boolean'
+          ) {
+            (raw as Record<string, unknown>).autoStart = false;
+          }
+          const saved = raw;
+          validateTakSettings(saved);
+          if (saved.autoStart) {
+            void ensureTakServerManager()
+              .then((m) => m.start(saved))
+              .catch((e: unknown) => {
+                console.error(
+                  '[TAK] Auto-start failed:',
+                  sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+                );
+              });
+          }
+        }
+      } catch (e: unknown) {
+        console.warn(
+          '[TAK] Settings restore failed:',
+          sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+        );
+      }
+
+      // Force the dock icon in development on macOS
+      if (!app.isPackaged && process.platform === 'darwin') {
+        const iconPath = path.join(
+          __dirname,
+          '../../resources/icons/mac/iconset/icon_256x256@1x.png',
+        );
+        app.dock?.setIcon(iconPath);
+      }
+      createWindow();
+
+      rendererHeartbeatWatchdog.startStallWatchdog(() => {
+        const win = mainWindow;
+        if (!win || win.isDestroyed()) return false;
+        return win.isVisible() && !win.isMinimized();
+      });
+
+      const MAIN_PROCESS_HEALTH_LOG_INTERVAL_MS = 60 * 60 * 1000;
+      const MAIN_PROCESS_HEALTH_UPTIME_THRESHOLD_SEC = 24 * 60 * 60;
+      setInterval(() => {
+        if (process.uptime() < MAIN_PROCESS_HEALTH_UPTIME_THRESHOLD_SEC) return;
+        const uptimeSec = Math.floor(process.uptime());
+        const mem = process.memoryUsage();
+        const ble = nobleBleManager.getLongSessionHealthSnapshot();
+        console.debug(
+          `[main] long-session health uptimeSec=${uptimeSec} rss=${mem.rss} heapUsed=${mem.heapUsed} ble=${JSON.stringify(ble)}`,
+        );
+      }, MAIN_PROCESS_HEALTH_LOG_INTERVAL_MS).unref();
+
+      setupAppMenu();
+
+      // ─── Power monitor: notify renderer on suspend/resume ──────────
+      powerMonitor.on('suspend', () => {
+        console.debug('[main] System suspending');
+        rendererHeartbeatWatchdog.clearResumeWatchdog();
+        mqttManager.handlePowerSuspend();
+        meshcoreMqttAdapter.handlePowerSuspend();
+        mainWindow?.webContents.send('power:suspend');
+      });
+      powerMonitor.on('resume', () => {
+        console.debug('[main] System resumed');
+        rendererHeartbeatWatchdog.startResumeWatchdog(() => {
+          const win = mainWindow;
+          if (!win || win.isDestroyed()) return false;
+          return win.isVisible() && !win.isMinimized();
+        });
+        mainWindow?.webContents.send('power:resume');
+      });
+    } catch (error) {
+      if (isDatabaseSchemaUpgradeDeclinedError(error)) {
+        console.debug(
+          '[main] Schema upgrade declined; quitting without changing database:',
+          sanitizeLogMessage(error.message),
+        );
+        app.quit();
+        return;
+      }
+      console.error(
+        '[main] Fatal startup error:',
+        sanitizeLogMessage(error instanceof Error ? (error.stack ?? error.message) : String(error)),
+      );
+      const isNativeModuleError =
+        error instanceof Error && (error as NodeJS.ErrnoException).code === 'ERR_DLOPEN_FAILED';
+      const message = isDatabaseSchemaTooNewError(error)
+        ? formatDatabaseSchemaTooNewMessage(error)
+        : isNativeModuleError
+          ? `A native module failed to load. This usually means the app needs to be rebuilt for this version of Electron.\n\nFix: run "pnpm install" in the project directory, then restart.\n\nDetails: ${error.message}`
+          : `The application failed to start:\n\n${error instanceof Error ? error.message : String(error)}\n\nPlease report this issue.`;
+      showFatalStartupError('Mesh-Client — Startup Error', message);
+      app.quit();
+      return;
+    }
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        try {
+          createWindow();
+        } catch (error) {
+          console.error(
+            '[main] Window creation error:',
+            sanitizeLogMessage(error instanceof Error ? error.message : String(error)),
+          );
+        }
+      } else {
+        mainWindow?.show(); // Restore hidden window on dock click
+      }
+    });
+  })
+  .catch((error: unknown) => {
+    console.error(
+      '[main] app.whenReady failed:',
+      sanitizeLogMessage(error instanceof Error ? (error.stack ?? error.message) : String(error)),
+    );
+    showFatalStartupError(
+      'Mesh-Client — Startup Error',
+      `The application failed to start:\n\n${error instanceof Error ? error.message : String(error)}\n\nPlease report this issue.`,
+    );
+    app.quit();
+  });
+
+app.on('before-quit', (event) => {
+  rendererHeartbeatWatchdog.stopStallWatchdog();
+  rendererHeartbeatWatchdog.clearResumeWatchdog();
+  // Clean up any pending Bluetooth device selection to prevent callback leak
+  if (linuxWebBluetoothDeviceSelection.hasPendingSelection()) {
+    console.debug('[main] before-quit: cleaning up pending Bluetooth callback');
+    linuxWebBluetoothDeviceSelection.cancelSelection();
+  }
+
+  if (shutdownDone) {
+    return;
+  }
+
+  if (nobleBleManager.isBleSessionActive()) {
+    event.preventDefault();
+    void (async () => {
+      try {
+        await nobleBleManager.stopAllScanning();
+        await nobleBleManager.disconnectAll();
+      } catch (err) {
+        console.error(
+          '[main] Noble BLE shutdown failed:',
+          sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+        );
+      } finally {
+        // quit() must run even if shutdown throws: before-quit was prevented, so an
+        // escaping rejection here would leave the app running with no path to exit.
+        try {
+          await shutdownAppResources();
+        } catch (err) {
+          console.error(
+            '[main] shutdownAppResources failed before quit:',
+            sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+          );
+        }
+        app.quit();
+      }
+    })();
+    return;
+  }
+
+  event.preventDefault();
+  void shutdownAppResources()
+    .then(() => {
+      app.quit();
+    })
+    .catch((err: unknown) => {
+      console.error(
+        '[main] shutdownAppResources failed before quit:',
+        sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+      );
+      app.quit();
+    });
+});
+
+app.on('will-quit', (event) => {
+  event.preventDefault();
+  void (async () => {
+    console.debug(
+      `[main] will-quit userInitiated=${isQuitting} shutdownDone=${shutdownDone} uptimeSec=${Math.floor(process.uptime())}`,
+    );
+    await Promise.race([
+      flushLogBeforeQuit(),
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, 500);
+      }),
+    ]);
+    try {
+      takServerManager?.stop();
+    } catch (err) {
+      console.debug(
+        '[main] TAK server stop during will-quit (ignored):',
+        err instanceof Error ? err.message : err,
+      ); // log-injection-ok internal cleanup
+    }
+    try {
+      await reticulumSidecarManager?.stop({ forQuit: true });
+    } catch (err) {
+      console.debug(
+        '[main] Reticulum sidecar stop during will-quit (ignored):',
+        err instanceof Error ? err.message : err,
+      ); // log-injection-ok internal cleanup
+    }
+    try {
+      mqttManager.disconnect();
+      meshcoreMqttAdapter.disconnect();
+    } catch (err) {
+      console.debug(
+        '[main] MQTT disconnect during will-quit (ignored):',
+        err instanceof Error ? err.message : err,
+      ); // log-injection-ok internal library error during cleanup
+    }
+    destroyRegisteredTcpBridgeSockets('TCP socket destroy during will-quit (ignored)');
+    stopPowerSaveBlocker();
+    nobleBleManager.releaseNobleProcessHandles();
+    tray?.destroy();
+    tray = null;
+    // releaseNobleProcessHandles() above calls noble._bindings.stop() which releases the native
+    // BLEManager and its CBqueue GCD dispatch queue — without that, the process cannot exit on macOS.
+    app.exit(0);
+  })();
+});
+
+app.on('window-all-closed', () => {
+  // Clean up any pending Bluetooth device selection to prevent callback leak
+  if (linuxWebBluetoothDeviceSelection.hasPendingSelection()) {
+    console.debug('[main] window-all-closed: cleaning up pending Bluetooth callback');
+    linuxWebBluetoothDeviceSelection.cancelSelection();
+  }
+  const hasConnection = isConnected || isAnyMqttConnected();
+  // On macOS: quit when user chose Quit, or when there's no connection (window closed with nothing to keep running for)
+  if (process.platform !== 'darwin' || isQuitting || !hasConnection) {
+    app.quit();
+  }
+});

@@ -1,0 +1,2743 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { act } from 'react';
+import { flushSync } from 'react-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { axe } from 'vitest-axe';
+
+import type { SerialPort } from '@/shared/electron-api.types';
+
+import { hydrateAxeThemeColors } from '../lib/a11yTestHelpers';
+import type { FirmwareCheckResult } from '../lib/firmwareCheck';
+import { MESHCORE_IDENTITY_STORAGE_KEY } from '../lib/letsMeshJwt';
+import {
+  initNobleBleDualRadioStartup,
+  resetNobleBleConnectMutexForTests,
+} from '../lib/meshcoreDualNobleBleInit';
+import type { DeviceState } from '../lib/types';
+import { mockConsoleWarn, withMockedConsoleWarn } from '../lib/vitestConsoleMock';
+import ConnectionPanel from './ConnectionPanel';
+
+const CONNECTION_PANEL_SOURCE = readFileSync(join(__dirname, 'ConnectionPanel.tsx'), 'utf-8');
+
+const disconnectedState: DeviceState = {
+  status: 'disconnected',
+  myNodeNum: 0,
+  reconnectAttempt: 0,
+  connectionType: null,
+};
+
+const NOBLE_PLATFORM_USER_AGENT = {
+  darwin:
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124 Safari/537.36',
+  win32: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
+} as const;
+
+function mockNobleBlePlatform(platform: 'darwin' | 'win32'): {
+  userAgentSpy: ReturnType<typeof vi.spyOn>;
+  restore: () => void;
+} {
+  vi.mocked(window.electronAPI.getPlatform).mockReturnValue(platform);
+  const userAgentSpy = vi.spyOn(window.navigator, 'userAgent', 'get');
+  userAgentSpy.mockReturnValue(NOBLE_PLATFORM_USER_AGENT[platform]);
+  return {
+    userAgentSpy,
+    restore: () => {
+      userAgentSpy.mockRestore();
+      vi.mocked(window.electronAPI.getPlatform).mockReturnValue('linux');
+    },
+  };
+}
+
+function mockMacNoblePlatform(): ReturnType<typeof mockNobleBlePlatform> {
+  return mockNobleBlePlatform('darwin');
+}
+
+describe('ConnectionPanel MQTT port clamping', () => {
+  it('clamps port to 1 when 0 is entered', async () => {
+    const user = userEvent.setup();
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+    // Navigate to MQTT section — look for the port field by label
+    const portInput = screen.queryByLabelText(/^Port$/i);
+    if (portInput) {
+      await user.clear(portInput);
+      await user.type(portInput, '0');
+      // After typing, the value should be clamped to 1 (displayed as 1 or 1883 fallback)
+      const val = parseInt((portInput as HTMLInputElement).value);
+      expect(val).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
+describe('HelpTooltip in MQTT form', () => {
+  function renderMqttForm(protocol: 'meshtastic' | 'meshcore' = 'meshtastic') {
+    return render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol={protocol}
+      />,
+    );
+  }
+
+  it('shows non-empty tooltip text on mouseenter for each help icon', async () => {
+    const user = userEvent.setup();
+    renderMqttForm();
+    const helpIcons = document.querySelectorAll('.cursor-help');
+    expect(helpIcons.length).toBeGreaterThan(0);
+    for (const icon of helpIcons) {
+      await user.hover(icon);
+      // After hover, a tooltip span should appear with non-empty text
+      const tooltips = document.querySelectorAll('.pointer-events-none');
+      const visibleTooltip = Array.from(tooltips).find(
+        (el) => el.textContent && el.textContent.trim().length > 0,
+      );
+      expect(visibleTooltip).toBeTruthy();
+      await user.unhover(icon);
+    }
+  });
+
+  it('help icons do not use native title attribute (broken in Electron)', () => {
+    renderMqttForm();
+    const helpIcons = document.querySelectorAll('.cursor-help');
+    expect(helpIcons.length).toBeGreaterThan(0);
+    for (const icon of helpIcons) {
+      expect(icon.getAttribute('title')).toBeNull();
+    }
+  });
+});
+
+describe('ConnectionPanel accessibility', () => {
+  it('has no axe violations in disconnected state', async () => {
+    const { container } = render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+    hydrateAxeThemeColors(container);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it('has no axe violations for MeshCore disconnected state', async () => {
+    const { container } = render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+    hydrateAxeThemeColors(container);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+});
+
+describe('ConnectionPanel MQTT connect error', () => {
+  it('surfaces error when mqtt.connect rejects', async () => {
+    const user = userEvent.setup();
+    const { spy: consoleWarnSpy, restore } = mockConsoleWarn();
+    vi.mocked(window.electronAPI.mqtt.connect).mockRejectedValueOnce(new Error('broker refused'));
+    // Custom (non–device-signing) so Connect reaches mqtt.connect without JWT/identity gates.
+    localStorage.setItem('mesh-client:mqttPreset:meshcore', 'custom');
+    localStorage.setItem(
+      'mesh-client:mqttSettings:meshcore',
+      JSON.stringify({
+        server: 'mqtt.example.com',
+        port: 1883,
+        username: '',
+        password: '',
+        topicPrefix: 'meshcore/chat',
+        useWebSocket: false,
+      }),
+    );
+    localStorage.setItem('mesh-client:migrated:meshcore-letsmesh-default-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-v1', '1');
+    localStorage.setItem('mesh-client:migrated:colorado-mesh-port-443-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-shape-v1', '1');
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+
+    const mqttCard = screen.getByText('MQTT Connection').closest('.bg-deep-black');
+    expect(mqttCard).toBeTruthy();
+    const connectBtn = within(mqttCard as HTMLElement).getByRole('button', { name: 'Connect' });
+    await user.click(connectBtn);
+
+    expect(await screen.findByText('broker refused')).toBeInTheDocument();
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/\[ConnectionPanel\].*broker refused/s),
+    );
+    restore();
+    localStorage.clear();
+  });
+
+  it('does not run LetsMesh preset validation for Meshtastic when meshcore preset was letsmesh', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('mesh-client:mqttPreset:meshcore', 'letsmesh');
+    const connect = vi.mocked(window.electronAPI.mqtt.connect);
+    connect.mockClear();
+    connect.mockResolvedValue(undefined);
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+
+    const mqttCard = screen.getByText('MQTT Connection').closest('.bg-deep-black');
+    expect(mqttCard).toBeTruthy();
+    const connectBtn = within(mqttCard as HTMLElement).getByRole('button', { name: 'Connect' });
+    await user.click(connectBtn);
+
+    expect(connect).toHaveBeenCalledTimes(1);
+    const payload = connect.mock.calls[0]?.[0];
+    expect(payload?.mqttTransportProtocol).toBe('meshtastic');
+    expect(
+      screen.queryByText(/LetsMesh requires WebSocket transport on port 443/i),
+    ).not.toBeInTheDocument();
+
+    localStorage.removeItem('mesh-client:mqttPreset:meshcore');
+  });
+});
+
+describe('ConnectionPanel MeshCore MQTT presets', () => {
+  afterEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it('lists all MeshCore presets in the network preset picker', () => {
+    localStorage.setItem('mesh-client:coloradoMqttRegionAck-v1', '1');
+    localStorage.setItem('mesh-client:mqttPreset:meshcore', 'letsmesh');
+    localStorage.setItem(
+      'mesh-client:mqttSettings:meshcore',
+      JSON.stringify({
+        server: 'mqtt-us-v1.letsmesh.net',
+        topicPrefix: 'meshcore/test',
+        port: 443,
+        useWebSocket: true,
+        tlsEnabled: true,
+      }),
+    );
+    localStorage.setItem('mesh-client:migrated:meshcore-letsmesh-default-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-v1', '1');
+    localStorage.setItem('mesh-client:migrated:colorado-mesh-port-443-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-shape-v1', '1');
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+
+    const select = screen.getByRole('combobox', { name: 'Network Preset' });
+    const labels = within(select)
+      .getAllByRole('option')
+      .map((o) => o.textContent);
+    expect(labels).toEqual([
+      'LetsMesh',
+      'MeshMapper',
+      'Colorado Mesh',
+      'Waev',
+      'Meshat.se',
+      'MeshCore.CA',
+      'EastMesh',
+      'Ripple Networks',
+      'Custom',
+    ]);
+  });
+
+  it('applies Waev broker fields when selected from the picker', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('mesh-client:coloradoMqttRegionAck-v1', '1');
+    localStorage.setItem('mesh-client:mqttPreset:meshcore', 'letsmesh');
+    localStorage.setItem(
+      'mesh-client:mqttSettings:meshcore',
+      JSON.stringify({
+        server: 'mqtt-us-v1.letsmesh.net',
+        topicPrefix: 'meshcore/test',
+        port: 443,
+        useWebSocket: true,
+        tlsEnabled: true,
+      }),
+    );
+    localStorage.setItem('mesh-client:migrated:meshcore-letsmesh-default-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-v1', '1');
+    localStorage.setItem('mesh-client:migrated:colorado-mesh-port-443-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-shape-v1', '1');
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+
+    const select = screen.getByRole('combobox', { name: 'Network Preset' });
+    await user.selectOptions(select, within(select).getByRole('option', { name: 'Waev' }));
+
+    expect(localStorage.getItem('mesh-client:mqttPreset:meshcore')).toBe('waev');
+    expect(screen.getByLabelText<HTMLInputElement>(/^Server$/i).value).toBe('mqtt.waev.app');
+    expect(screen.getByLabelText<HTMLInputElement>(/^Port$/i).value).toBe('443');
+  });
+
+  function renderLetsMeshMeshcorePanel() {
+    localStorage.setItem('mesh-client:coloradoMqttRegionAck-v1', '1');
+    localStorage.setItem('mesh-client:mqttPreset:meshcore', 'letsmesh');
+    localStorage.setItem(
+      'mesh-client:mqttSettings:meshcore',
+      JSON.stringify({
+        server: 'mqtt-us-v1.letsmesh.net',
+        topicPrefix: 'meshcore/test',
+        port: 443,
+        useWebSocket: true,
+        tlsEnabled: true,
+        wsPath: '/ws',
+        keepalive: 30,
+      }),
+    );
+    localStorage.setItem('mesh-client:migrated:meshcore-letsmesh-default-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-v1', '1');
+    localStorage.setItem('mesh-client:migrated:colorado-mesh-port-443-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-shape-v1', '1');
+    return render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+  }
+
+  it('normalizes an IATA topic prefix on blur without leaving the preset', async () => {
+    const user = userEvent.setup();
+    renderLetsMeshMeshcorePanel();
+
+    const topic = screen.getByLabelText<HTMLInputElement>(/^Topic Prefix$/i);
+    await user.clear(topic);
+    await user.type(topic, 'meshcore/den');
+    fireEvent.blur(topic);
+
+    expect(topic.value).toBe('meshcore/DEN');
+    expect(screen.getByRole('combobox', { name: 'Network Preset' })).toHaveValue('letsmesh');
+  });
+
+  it('disables Connect and flags an invalid IATA topic prefix', async () => {
+    const user = userEvent.setup();
+    renderLetsMeshMeshcorePanel();
+
+    const topic = screen.getByLabelText<HTMLInputElement>(/^Topic Prefix$/i);
+    await user.clear(topic);
+    await user.type(topic, 'meshcore/zzzz');
+
+    expect(topic).toHaveAttribute('aria-invalid', 'true');
+    const mqttCard = screen.getByText('MQTT Connection').closest('.bg-deep-black');
+    const connectBtn = within(mqttCard as HTMLElement).getByRole('button', { name: 'Connect' });
+    expect(connectBtn).toBeDisabled();
+  });
+
+  it('offers MeshCore.CA Primary/Backup broker toggle that switches the server', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('mesh-client:coloradoMqttRegionAck-v1', '1');
+    localStorage.setItem('mesh-client:mqttPreset:meshcore', 'letsmesh');
+    localStorage.setItem(
+      'mesh-client:mqttSettings:meshcore',
+      JSON.stringify({
+        server: 'mqtt-us-v1.letsmesh.net',
+        topicPrefix: 'meshcore/test',
+        port: 443,
+        useWebSocket: true,
+        tlsEnabled: true,
+      }),
+    );
+    localStorage.setItem('mesh-client:migrated:meshcore-letsmesh-default-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-v1', '1');
+    localStorage.setItem('mesh-client:migrated:colorado-mesh-port-443-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-shape-v1', '1');
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+
+    const select = screen.getByRole('combobox', { name: 'Network Preset' });
+    await user.selectOptions(select, within(select).getByRole('option', { name: 'MeshCore.CA' }));
+    expect(screen.getByLabelText<HTMLInputElement>(/^Server$/i).value).toBe('mqtt1.meshcore.ca');
+
+    const brokerGroup = screen.getByRole('group', { name: 'MeshCore.CA broker' });
+    await user.click(within(brokerGroup).getByRole('button', { name: 'Backup' }));
+    expect(screen.getByLabelText<HTMLInputElement>(/^Server$/i).value).toBe('mqtt2.meshcore.ca');
+  });
+
+  it('does not apply Colorado preset fields when confirm is cancelled', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('mesh-client:coloradoMqttRegionAck-v1', '1');
+    localStorage.setItem('mesh-client:mqttPreset:meshcore', 'letsmesh');
+    localStorage.setItem(
+      'mesh-client:mqttSettings:meshcore',
+      JSON.stringify({
+        server: 'mqtt-us-v1.letsmesh.net',
+        topicPrefix: 'meshcore/test',
+        port: 443,
+        useWebSocket: true,
+        tlsEnabled: true,
+        username: '',
+        password: '',
+      }),
+    );
+    localStorage.setItem('mesh-client:migrated:meshcore-letsmesh-default-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-v1', '1');
+    localStorage.setItem('mesh-client:migrated:colorado-mesh-port-443-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-shape-v1', '1');
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+
+    const select = screen.getByRole('combobox', { name: 'Network Preset' });
+    await user.selectOptions(select, within(select).getByRole('option', { name: 'Colorado Mesh' }));
+    expect(window.confirm).toHaveBeenCalled();
+    expect(localStorage.getItem('mesh-client:mqttPreset:meshcore')).toBe('letsmesh');
+    expect(screen.getByLabelText(/^Server$/i)).toHaveValue('mqtt-us-v1.letsmesh.net');
+    // The controlled select must snap back to the current preset after a cancelled confirm
+    // (re-query: cancelling remounts the select so the original node is detached).
+    expect(screen.getByRole('combobox', { name: 'Network Preset' })).toHaveValue('letsmesh');
+  });
+
+  it('shows one-time Colorado region gate and switches to LetsMesh on cancel', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('mesh-client:mqttPreset:meshcore', 'coloradomesh');
+    localStorage.setItem(
+      'mesh-client:mqttSettings:meshcore',
+      JSON.stringify({
+        server: 'mqtt.meshcore.coloradomesh.org',
+        topicPrefix: 'meshcore/DEN',
+        port: 443,
+        useWebSocket: true,
+        tlsEnabled: true,
+        wsPath: '/ws',
+        keepalive: 30,
+        password: '',
+      }),
+    );
+    localStorage.setItem('mesh-client:migrated:meshcore-letsmesh-default-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-v1', '1');
+    localStorage.setItem('mesh-client:migrated:colorado-mesh-port-443-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-shape-v1', '1');
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+
+    const dialog = await screen.findByRole('alertdialog', { name: 'Colorado Mesh MQTT' });
+    expect(dialog).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Switch to LetsMesh' }));
+    expect(localStorage.getItem('mesh-client:coloradoMqttRegionAck-v1')).toBe('1');
+    expect(localStorage.getItem('mesh-client:mqttPreset:meshcore')).toBe('letsmesh');
+    expect(
+      screen.queryByRole('alertdialog', { name: 'Colorado Mesh MQTT' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('keeps Colorado Mesh when the region gate is acknowledged with Stay', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('mesh-client:mqttPreset:meshcore', 'coloradomesh');
+    localStorage.setItem(
+      'mesh-client:mqttSettings:meshcore',
+      JSON.stringify({
+        server: 'mqtt.meshcore.coloradomesh.org',
+        topicPrefix: 'meshcore/DEN',
+        port: 443,
+        useWebSocket: true,
+        tlsEnabled: true,
+        wsPath: '/ws',
+        keepalive: 30,
+        password: '',
+      }),
+    );
+    localStorage.setItem('mesh-client:migrated:meshcore-letsmesh-default-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-v1', '1');
+    localStorage.setItem('mesh-client:migrated:colorado-mesh-port-443-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-shape-v1', '1');
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+
+    const dialog = await screen.findByRole('alertdialog', { name: 'Colorado Mesh MQTT' });
+    await user.click(within(dialog).getByRole('button', { name: 'I am in Colorado' }));
+    expect(localStorage.getItem('mesh-client:coloradoMqttRegionAck-v1')).toBe('1');
+    expect(localStorage.getItem('mesh-client:mqttPreset:meshcore')).toBe('coloradomesh');
+    expect(screen.getByLabelText(/^Server$/i)).toHaveValue('mqtt.meshcore.coloradomesh.org');
+    expect(
+      screen.queryByRole('alertdialog', { name: 'Colorado Mesh MQTT' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows Colorado region gate even when MQTT is already connected', async () => {
+    localStorage.setItem('mesh-client:mqttPreset:meshcore', 'coloradomesh');
+    localStorage.setItem(
+      'mesh-client:mqttSettings:meshcore',
+      JSON.stringify({
+        server: 'mqtt.meshcore.coloradomesh.org',
+        topicPrefix: 'meshcore/DEN',
+        port: 443,
+        useWebSocket: true,
+        tlsEnabled: true,
+        wsPath: '/ws',
+        keepalive: 30,
+        password: '',
+        autoLaunch: true,
+      }),
+    );
+    localStorage.setItem('mesh-client:migrated:meshcore-letsmesh-default-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-v1', '1');
+    localStorage.setItem('mesh-client:migrated:colorado-mesh-port-443-v1', '1');
+    localStorage.setItem('mesh-client:migrated:meshcore-topic-iata-shape-v1', '1');
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="connected"
+        protocol="meshcore"
+      />,
+    );
+
+    expect(
+      await screen.findByRole('alertdialog', { name: 'Colorado Mesh MQTT' }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('ConnectionPanel BLE error humanization', () => {
+  afterEach(() => {
+    localStorage.clear();
+    vi.mocked(window.electronAPI.getPlatform).mockReturnValue('linux');
+    vi.mocked(window.electronAPI.startNobleBleScanning).mockReset();
+  });
+
+  it('shows Windows handshake guidance for MeshCore BLE handshake timeout/disconnect', async () => {
+    const user = userEvent.setup();
+    const { spy: consoleWarnSpy, restore } = mockConsoleWarn();
+    const { restore: restorePlatform } = mockNobleBlePlatform('win32');
+    vi.mocked(window.electronAPI.startNobleBleScanning).mockRejectedValueOnce(
+      new Error(
+        'Bluetooth connected but MeshCore protocol handshake did not complete before disconnect/timeout. Retry, keep the device awake and nearby, power-cycle BLE, or use Serial/TCP.',
+      ),
+    );
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+
+    const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+    expect(radioCard).toBeTruthy();
+    await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+    expect(await screen.findByText(/On Windows, toggle Bluetooth off\/on/i)).toBeInTheDocument();
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /\[ConnectionPanel\].*Bluetooth connected but MeshCore protocol handshake/s,
+      ),
+    );
+    restore();
+    restorePlatform();
+  });
+
+  it('renders object-shaped BLE errors as JSON instead of [object Object]', async () => {
+    const user = userEvent.setup();
+    const { spy: consoleWarnSpy, restore } = mockConsoleWarn();
+    const { restore: restorePlatform } = mockNobleBlePlatform('win32');
+    vi.mocked(window.electronAPI.startNobleBleScanning).mockRejectedValueOnce({
+      reason: 'adapter glitch',
+      code: 'BLE_OBJECT_ERR',
+    });
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+
+    const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+    expect(radioCard).toBeTruthy();
+    await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+    expect(await screen.findByText(/"reason":"adapter glitch"/)).toBeInTheDocument();
+    expect(screen.queryByText(/\[object Object\]/)).not.toBeInTheDocument();
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/\[ConnectionPanel\].*"reason":"adapter glitch"/s),
+    );
+    restore();
+    restorePlatform();
+  });
+
+  it('shows Windows adapter guidance when BLE adapter is unavailable', async () => {
+    const user = userEvent.setup();
+    const { spy: consoleWarnSpy, restore } = mockConsoleWarn();
+    const { restore: restorePlatform } = mockNobleBlePlatform('win32');
+    vi.mocked(window.electronAPI.startNobleBleScanning).mockRejectedValueOnce(
+      new Error('Bluetooth adapter is not available'),
+    );
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+
+    const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+    expect(radioCard).toBeTruthy();
+    await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+    expect(
+      await screen.findByText(/update your Bluetooth driver in Device Manager/i),
+    ).toBeInTheDocument();
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/\[ConnectionPanel\].*Bluetooth adapter is not available/s),
+    );
+    restore();
+    restorePlatform();
+  });
+});
+
+describe('ConnectionPanel Linux BLE auto-connect', () => {
+  function mockLinuxUserAgent(): ReturnType<typeof vi.spyOn> {
+    const userAgentSpy = vi.spyOn(window.navigator, 'userAgent', 'get');
+    userAgentSpy.mockReturnValue(
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
+    );
+    return userAgentSpy;
+  }
+
+  it('does not mount-auto-connect BLE when last connection is saved (coordinator owns cold-start)', async () => {
+    const userAgentSpy = mockLinuxUserAgent();
+    const bleId = 'linux-ble-device';
+    const lastConnKey = 'mesh-client:lastConnection:meshtastic';
+    localStorage.setItem(lastConnKey, JSON.stringify({ type: 'ble', bleDeviceId: bleId }));
+    const onAutoConnect = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(window.electronAPI.startNobleBleScanning).mockClear();
+
+    try {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={vi.fn().mockResolvedValue(undefined)}
+          onAutoConnect={onAutoConnect}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshtastic"
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Radio Connection')).toBeInTheDocument();
+      });
+      expect(onAutoConnect).not.toHaveBeenCalled();
+      expect(window.electronAPI.startNobleBleScanning).not.toHaveBeenCalled();
+    } finally {
+      localStorage.removeItem(lastConnKey);
+      userAgentSpy.mockRestore();
+    }
+  });
+
+  it('uses Web Bluetooth reconnect path from last-connection card on Linux', async () => {
+    const user = userEvent.setup();
+    const userAgentSpy = mockLinuxUserAgent();
+    const lastConnKey = 'mesh-client:lastConnection:meshtastic';
+    localStorage.setItem(
+      lastConnKey,
+      JSON.stringify({ type: 'ble', bleDeviceId: 'linux-ble-device' }),
+    );
+    const onConnect = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(window.electronAPI.startNobleBleScanning).mockClear();
+    vi.mocked(window.electronAPI.cancelBluetoothSelection).mockClear();
+
+    try {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={onConnect}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshtastic"
+        />,
+      );
+
+      await user.click(screen.getByRole('button', { name: /^Reconnect$/i }));
+
+      await waitFor(() => {
+        expect(onConnect).toHaveBeenCalledWith('ble', undefined);
+      });
+      expect(window.electronAPI.startNobleBleScanning).not.toHaveBeenCalled();
+      expect(window.electronAPI.cancelBluetoothSelection).toHaveBeenCalled();
+      const cancelOrder = vi.mocked(window.electronAPI.cancelBluetoothSelection).mock
+        .invocationCallOrder[0];
+      const connectOrder = onConnect.mock.invocationCallOrder[0];
+      expect(cancelOrder).toBeDefined();
+      expect(connectOrder).toBeDefined();
+      expect(cancelOrder).toBeLessThan(connectOrder);
+    } finally {
+      localStorage.removeItem(lastConnKey);
+      userAgentSpy.mockRestore();
+    }
+  });
+
+  it('awaits cancelBluetoothSelection before Reconnect onConnect on Linux', async () => {
+    const user = userEvent.setup();
+    const userAgentSpy = mockLinuxUserAgent();
+    const lastConnKey = 'mesh-client:lastConnection:meshtastic';
+    localStorage.setItem(
+      lastConnKey,
+      JSON.stringify({ type: 'ble', bleDeviceId: 'linux-ble-device' }),
+    );
+    let releaseCancel: (() => void) | undefined;
+    const cancelSettled = new Promise<void>((resolve) => {
+      releaseCancel = resolve;
+    });
+    let onConnectStarted = false;
+    const onConnect = vi.fn().mockImplementation(() => {
+      onConnectStarted = true;
+      return Promise.resolve();
+    });
+    vi.mocked(window.electronAPI.cancelBluetoothSelection).mockImplementation(
+      () =>
+        new Promise<{ cancelled: boolean }>((resolve) => {
+          void cancelSettled.then(() => {
+            resolve({ cancelled: true });
+          });
+        }),
+    );
+
+    try {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={onConnect}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshtastic"
+        />,
+      );
+
+      await user.click(screen.getByRole('button', { name: /^Reconnect$/i }));
+
+      await waitFor(() => {
+        expect(window.electronAPI.cancelBluetoothSelection).toHaveBeenCalled();
+      });
+      expect(onConnectStarted).toBe(false);
+      expect(onConnect).not.toHaveBeenCalled();
+
+      releaseCancel?.();
+      await waitFor(() => {
+        expect(onConnect).toHaveBeenCalledWith('ble', undefined);
+      });
+      expect(onConnectStarted).toBe(true);
+    } finally {
+      vi.mocked(window.electronAPI.cancelBluetoothSelection).mockResolvedValue({
+        cancelled: false,
+      });
+      localStorage.removeItem(lastConnKey);
+      userAgentSpy.mockRestore();
+    }
+  });
+
+  it('does not start noble scan for meshcore on Linux mount with saved BLE connection', async () => {
+    const userAgentSpy = mockLinuxUserAgent();
+    const lastConnKey = 'mesh-client:lastConnection:meshcore';
+    localStorage.setItem(lastConnKey, JSON.stringify({ type: 'ble', bleDeviceId: 'linux-mc-ble' }));
+    vi.mocked(window.electronAPI.startNobleBleScanning).mockClear();
+
+    try {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={vi.fn().mockResolvedValue(undefined)}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshcore"
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Radio Connection')).toBeInTheDocument();
+      });
+      expect(window.electronAPI.startNobleBleScanning).not.toHaveBeenCalled();
+    } finally {
+      localStorage.removeItem(lastConnKey);
+      userAgentSpy.mockRestore();
+    }
+  });
+});
+
+describe('ConnectionPanel Linux BLE path', () => {
+  it('uses Web Bluetooth connect path on Linux instead of noble scanning', async () => {
+    const user = userEvent.setup();
+    vi.mocked(window.electronAPI.startNobleBleScanning).mockClear();
+    const userAgentSpy = vi.spyOn(window.navigator, 'userAgent', 'get');
+    userAgentSpy.mockReturnValue(
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
+    );
+    const onConnect = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={onConnect}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+
+    const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+    expect(radioCard).toBeTruthy();
+    await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+    expect(onConnect).toHaveBeenCalledWith('ble', undefined);
+    expect(window.electronAPI.startNobleBleScanning).not.toHaveBeenCalled();
+    expect(window.electronAPI.cancelBluetoothSelection).toHaveBeenCalled();
+    const cancelOrder = vi.mocked(window.electronAPI.cancelBluetoothSelection).mock
+      .invocationCallOrder[0];
+    const connectOrder = onConnect.mock.invocationCallOrder[0];
+    expect(cancelOrder).toBeDefined();
+    expect(connectOrder).toBeDefined();
+    expect(cancelOrder).toBeLessThan(connectOrder);
+    userAgentSpy.mockRestore();
+  });
+
+  it('awaits cancelBluetoothSelection before onConnect so force-clear cannot race the chooser', async () => {
+    const user = userEvent.setup();
+    const userAgentSpy = vi.spyOn(window.navigator, 'userAgent', 'get');
+    userAgentSpy.mockReturnValue(
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
+    );
+
+    let releaseCancel: (() => void) | undefined;
+    const cancelSettled = new Promise<void>((resolve) => {
+      releaseCancel = resolve;
+    });
+    let onConnectStarted = false;
+    vi.mocked(window.electronAPI.cancelBluetoothSelection).mockImplementation(
+      () =>
+        new Promise<{ cancelled: boolean }>((resolve) => {
+          void cancelSettled.then(() => {
+            resolve({ cancelled: true });
+          });
+        }),
+    );
+    const onConnect = vi.fn().mockImplementation(() => {
+      onConnectStarted = true;
+      return Promise.resolve();
+    });
+
+    try {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={onConnect}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshcore"
+        />,
+      );
+
+      const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+      expect(radioCard).toBeTruthy();
+      const connectClick = user.click(
+        within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }),
+      );
+
+      await waitFor(() => {
+        expect(window.electronAPI.cancelBluetoothSelection).toHaveBeenCalled();
+      });
+      expect(onConnectStarted).toBe(false);
+      expect(onConnect).not.toHaveBeenCalled();
+
+      releaseCancel?.();
+      await connectClick;
+      await waitFor(() => {
+        expect(onConnect).toHaveBeenCalledWith('ble', undefined);
+      });
+      expect(onConnectStarted).toBe(true);
+    } finally {
+      vi.mocked(window.electronAPI.cancelBluetoothSelection).mockResolvedValue({
+        cancelled: false,
+      });
+      userAgentSpy.mockRestore();
+    }
+  });
+
+  it('passes Linux BLE chooser generation to cancelBluetoothSelection on Cancel', async () => {
+    const user = userEvent.setup();
+    vi.mocked(window.electronAPI.cancelBluetoothSelection).mockClear();
+    const userAgentSpy = vi.spyOn(window.navigator, 'userAgent', 'get');
+    userAgentSpy.mockReturnValue(
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
+    );
+
+    const discovered = {
+      cb: null as
+        null | ((devices: { deviceId: string; deviceName: string }[], generation?: number) => void),
+    };
+    vi.mocked(window.electronAPI.onBluetoothDevicesDiscovered).mockImplementation((cb) => {
+      discovered.cb = cb;
+      return () => {};
+    });
+
+    const onConnect = vi.fn().mockImplementation(
+      () =>
+        new Promise<void>(() => {
+          /* leave connecting so Cancel stays available */
+        }),
+    );
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={onConnect}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+
+    const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+    expect(radioCard).toBeTruthy();
+    await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+    expect(onConnect).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => {
+      expect(discovered.cb).toBeTruthy();
+    });
+    discovered.cb?.([{ deviceId: 'aa:bb:cc:dd:ee:ff', deviceName: 'Node' }], 3);
+
+    const cancelBtn = await screen.findByRole('button', { name: /^Cancel$/i });
+    await user.click(cancelBtn);
+
+    expect(window.electronAPI.cancelBluetoothSelection).toHaveBeenCalledWith(3);
+    userAgentSpy.mockRestore();
+  });
+
+  it('keeps MeshCore PIN guidance in Linux BLE pairing-related errors', async () => {
+    const user = userEvent.setup();
+    vi.mocked(window.electronAPI.startNobleBleScanning).mockClear();
+    const userAgentSpy = vi.spyOn(window.navigator, 'userAgent', 'get');
+    userAgentSpy.mockReturnValue(
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
+    );
+    const onConnect = vi
+      .fn()
+      .mockRejectedValue(
+        new Error(
+          'Bluetooth connected but MeshCore protocol handshake did not complete before disconnect/timeout.',
+        ),
+      );
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={onConnect}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+
+    const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+    expect(radioCard).toBeTruthy();
+    await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+    expect(await screen.findByText(/Bluetooth Companion mode/i)).toBeInTheDocument();
+    expect(screen.getByText(/paired with your computer using a PIN/i)).toBeInTheDocument();
+    userAgentSpy.mockRestore();
+  });
+
+  it('clears remembered MeshCore BLE selection after Linux missing-services failure', async () => {
+    const user = userEvent.setup();
+    const userAgentSpy = vi.spyOn(window.navigator, 'userAgent', 'get');
+    userAgentSpy.mockReturnValue(
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
+    );
+    const lastConnKey = 'mesh-client:lastConnection:meshcore';
+    const lastBleKey = 'mesh-client:lastBleDevice:meshcore';
+    localStorage.setItem(lastConnKey, JSON.stringify({ type: 'ble', bleDeviceId: 'bad-device' }));
+    localStorage.setItem(lastBleKey, 'bad-device');
+    const onConnect = vi.fn().mockRejectedValue(new Error('Could not find all requested services'));
+
+    try {
+      await withMockedConsoleWarn(async () => {
+        render(
+          <ConnectionPanel
+            state={disconnectedState}
+            onConnect={onConnect}
+            onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+            onDisconnect={vi.fn().mockResolvedValue(undefined)}
+            mqttStatus="disconnected"
+            protocol="meshcore"
+          />,
+        );
+
+        const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+        expect(radioCard).toBeTruthy();
+        await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+        await waitFor(() => {
+          expect(onConnect).toHaveBeenCalledWith('ble', undefined);
+          expect(localStorage.getItem(lastConnKey)).toBeNull();
+          expect(localStorage.getItem(lastBleKey)).toBeNull();
+        });
+      });
+    } finally {
+      localStorage.removeItem(lastConnKey);
+      localStorage.removeItem(lastBleKey);
+      userAgentSpy.mockRestore();
+    }
+  });
+
+  it('clears remembered MeshCore BLE selection after Linux missing-services reconnect failure', async () => {
+    const user = userEvent.setup();
+    const userAgentSpy = vi.spyOn(window.navigator, 'userAgent', 'get');
+    userAgentSpy.mockReturnValue(
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
+    );
+    const lastConnKey = 'mesh-client:lastConnection:meshcore';
+    const lastBleKey = 'mesh-client:lastBleDevice:meshcore';
+    localStorage.setItem(lastConnKey, JSON.stringify({ type: 'ble', bleDeviceId: 'bad-device' }));
+    localStorage.setItem(lastBleKey, 'bad-device');
+    const onConnect = vi.fn().mockRejectedValue(new Error('Could not find all requested services'));
+
+    try {
+      await withMockedConsoleWarn(async () => {
+        render(
+          <ConnectionPanel
+            state={disconnectedState}
+            onConnect={onConnect}
+            onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+            onDisconnect={vi.fn().mockResolvedValue(undefined)}
+            mqttStatus="disconnected"
+            protocol="meshcore"
+          />,
+        );
+
+        await waitFor(() => {
+          expect(screen.getByRole('button', { name: /^Reconnect$/i })).toBeInTheDocument();
+        });
+
+        await user.click(screen.getByRole('button', { name: /^Reconnect$/i }));
+
+        await waitFor(() => {
+          expect(onConnect).toHaveBeenCalledWith('ble', undefined);
+          expect(localStorage.getItem(lastConnKey)).toBeNull();
+          expect(localStorage.getItem(lastBleKey)).toBeNull();
+        });
+      });
+    } finally {
+      localStorage.removeItem(lastConnKey);
+      localStorage.removeItem(lastBleKey);
+      userAgentSpy.mockRestore();
+    }
+  });
+});
+
+// ─── Firmware status indicator ────────────────────────────────────
+
+const configuredState: DeviceState = {
+  status: 'configured',
+  myNodeNum: 1,
+  connectionType: 'ble',
+  firmwareVersion: '2.5.3',
+};
+
+function renderWithFirmware(
+  firmwareCheckState?: FirmwareCheckResult,
+  onOpenFirmwareReleases?: () => void,
+) {
+  return render(
+    <ConnectionPanel
+      state={configuredState}
+      onConnect={vi.fn().mockResolvedValue(undefined)}
+      onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+      onDisconnect={vi.fn().mockResolvedValue(undefined)}
+      mqttStatus="disconnected"
+      protocol="meshtastic"
+      firmwareCheckState={firmwareCheckState}
+      onOpenFirmwareReleases={onOpenFirmwareReleases}
+    />,
+  );
+}
+
+describe('ConnectionPanel firmware status indicator', () => {
+  it('shows plain firmware version text without indicator when firmwareCheckState is not passed', () => {
+    renderWithFirmware();
+    expect(screen.getByText('2.5.3')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Firmware is up to date')).not.toBeInTheDocument();
+  });
+
+  it('hides firmware row entirely when firmwareVersion is undefined', () => {
+    render(
+      <ConnectionPanel
+        state={{ ...configuredState, firmwareVersion: undefined }}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+        firmwareCheckState={{ phase: 'up-to-date', latestVersion: '2.5.4' }}
+        onOpenFirmwareReleases={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/Firmware/)).not.toBeInTheDocument();
+  });
+
+  it('shows spinner for checking phase', () => {
+    renderWithFirmware({ phase: 'checking' }, vi.fn());
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('shows green checkmark for up-to-date phase', () => {
+    renderWithFirmware({ phase: 'up-to-date', latestVersion: '2.5.3' }, vi.fn());
+    expect(screen.getByLabelText('Firmware is up to date')).toBeInTheDocument();
+  });
+
+  it('shows amber update button with version for update-available phase', () => {
+    renderWithFirmware({ phase: 'update-available', latestVersion: '2.5.4' }, vi.fn());
+    expect(screen.getByLabelText('Firmware update available: v2.5.4')).toBeInTheDocument();
+    expect(screen.getByText('v2.5.4')).toBeInTheDocument();
+  });
+
+  it('calls onOpenFirmwareReleases when update-available button is clicked', async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn();
+    renderWithFirmware({ phase: 'update-available', latestVersion: '2.5.4' }, onOpen);
+    await user.click(screen.getByLabelText('Firmware update available: v2.5.4'));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('has no axe violations with update-available indicator', async () => {
+    const { container } = renderWithFirmware(
+      { phase: 'update-available', latestVersion: '2.5.4' },
+      vi.fn(),
+    );
+    hydrateAxeThemeColors(container);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe('ConnectionPanel status i18n and pulse', () => {
+  it('translates radio status, connection type, and docs link when connected', () => {
+    renderWithFirmware();
+    expect(screen.getByText('Configured')).toBeInTheDocument();
+    expect(screen.getByText('Bluetooth')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Docs ↗' })).toHaveAttribute(
+      'href',
+      'https://github.com/Colorado-Mesh/mesh-client/blob/main/docs/troubleshooting.md',
+    );
+    expect(screen.queryByText('configured')).not.toBeInTheDocument();
+    expect(screen.queryByText('ble')).not.toBeInTheDocument();
+  });
+
+  it('pulses the reconnecting radio status dot, not the status text', () => {
+    render(
+      <ConnectionPanel
+        state={{ ...configuredState, status: 'reconnecting' }}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+    const statusText = screen.getByText('Reconnecting');
+    expect(statusText).not.toHaveClass('animate-pulse');
+    expect(statusText.previousElementSibling).toHaveClass('animate-pulse');
+  });
+
+  it('pulses the MQTT connecting dot, not the status text', () => {
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="connecting"
+        protocol="meshtastic"
+      />,
+    );
+    const mqttCard = screen.getByText('MQTT Connection').closest('.bg-deep-black');
+    expect(mqttCard).toBeTruthy();
+    const statusText = within(mqttCard as HTMLElement).getByText('connecting');
+    expect(statusText).not.toHaveClass('animate-pulse');
+    expect(statusText.parentElement).toHaveClass('text-yellow-400');
+    expect(statusText.parentElement).not.toHaveClass('animate-pulse');
+    expect(statusText.previousElementSibling).toHaveClass('animate-pulse');
+  });
+
+  it('translates last-connection transport type', () => {
+    const lastConnKey = 'mesh-client:lastConnection:meshtastic';
+    localStorage.setItem(
+      lastConnKey,
+      JSON.stringify({ type: 'http', httpAddress: '192.168.1.20' }),
+    );
+    try {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={vi.fn().mockResolvedValue(undefined)}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshtastic"
+        />,
+      );
+      const lastCard = screen
+        .getByRole('button', { name: /^Reconnect$/i })
+        .closest('.bg-deep-black');
+      expect(lastCard).toBeTruthy();
+      expect(within(lastCard as HTMLElement).getByText('WiFi/HTTP')).toBeInTheDocument();
+      expect(within(lastCard as HTMLElement).queryByText(/^http$/i)).not.toBeInTheDocument();
+    } finally {
+      localStorage.removeItem(lastConnKey);
+    }
+  });
+});
+
+describe("ConnectionPanel Meshtastic MQTT presets — Liam's server", () => {
+  function renderMeshtasticMqtt() {
+    return render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+  }
+
+  it("selecting Liam's preset populates liamcottle.net credentials", async () => {
+    const user = userEvent.setup();
+    renderMeshtasticMqtt();
+
+    const select = screen.getByRole('combobox', { name: 'Network Preset' });
+    await user.selectOptions(select, within(select).getByRole('option', { name: "Liam's" }));
+
+    expect(screen.getByLabelText<HTMLInputElement>(/^Server$/i).value).toBe(
+      'mqtt.meshtastic.liamcottle.net',
+    );
+    expect(screen.getByLabelText<HTMLInputElement>(/^Port$/i).value).toBe('1883');
+    expect(screen.getByLabelText<HTMLInputElement>(/^Username$/i).value).toBe('uplink');
+  });
+
+  it("shows uplink-only warning when Liam's preset is active", async () => {
+    const user = userEvent.setup();
+    renderMeshtasticMqtt();
+
+    const select = screen.getByRole('combobox', { name: 'Network Preset' });
+    await user.selectOptions(select, within(select).getByRole('option', { name: "Liam's" }));
+
+    expect(screen.getByText(/uplink-only/i)).toBeInTheDocument();
+  });
+
+  it('selecting the Official preset applies official 1883 fields and hides the uplink warning', async () => {
+    const user = userEvent.setup();
+    renderMeshtasticMqtt();
+
+    const select = screen.getByRole('combobox', { name: 'Network Preset' });
+    // First activate Liam's, then switch back to Official
+    await user.selectOptions(select, within(select).getByRole('option', { name: "Liam's" }));
+    await user.selectOptions(select, within(select).getByRole('option', { name: 'Official' }));
+
+    expect(screen.getByLabelText<HTMLInputElement>(/^Server$/i).value).toBe('mqtt.meshtastic.org');
+    expect(screen.getByLabelText<HTMLInputElement>(/^Port$/i).value).toBe('1883');
+    expect(screen.queryByText(/uplink-only/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('ConnectionPanel MQTT cancel while connecting', () => {
+  it('calls mqtt.disconnect with meshtastic when Cancel is pressed', async () => {
+    const user = userEvent.setup();
+    vi.mocked(window.electronAPI.mqtt.disconnect).mockClear();
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="connecting"
+        protocol="meshtastic"
+      />,
+    );
+    const mqttCard = screen.getByText('MQTT Connection').closest('.bg-deep-black');
+    expect(mqttCard).toBeTruthy();
+    const cancelBtn = within(mqttCard as HTMLElement).getByRole('button', { name: /^Cancel$/i });
+    await user.click(cancelBtn);
+    expect(window.electronAPI.mqtt.disconnect).toHaveBeenCalledWith('meshtastic');
+  });
+
+  it('calls mqtt.disconnect with meshcore when Cancel is pressed', async () => {
+    const user = userEvent.setup();
+    vi.mocked(window.electronAPI.mqtt.disconnect).mockClear();
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="connecting"
+        protocol="meshcore"
+      />,
+    );
+    const mqttCard = screen.getByText('MQTT Connection').closest('.bg-deep-black');
+    expect(mqttCard).toBeTruthy();
+    const cancelBtn = within(mqttCard as HTMLElement).getByRole('button', { name: /^Cancel$/i });
+    await user.click(cancelBtn);
+    expect(window.electronAPI.mqtt.disconnect).toHaveBeenCalledWith('meshcore');
+  });
+});
+
+describe('ConnectionPanel exit actions', () => {
+  it('shows Quit on Meshtastic disconnected view when MQTT is off', () => {
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+    expect(screen.getByRole('button', { name: /^Quit$/i })).toBeInTheDocument();
+  });
+
+  it('shows Quit on MeshCore disconnected view when MQTT is off', () => {
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+    expect(screen.getByRole('button', { name: /^Quit$/i })).toBeInTheDocument();
+  });
+
+  it('shows Disconnect & Quit while status is reconnecting', () => {
+    render(
+      <ConnectionPanel
+        state={{
+          ...disconnectedState,
+          status: 'reconnecting',
+          connectionType: 'ble',
+          connectionLoss: true,
+          reconnectAttempt: 2,
+        }}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Disconnect & Quit/i })).toBeInTheDocument();
+  });
+
+  it('shows auto-reconnect banner while status is reconnecting', () => {
+    render(
+      <ConnectionPanel
+        state={{
+          ...disconnectedState,
+          status: 'reconnecting',
+          connectionType: 'ble',
+          connectionLoss: true,
+          reconnectAttempt: 2,
+        }}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+    expect(screen.getByText(/Auto-reconnect in progress/i)).toBeInTheDocument();
+  });
+
+  it('shows Disconnect & Quit while RF connect is in progress', async () => {
+    const user = userEvent.setup();
+    let resolveConnect!: () => void;
+    const onConnect = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveConnect = resolve;
+        }),
+    );
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={onConnect}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+
+    const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+    expect(radioCard).toBeTruthy();
+    await user.click(within(radioCard as HTMLElement).getByRole('radio', { name: /tcp\/ip/i }));
+    await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+    expect(screen.getByRole('button', { name: /Disconnect & Quit/i })).toBeInTheDocument();
+    resolveConnect();
+    await waitFor(() => {
+      expect(onConnect).toHaveBeenCalled();
+    });
+  });
+
+  it('shows Quit after connect failure returns to disconnected view', async () => {
+    const user = userEvent.setup();
+    const onConnect = vi.fn().mockRejectedValue(new Error('Connection refused'));
+    await withMockedConsoleWarn(async () => {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={onConnect}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshtastic"
+        />,
+      );
+
+      const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+      expect(radioCard).toBeTruthy();
+      await user.click(
+        within(radioCard as HTMLElement).getByRole('radio', { name: /wifi\/http/i }),
+      );
+      const hostInput = within(radioCard as HTMLElement).getByLabelText(/device address/i);
+      fireEvent.change(hostInput, { target: { value: '192.168.1.10' } });
+      await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /^Quit$/i })).toBeInTheDocument();
+      });
+      expect(screen.getByText('Radio Connection')).toBeInTheDocument();
+    });
+  });
+
+  it('connects via TCP with typed address', async () => {
+    const user = userEvent.setup();
+    const onConnect = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={onConnect}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+
+    const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+    expect(radioCard).toBeTruthy();
+    await user.click(within(radioCard as HTMLElement).getByRole('radio', { name: /wifi\/tcp/i }));
+    const hostInput = within(radioCard as HTMLElement).getByLabelText(/device address/i);
+    fireEvent.change(hostInput, { target: { value: '192.168.200.4' } });
+    await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+    await waitFor(() => {
+      expect(onConnect).toHaveBeenCalledWith('tcp', '192.168.200.4');
+    });
+  });
+
+  it('shows Disconnect & Quit on disconnected view when MQTT is connected', () => {
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="connected"
+        protocol="meshtastic"
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Disconnect & Quit/i })).toBeInTheDocument();
+  });
+
+  it('shows Disconnect & Quit while serial port picker is open', async () => {
+    const user = userEvent.setup();
+    let capturedCb: ((ports: SerialPort[]) => void) | undefined;
+    vi.mocked(window.electronAPI.onSerialPortsDiscovered).mockImplementation((cb) => {
+      capturedCb = cb;
+      return () => {};
+    });
+    const onConnect = vi.fn(() => new Promise<void>(() => {}));
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={onConnect}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+
+    const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+    expect(radioCard).toBeTruthy();
+    await user.click(within(radioCard as HTMLElement).getByRole('radio', { name: /USB Serial/i }));
+    await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+    expect(onConnect).toHaveBeenCalledWith('serial');
+    expect(capturedCb).toBeDefined();
+
+    act(() => {
+      flushSync(() => {
+        capturedCb!([
+          { portId: 'port-1', displayName: 'Meshtastic USB', portName: '/dev/ttyUSB0' },
+        ]);
+      });
+    });
+
+    expect(screen.getByText('Select Serial Port')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Disconnect & Quit/i })).toBeInTheDocument();
+  });
+
+  it('shows Quit after HTTP reconnect failure from last-connection card', async () => {
+    const user = userEvent.setup();
+    const lastConnKey = 'mesh-client:lastConnection:meshtastic';
+    localStorage.setItem(
+      lastConnKey,
+      JSON.stringify({ type: 'http', httpAddress: '192.168.1.10' }),
+    );
+    const onConnect = vi.fn().mockRejectedValue(new Error('Connection refused'));
+
+    try {
+      await withMockedConsoleWarn(async () => {
+        render(
+          <ConnectionPanel
+            state={disconnectedState}
+            onConnect={onConnect}
+            onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+            onDisconnect={vi.fn().mockResolvedValue(undefined)}
+            mqttStatus="disconnected"
+            protocol="meshtastic"
+          />,
+        );
+
+        await user.click(screen.getByRole('button', { name: /^Reconnect$/i }));
+
+        await waitFor(() => {
+          expect(screen.getByRole('button', { name: /^Quit$/i })).toBeInTheDocument();
+        });
+        expect(onConnect).toHaveBeenCalledWith('http', '192.168.1.10');
+        expect(screen.getByText('Radio Connection')).toBeInTheDocument();
+      });
+    } finally {
+      localStorage.removeItem(lastConnKey);
+    }
+  });
+});
+
+describe('ConnectionPanel auto-reconnect banner leftover', () => {
+  afterEach(() => {
+    localStorage.removeItem('mesh-client:lastBleDevice:meshtastic');
+    localStorage.removeItem('mesh-client:lastBleDevice:meshcore');
+    localStorage.removeItem('mesh-client:protocol');
+    resetNobleBleConnectMutexForTests();
+    vi.mocked(window.electronAPI.getPlatform).mockReturnValue('linux');
+  });
+
+  function seedDualRadioPrimaryMeshtastic(): ReturnType<typeof mockMacNoblePlatform> {
+    const platform = mockMacNoblePlatform();
+    localStorage.setItem('mesh-client:lastBleDevice:meshtastic', 'mt-peripheral');
+    localStorage.setItem('mesh-client:lastBleDevice:meshcore', 'mc-peripheral');
+    localStorage.setItem('mesh-client:protocol', 'meshtastic');
+    initNobleBleDualRadioStartup();
+    return platform;
+  }
+
+  it.each(['meshcore', 'meshtastic'] as const)(
+    'does not show leftover auto-reconnect banner on configured %s radio',
+    (protocol) => {
+      const { restore } = seedDualRadioPrimaryMeshtastic();
+      try {
+        render(
+          <ConnectionPanel
+            state={{
+              ...configuredState,
+              connectionType: 'ble',
+            }}
+            onConnect={vi.fn().mockResolvedValue(undefined)}
+            onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+            onDisconnect={vi.fn().mockResolvedValue(undefined)}
+            mqttStatus="connected"
+            protocol={protocol}
+          />,
+        );
+        expect(screen.queryByText(/Auto-reconnect in progress/i)).not.toBeInTheDocument();
+        expect(screen.getByText('Radio Connection')).toBeInTheDocument();
+      } finally {
+        restore();
+      }
+    },
+  );
+
+  it('shows auto-reconnect banner on disconnected secondary while primary auto-connect is in flight', () => {
+    const { restore } = seedDualRadioPrimaryMeshtastic();
+    try {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={vi.fn().mockResolvedValue(undefined)}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshcore"
+        />,
+      );
+      expect(screen.getAllByText(/Auto-reconnect in progress/i).length).toBeGreaterThan(0);
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe('ConnectionPanel BLE noble manual connect', () => {
+  it('starts noble scan on manual Connect even when a last BLE device is saved', async () => {
+    const user = userEvent.setup();
+    const { restore } = mockMacNoblePlatform();
+    const lastConnKey = 'mesh-client:lastConnection:meshtastic';
+    localStorage.setItem(
+      lastConnKey,
+      JSON.stringify({ type: 'ble', bleDeviceId: 'previously-paired-radio' }),
+    );
+    const onAutoConnect = vi.fn().mockResolvedValue(undefined);
+    const onConnect = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(window.electronAPI.startNobleBleScanning).mockClear();
+
+    try {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={onConnect}
+          onAutoConnect={onAutoConnect}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshtastic"
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('radiogroup', { name: 'Connection Type' })).toBeInTheDocument();
+      });
+      // Cold-start BLE is owned by ProtocolAutoConnectCoordinator — panel must not mount-connect.
+      expect(onAutoConnect).not.toHaveBeenCalled();
+
+      vi.mocked(window.electronAPI.startNobleBleScanning).mockClear();
+
+      const connectionField = screen
+        .getByRole('radiogroup', { name: 'Connection Type' })
+        .closest('fieldset')?.parentElement;
+      expect(connectionField).toBeTruthy();
+      await user.click(within(connectionField!).getByRole('radio', { name: /Bluetooth/i }));
+      await user.click(within(connectionField!).getByRole('button', { name: /^Connect$/i }));
+
+      await waitFor(() => {
+        expect(window.electronAPI.startNobleBleScanning).toHaveBeenCalledWith('meshtastic');
+      });
+      expect(onConnect).not.toHaveBeenCalled();
+    } finally {
+      localStorage.removeItem(lastConnKey);
+      restore();
+    }
+  });
+});
+
+describe('ConnectionPanel ProtocolAutoConnectCoordinator cancel', () => {
+  it('cancels ProtocolAutoConnectCoordinator when user clicks Reconnect with a pending last connection', async () => {
+    const user = userEvent.setup();
+    const lastConnKey = 'mesh-client:lastConnection:meshtastic';
+    localStorage.setItem(
+      lastConnKey,
+      JSON.stringify({ type: 'tcp', httpAddress: '192.168.1.50:4403' }),
+    );
+    const gate = await import('../lib/protocolRfAutoConnectGate');
+    const cancelSpy = vi.spyOn(gate, 'cancelProtocolRfAutoConnect');
+    const onConnect = vi.fn().mockResolvedValue(undefined);
+
+    try {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={onConnect}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshtastic"
+        />,
+      );
+
+      await user.click(await screen.findByRole('button', { name: /^Reconnect$/i }));
+
+      expect(cancelSpy).toHaveBeenCalledWith('meshtastic');
+      await waitFor(() => {
+        expect(onConnect).toHaveBeenCalledWith('tcp', '192.168.1.50:4403');
+      });
+      const cancelOrder = cancelSpy.mock.invocationCallOrder[0];
+      const connectOrder = onConnect.mock.invocationCallOrder[0];
+      if (cancelOrder === undefined || connectOrder === undefined) {
+        throw new Error('expected cancelProtocolRfAutoConnect and onConnect call order');
+      }
+      expect(cancelOrder).toBeLessThan(connectOrder);
+    } finally {
+      cancelSpy.mockRestore();
+      localStorage.removeItem(lastConnKey);
+    }
+  });
+});
+
+describe('ConnectionPanel MeshCore TCP port field', () => {
+  it('renders host and port inputs with default port 5000 when TCP/IP is selected', async () => {
+    const user = userEvent.setup();
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+
+    const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+    expect(radioCard).toBeTruthy();
+
+    const tcpBtn = within(radioCard as HTMLElement).getByRole('radio', { name: /tcp\/ip/i });
+    await user.click(tcpBtn);
+
+    const hostInput = within(radioCard as HTMLElement).getByLabelText(/^Host$/i);
+    const portInput = within(radioCard as HTMLElement).getByLabelText(/^Port$/i);
+    expect(hostInput).toBeInTheDocument();
+    expect(portInput).toBeInTheDocument();
+    expect((portInput as HTMLInputElement).value).toBe('5000');
+  });
+
+  it('passes host:port to onConnect when a custom port is set', async () => {
+    const user = userEvent.setup();
+    const onConnect = vi.fn().mockResolvedValue(undefined);
+    await withMockedConsoleWarn(async () => {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={onConnect}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshcore"
+        />,
+      );
+
+      const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+      expect(radioCard).toBeTruthy();
+
+      const tcpBtn = within(radioCard as HTMLElement).getByRole('radio', { name: /tcp\/ip/i });
+      await user.click(tcpBtn);
+
+      const portInput = within(radioCard as HTMLElement).getByLabelText(/^Port$/i);
+      fireEvent.change(portInput, { target: { value: '5001' } });
+
+      await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+      expect(onConnect).toHaveBeenCalledWith('http', 'localhost:5001');
+    });
+  });
+
+  it.each([
+    ['0', 'localhost:5000'],
+    ['65536', 'localhost:5000'],
+    ['abc', 'localhost:5000'],
+  ])('falls back to port 5000 for invalid port %s', async (badPort, expectedAddress) => {
+    const user = userEvent.setup();
+    const onConnect = vi.fn().mockResolvedValue(undefined);
+    await withMockedConsoleWarn(async () => {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={onConnect}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshcore"
+        />,
+      );
+
+      const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+      const tcpBtn = within(radioCard as HTMLElement).getByRole('radio', { name: /tcp\/ip/i });
+      await user.click(tcpBtn);
+
+      const portInput = within(radioCard as HTMLElement).getByLabelText(/^Port$/i);
+      fireEvent.change(portInput, { target: { value: badPort } });
+
+      await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+      expect(onConnect).toHaveBeenCalledWith('http', expectedAddress);
+    });
+  });
+});
+
+describe('ConnectionPanel Meshtastic MQTT autoLaunch persistence', () => {
+  function renderMeshtasticMqttPanel() {
+    return render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+  }
+
+  it('persists autoLaunch immediately when toggled', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('mesh-client:mqttSettings', JSON.stringify({ autoLaunch: false }));
+    renderMeshtasticMqttPanel();
+
+    await user.click(screen.getByRole('checkbox', { name: 'Auto-connect on application start' }));
+
+    expect(JSON.parse(localStorage.getItem('mesh-client:mqttSettings') ?? '{}').autoLaunch).toBe(
+      true,
+    );
+  });
+});
+
+describe('ConnectionPanel MQTT channel PSKs', () => {
+  const KEY_A = '1PG7OiApB1nwvP+rz05pAQ==';
+  const KEY_B = 'AAAAAAAAAAAAAAAAAAAAAA==';
+  const INVALID_LENGTH_PSK = btoa(String.fromCharCode(...new Uint8Array(20).fill(2)));
+
+  function renderMeshtasticMqtt() {
+    return render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+  }
+
+  it('passes multiple comma-separated channel PSKs to mqtt.connect without blur', async () => {
+    const user = userEvent.setup();
+    const connect = vi.mocked(window.electronAPI.mqtt.connect);
+    connect.mockClear();
+    connect.mockResolvedValue(undefined);
+
+    renderMeshtasticMqtt();
+
+    const mqttCard = screen.getByText('MQTT Connection').closest('.bg-deep-black');
+    expect(mqttCard).toBeTruthy();
+    const textarea = document.getElementById('mqtt-channel-psks') as HTMLTextAreaElement;
+    await user.clear(textarea);
+    await user.type(textarea, `${KEY_A}, ${KEY_B}`);
+
+    const connectBtn = within(mqttCard as HTMLElement).getByRole('button', { name: 'Connect' });
+    await user.click(connectBtn);
+
+    expect(connect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channelPsks: [KEY_A, KEY_B],
+      }),
+    );
+  });
+
+  it('keeps a trailing newline while typing a second PSK and commits both on blur', async () => {
+    const user = userEvent.setup();
+    localStorage.removeItem('mesh-client:mqttSettings');
+    renderMeshtasticMqtt();
+
+    const textarea = document.getElementById('mqtt-channel-psks') as HTMLTextAreaElement;
+    await user.clear(textarea);
+    await user.type(textarea, KEY_A);
+    await user.keyboard('{Enter}');
+    expect(textarea.value).toBe(`${KEY_A}\n`);
+    await user.type(textarea, KEY_B);
+    expect(textarea.value).toBe(`${KEY_A}\n${KEY_B}`);
+    fireEvent.blur(textarea);
+
+    await waitFor(() => {
+      const saved = JSON.parse(localStorage.getItem('mesh-client:mqttSettings') ?? '{}');
+      expect(saved.channelPsks).toEqual([KEY_A, KEY_B]);
+    });
+  });
+
+  it('shows invalid length warning after blur', async () => {
+    const user = userEvent.setup();
+    renderMeshtasticMqtt();
+
+    const textarea = document.getElementById('mqtt-channel-psks') as HTMLTextAreaElement;
+    await user.clear(textarea);
+    await user.type(textarea, INVALID_LENGTH_PSK);
+    fireEvent.blur(textarea);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Each key must decode to 16 bytes \(AES-128\) or 32 bytes \(AES-256\)/),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('shows invalid base64 warning after blur', async () => {
+    const user = userEvent.setup();
+    renderMeshtasticMqtt();
+
+    const textarea = document.getElementById('mqtt-channel-psks') as HTMLTextAreaElement;
+    await user.clear(textarea);
+    await user.type(textarea, 'not!!!base64');
+    fireEvent.blur(textarea);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Invalid base64 on a channel PSK line/)).toBeInTheDocument();
+    });
+  });
+
+  it('clears validation warning when draft is edited', async () => {
+    const user = userEvent.setup();
+    renderMeshtasticMqtt();
+
+    const textarea = document.getElementById('mqtt-channel-psks') as HTMLTextAreaElement;
+    await user.clear(textarea);
+    await user.type(textarea, INVALID_LENGTH_PSK);
+    fireEvent.blur(textarea);
+    await waitFor(() => {
+      expect(screen.getByText(/Each key must decode to 16 bytes/)).toBeInTheDocument();
+    });
+
+    await user.type(textarea, 'x');
+    await waitFor(() => {
+      expect(screen.queryByText(/Each key must decode to 16 bytes/)).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows MQTT-only @index hint when no radio is configured and no @index lines', () => {
+    renderMeshtasticMqtt();
+
+    expect(
+      screen.getByText(/Without a radio connected, inbound MQTT messages route to chat tabs/i),
+    ).toBeInTheDocument();
+  });
+
+  it('hides MQTT-only @index hint when draft includes ChannelName@index', async () => {
+    renderMeshtasticMqtt();
+
+    const textarea = document.getElementById('mqtt-channel-psks') as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: `LongFast@1=${KEY_B}` } });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/Without a radio connected, inbound MQTT messages route to chat tabs/i),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it('hides MQTT-only @index hint when radio is configured', () => {
+    render(
+      <ConnectionPanel
+        state={configuredState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+
+    expect(
+      screen.queryByText(/Without a radio connected, inbound MQTT messages route to chat tabs/i),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe('ConnectionPanel LetsMesh username sync', () => {
+  const PUB_HEX = 'a'.repeat(64);
+
+  function renderMeshcoreLetsMesh() {
+    return render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshcore"
+      />,
+    );
+  }
+
+  it('populates username from identity on mount and after debounced identity updates', async () => {
+    localStorage.setItem('mesh-client:mqttPreset:meshcore', 'letsmesh');
+    localStorage.setItem(MESHCORE_IDENTITY_STORAGE_KEY, JSON.stringify({ public_key: PUB_HEX }));
+    const getItemSpy = vi.spyOn(Storage.prototype, 'getItem');
+
+    try {
+      renderMeshcoreLetsMesh();
+
+      const usernameInput = await screen.findByLabelText<HTMLInputElement>(/^Username$/i);
+      expect(usernameInput.value).toBe(`v1_${PUB_HEX.toUpperCase()}`);
+
+      const callsBeforeBurst = getItemSpy.mock.calls.filter(
+        ([key]) => key === MESHCORE_IDENTITY_STORAGE_KEY,
+      ).length;
+
+      act(() => {
+        window.dispatchEvent(new Event('meshclient:meshcoreIdentityUpdated'));
+        window.dispatchEvent(new Event('meshclient:meshcoreIdentityUpdated'));
+        window.dispatchEvent(new Event('meshclient:meshcoreIdentityUpdated'));
+      });
+
+      await waitFor(
+        () => {
+          const callsAfterBurst = getItemSpy.mock.calls.filter(
+            ([key]) => key === MESHCORE_IDENTITY_STORAGE_KEY,
+          ).length;
+          expect(callsAfterBurst - callsBeforeBurst).toBeLessThanOrEqual(2);
+        },
+        { timeout: 500 },
+      );
+      expect(usernameInput.value).toBe(`v1_${PUB_HEX.toUpperCase()}`);
+    } finally {
+      localStorage.removeItem('mesh-client:mqttPreset:meshcore');
+      localStorage.removeItem(MESHCORE_IDENTITY_STORAGE_KEY);
+      getItemSpy.mockRestore();
+    }
+  });
+});
+
+describe('ConnectionPanel Reticulum', () => {
+  it('shows Reticulum stack panel instead of BLE spinner while sidecar is connecting', async () => {
+    const lastConnKey = 'mesh-client:lastConnection:reticulum';
+    localStorage.setItem(
+      lastConnKey,
+      JSON.stringify({ type: 'ble', bleDeviceId: 'saved-reticulum-ble' }),
+    );
+    const onAutoConnect = vi.fn().mockResolvedValue(undefined);
+
+    try {
+      render(
+        <ConnectionPanel
+          state={{ ...disconnectedState, status: 'connecting' }}
+          onConnect={vi.fn().mockResolvedValue(undefined)}
+          onAutoConnect={onAutoConnect}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="reticulum"
+          onStartReticulumStack={vi.fn().mockResolvedValue(undefined)}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Reticulum stack')).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/Scanning for Bluetooth devices/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Auto-connecting/i)).not.toBeInTheDocument();
+      expect(onAutoConnect).not.toHaveBeenCalled();
+    } finally {
+      localStorage.removeItem(lastConnKey);
+    }
+  });
+
+  it('Cancel fire-and-forgets onDisconnect and does not stopNobleBleScanning for reticulum', async () => {
+    // handleCancelConnection is shared by Cancel + Disconnect&Quit-while-connecting.
+    expect(CONNECTION_PANEL_SOURCE).toMatch(/void onDisconnect\(\)\.catch\(\(e: unknown\) => \{/);
+    expect(CONNECTION_PANEL_SOURCE).toMatch(
+      /else if \(capabilities\.hasNobleBleScanning\) \{\s*void window\.electronAPI\.stopNobleBleScanning\(protocol\)/,
+    );
+
+    const lastConnKey = 'mesh-client:lastConnection:reticulum';
+    localStorage.setItem(
+      lastConnKey,
+      JSON.stringify({ type: 'ble', bleDeviceId: 'saved-reticulum-ble' }),
+    );
+    let resolveDisconnect!: () => void;
+    const onDisconnect = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveDisconnect = resolve;
+        }),
+    );
+    vi.mocked(window.electronAPI.stopNobleBleScanning).mockClear();
+    vi.mocked(window.electronAPI.quitApp).mockClear();
+
+    try {
+      const user = userEvent.setup();
+      render(
+        <ConnectionPanel
+          state={{ ...disconnectedState, status: 'connecting' }}
+          onConnect={vi.fn().mockResolvedValue(undefined)}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={onDisconnect}
+          mqttStatus="disconnected"
+          protocol="reticulum"
+          onStartReticulumStack={vi.fn().mockResolvedValue(undefined)}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Reticulum stack')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole('button', { name: /Disconnect & Quit/i }));
+
+      await waitFor(() => {
+        expect(onDisconnect).toHaveBeenCalledTimes(1);
+      });
+      // Fire-and-forget: hung onDisconnect must not block quitApp.
+      await waitFor(() => {
+        expect(window.electronAPI.quitApp).toHaveBeenCalled();
+      });
+      expect(window.electronAPI.stopNobleBleScanning).not.toHaveBeenCalled();
+    } finally {
+      resolveDisconnect?.();
+      localStorage.removeItem(lastConnKey);
+    }
+  });
+
+  it('connected Disconnect & Quit skips onDisconnect and quits (main owns teardown)', async () => {
+    const onDisconnect = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(window.electronAPI.quitApp).mockClear();
+    vi.mocked(window.electronAPI.mqtt.disconnect).mockClear();
+
+    const user = userEvent.setup();
+    render(
+      <ConnectionPanel
+        state={{ ...disconnectedState, status: 'configured' }}
+        onConnect={vi.fn().mockResolvedValue(undefined)}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={onDisconnect}
+        mqttStatus="disconnected"
+        protocol="reticulum"
+        onStartReticulumStack={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /Disconnect & Quit/i }));
+
+    await waitFor(() => {
+      expect(window.electronAPI.quitApp).toHaveBeenCalled();
+    });
+    // Graceful sidecar stop here would add ~2s before quit; main stops it quit-fast.
+    expect(onDisconnect).not.toHaveBeenCalled();
+    expect(window.electronAPI.mqtt.disconnect).toHaveBeenCalled();
+  });
+});
+
+describe('ConnectionPanel device picker sort', () => {
+  it('sorts BLE devices by RSSI then Name', async () => {
+    const user = userEvent.setup();
+    const userAgentSpy = vi.spyOn(window.navigator, 'userAgent', 'get');
+    userAgentSpy.mockReturnValue(
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
+    );
+
+    const discovered = {
+      cb: null as
+        | ((
+            devices: { deviceId: string; deviceName: string; rssi?: number | null }[],
+            generation?: number,
+          ) => void)
+        | null,
+    };
+    vi.mocked(window.electronAPI.onBluetoothDevicesDiscovered).mockImplementation((cb) => {
+      discovered.cb = cb;
+      return () => {};
+    });
+
+    const onConnect = vi.fn(
+      () =>
+        new Promise<void>(() => {
+          /* leave connecting so picker stays open */
+        }),
+    );
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={onConnect}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+
+    const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+    expect(radioCard).toBeTruthy();
+    await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+    await waitFor(() => {
+      expect(discovered.cb).toBeTruthy();
+    });
+    discovered.cb?.(
+      [
+        { deviceId: 'id-z', deviceName: 'Zulu', rssi: -90 },
+        { deviceId: 'id-a', deviceName: 'Alpha', rssi: -40 },
+        { deviceId: 'id-m', deviceName: 'Mid', rssi: -70 },
+        { deviceId: 'id-n', deviceName: 'NoRssi' },
+      ],
+      1,
+    );
+
+    const names = () =>
+      screen
+        .getAllByRole('button')
+        .map((el) => el.getAttribute('aria-label') ?? '')
+        .filter((label) => /Alpha|Mid|Zulu|NoRssi/.test(label) && label.includes('id-'))
+        .map((label) => label.split(' ')[0]);
+
+    await waitFor(() => {
+      expect(names()).toEqual(['Alpha', 'Mid', 'Zulu', 'NoRssi']);
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Name, A to Z' }));
+    expect(names()).toEqual(['Alpha', 'Mid', 'NoRssi', 'Zulu']);
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Name, A to Z' }));
+    expect(names()).toEqual(['Zulu', 'NoRssi', 'Mid', 'Alpha']);
+
+    userAgentSpy.mockRestore();
+  });
+
+  it('sorts serial ports A–Z by default and reverses on Name click', async () => {
+    const user = userEvent.setup();
+    let capturedCb: ((ports: SerialPort[]) => void) | undefined;
+    vi.mocked(window.electronAPI.onSerialPortsDiscovered).mockImplementation((cb) => {
+      capturedCb = cb;
+      return () => {};
+    });
+    const onConnect = vi.fn(() => new Promise<void>(() => {}));
+
+    render(
+      <ConnectionPanel
+        state={disconnectedState}
+        onConnect={onConnect}
+        onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn().mockResolvedValue(undefined)}
+        mqttStatus="disconnected"
+        protocol="meshtastic"
+      />,
+    );
+
+    const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+    expect(radioCard).toBeTruthy();
+    await user.click(within(radioCard as HTMLElement).getByRole('radio', { name: /USB Serial/i }));
+    await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+    act(() => {
+      flushSync(() => {
+        capturedCb!([
+          { portId: 'z', displayName: 'Zulu USB', portName: '/dev/ttyUSB1' },
+          { portId: 'a', displayName: 'Alpha USB', portName: '/dev/ttyUSB0' },
+        ]);
+      });
+    });
+
+    const names = () =>
+      screen
+        .getAllByRole('button')
+        .map((el) => el.getAttribute('aria-label') ?? '')
+        .filter((label) => label.includes('USB'))
+        .map((label) => (label.includes('Alpha') ? 'Alpha USB' : 'Zulu USB'));
+
+    expect(screen.getByText('Select Serial Port')).toBeInTheDocument();
+    expect(names()).toEqual(['Alpha USB', 'Zulu USB']);
+
+    await user.click(screen.getByRole('button', { name: 'Sort by Name, A to Z' }));
+    expect(names()).toEqual(['Zulu USB', 'Alpha USB']);
+  });
+});
+
+describe('ConnectionPanel BLE MAC identity', () => {
+  const darwinUuid = 'eccf2847e1fd3f5f0811064db1639a3d';
+  const lastConnKey = 'mesh-client:lastConnection:meshtastic';
+
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(window.electronAPI.startNobleBleScanning).mockResolvedValue({ ok: true });
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('shows formatted MAC in the picker when Noble provides address for a CoreBluetooth UUID', async () => {
+    const user = userEvent.setup();
+    const { restore } = mockMacNoblePlatform();
+    let capturedCb:
+      | ((device: {
+          deviceId: string;
+          deviceName: string;
+          rssi?: number | null;
+          address?: string | null;
+        }) => void)
+      | undefined;
+    vi.mocked(window.electronAPI.onNobleBleDeviceDiscovered).mockImplementation((cb) => {
+      capturedCb = cb;
+      return () => {};
+    });
+    const onConnect = vi.fn(
+      () =>
+        new Promise<void>(() => {
+          /* leave connecting so picker stays open */
+        }),
+    );
+
+    try {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={onConnect}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshtastic"
+        />,
+      );
+
+      const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+      expect(radioCard).toBeTruthy();
+      await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+      await waitFor(() => {
+        expect(capturedCb).toBeTruthy();
+      });
+      act(() => {
+        capturedCb?.({
+          deviceId: darwinUuid,
+          deviceName: 'MeshCore',
+          address: 'aa-bb-cc-dd-ee-ff',
+          rssi: -55,
+        });
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('aa:bb:cc:dd:ee:ff')).toBeInTheDocument();
+      });
+      expect(screen.queryByText(darwinUuid)).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /MeshCore aa:bb:cc:dd:ee:ff/ }),
+      ).toBeInTheDocument();
+    } finally {
+      restore();
+    }
+  });
+
+  it('shows formatted MAC in the MeshCore BLE picker when address is provided', async () => {
+    const user = userEvent.setup();
+    const { restore } = mockMacNoblePlatform();
+    let capturedCb:
+      | ((device: {
+          deviceId: string;
+          deviceName: string;
+          rssi?: number | null;
+          address?: string | null;
+        }) => void)
+      | undefined;
+    vi.mocked(window.electronAPI.onNobleBleDeviceDiscovered).mockImplementation((cb) => {
+      capturedCb = cb;
+      return () => {};
+    });
+    const onConnect = vi.fn(
+      () =>
+        new Promise<void>(() => {
+          /* leave connecting so picker stays open */
+        }),
+    );
+
+    try {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={onConnect}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshcore"
+        />,
+      );
+
+      const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+      expect(radioCard).toBeTruthy();
+      await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+      await waitFor(() => {
+        expect(capturedCb).toBeTruthy();
+      });
+      act(() => {
+        capturedCb?.({
+          deviceId: darwinUuid,
+          deviceName: 'MeshCore-NV0N',
+          address: 'ac:a7:04:00:d6:f1',
+          rssi: -62,
+        });
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('ac:a7:04:00:d6:f1')).toBeInTheDocument();
+      });
+      expect(screen.queryByText(darwinUuid)).not.toBeInTheDocument();
+    } finally {
+      restore();
+    }
+  });
+
+  it('clears remembered MeshCore BLE selection after missing-services connect failure', async () => {
+    const user = userEvent.setup();
+    const { restore } = mockMacNoblePlatform();
+    const lastConnKey = 'mesh-client:lastConnection:meshcore';
+    const lastBleKey = 'mesh-client:lastBleDevice:meshcore';
+    localStorage.setItem(
+      lastConnKey,
+      JSON.stringify({
+        type: 'ble',
+        bleDeviceId: darwinUuid,
+        bleDeviceName: 'MeshCore-NV0N',
+        bleMac: 'ac:a7:04:00:d6:f1',
+      }),
+    );
+    localStorage.setItem(lastBleKey, darwinUuid);
+    let capturedCb:
+      | ((device: {
+          deviceId: string;
+          deviceName: string;
+          rssi?: number | null;
+          address?: string | null;
+        }) => void)
+      | undefined;
+    vi.mocked(window.electronAPI.onNobleBleDeviceDiscovered).mockImplementation((cb) => {
+      capturedCb = cb;
+      return () => {};
+    });
+    const onConnect = vi
+      .fn()
+      .mockRejectedValue(new Error('Failed to find required BLE characteristics'));
+
+    try {
+      await withMockedConsoleWarn(async () => {
+        render(
+          <ConnectionPanel
+            state={disconnectedState}
+            onConnect={onConnect}
+            onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+            onDisconnect={vi.fn().mockResolvedValue(undefined)}
+            mqttStatus="disconnected"
+            protocol="meshcore"
+          />,
+        );
+
+        expect(screen.getByRole('button', { name: /^Reconnect$/i })).toBeInTheDocument();
+        const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+        expect(radioCard).toBeTruthy();
+        await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+        await waitFor(() => {
+          expect(capturedCb).toBeTruthy();
+        });
+        act(() => {
+          capturedCb?.({
+            deviceId: darwinUuid,
+            deviceName: 'MeshCore-NV0N',
+            address: 'ac:a7:04:00:d6:f1',
+            rssi: -62,
+          });
+        });
+
+        await user.click(
+          await screen.findByRole('button', { name: /MeshCore-NV0N ac:a7:04:00:d6:f1/i }),
+        );
+
+        await waitFor(() => {
+          expect(localStorage.getItem(lastConnKey)).toBeNull();
+          expect(localStorage.getItem(lastBleKey)).toBeNull();
+        });
+        await waitFor(() => {
+          expect(screen.queryByRole('button', { name: /^Reconnect$/i })).not.toBeInTheDocument();
+        });
+      });
+    } finally {
+      localStorage.removeItem(lastConnKey);
+      localStorage.removeItem(lastBleKey);
+      restore();
+    }
+  });
+
+  it('shows Bluetooth MAC on Last Connection and the connected Radio Connection card', () => {
+    localStorage.setItem(
+      lastConnKey,
+      JSON.stringify({
+        type: 'ble',
+        bleDeviceId: darwinUuid,
+        bleDeviceName: 'MeshCore',
+        bleMac: 'aa:bb:cc:dd:ee:ff',
+      }),
+    );
+
+    try {
+      const { unmount } = render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={vi.fn().mockResolvedValue(undefined)}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshtastic"
+        />,
+      );
+      expect(screen.getByText('MeshCore')).toBeInTheDocument();
+      expect(screen.getByText('aa:bb:cc:dd:ee:ff')).toBeInTheDocument();
+      unmount();
+
+      render(
+        <ConnectionPanel
+          state={configuredState}
+          onConnect={vi.fn().mockResolvedValue(undefined)}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshtastic"
+        />,
+      );
+      expect(screen.getByText('Bluetooth MAC')).toBeInTheDocument();
+      expect(screen.getByText('aa:bb:cc:dd:ee:ff')).toBeInTheDocument();
+    } finally {
+      localStorage.removeItem(lastConnKey);
+    }
+  });
+
+  it('labels a UUID-only last device as Bluetooth ID, not MAC', () => {
+    localStorage.setItem(
+      lastConnKey,
+      JSON.stringify({
+        type: 'ble',
+        bleDeviceId: darwinUuid,
+        bleDeviceName: 'MeshCore',
+      }),
+    );
+
+    try {
+      render(
+        <ConnectionPanel
+          state={configuredState}
+          onConnect={vi.fn().mockResolvedValue(undefined)}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshtastic"
+        />,
+      );
+      expect(screen.getByText('Bluetooth ID')).toBeInTheDocument();
+      expect(screen.getByText(darwinUuid)).toBeInTheDocument();
+      expect(screen.queryByText('Bluetooth MAC')).not.toBeInTheDocument();
+    } finally {
+      localStorage.removeItem(lastConnKey);
+    }
+  });
+
+  it('clears reconnect card when BLE selection-cleared event is emitted', async () => {
+    const lastConnKey = 'mesh-client:lastConnection:meshcore';
+    localStorage.setItem(lastConnKey, JSON.stringify({ type: 'ble', bleDeviceId: darwinUuid }));
+
+    try {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={vi.fn().mockResolvedValue(undefined)}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshcore"
+        />,
+      );
+
+      expect(screen.getByRole('button', { name: /^Reconnect$/i })).toBeInTheDocument();
+      window.dispatchEvent(
+        new CustomEvent('mesh-client:ble-selection-cleared', { detail: { protocol: 'meshcore' } }),
+      );
+      await waitFor(() => {
+        expect(screen.queryByRole('button', { name: /^Reconnect$/i })).not.toBeInTheDocument();
+      });
+    } finally {
+      localStorage.removeItem(lastConnKey);
+    }
+  });
+
+  it('formats a compact 12-hex picker deviceId as a colon MAC', async () => {
+    const user = userEvent.setup();
+    const userAgentSpy = vi.spyOn(window.navigator, 'userAgent', 'get');
+    userAgentSpy.mockReturnValue(
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
+    );
+
+    const discovered = {
+      cb: null as
+        | ((
+            devices: { deviceId: string; deviceName: string; rssi?: number | null }[],
+            generation?: number,
+          ) => void)
+        | null,
+    };
+    vi.mocked(window.electronAPI.onBluetoothDevicesDiscovered).mockImplementation((cb) => {
+      discovered.cb = cb;
+      return () => {};
+    });
+    const onConnect = vi.fn(
+      () =>
+        new Promise<void>(() => {
+          /* leave connecting so picker stays open */
+        }),
+    );
+
+    try {
+      render(
+        <ConnectionPanel
+          state={disconnectedState}
+          onConnect={onConnect}
+          onAutoConnect={vi.fn().mockResolvedValue(undefined)}
+          onDisconnect={vi.fn().mockResolvedValue(undefined)}
+          mqttStatus="disconnected"
+          protocol="meshtastic"
+        />,
+      );
+
+      const radioCard = screen.getByText('Radio Connection').closest('.bg-deep-black');
+      expect(radioCard).toBeTruthy();
+      await user.click(within(radioCard as HTMLElement).getByRole('button', { name: 'Connect' }));
+
+      await waitFor(() => {
+        expect(discovered.cb).toBeTruthy();
+      });
+      discovered.cb?.([{ deviceId: 'AABBCCDDEEFF', deviceName: 'MeshCore', rssi: -40 }], 1);
+
+      await waitFor(() => {
+        expect(screen.getByText('aa:bb:cc:dd:ee:ff')).toBeInTheDocument();
+      });
+    } finally {
+      userAgentSpy.mockRestore();
+    }
+  });
+});

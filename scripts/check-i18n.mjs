@@ -1,0 +1,657 @@
+#!/usr/bin/env node
+/**
+ * Pre-commit / CI check for i18n key completeness and locale string quality.
+ *
+ * 1. Extracts all t('key') / t("key") call sites from renderer source.
+ * 2. Verifies every key resolves to an existing path in en/translation.json.
+ * 3. Fails when en/translation.json contains keys with no usage (static t(), registered
+ *    dynamic prefixes, quoted key literals in src/, or tabs.* from TAB_SLOT_IDS).
+ * 4. Verifies every key in en/translation.json exists in every other locale file (warn only).
+ * 5. Fails on CAT/XLIFF/Memsource residue in non-English strings; fails if {{placeholder}}
+ *    name sets differ from English for the same key.
+ * 6. Fails on locale quality issues (mojibake, broken meshtastic://, false friends, etc.)
+ *    via check-i18n-quality.mjs — including appPanel.reduceMotionDesc loading-spinner false friends, appPanel.debugSnapshot*
+ *    copied-toast false friends and mixed EN "snapshot" residue, rawPacketLog protocol tokens,
+ *    flood/zero-hop advert commercial false friends on branch advert UI keys, MeshCore Open
+ *    wire / g: GIF composer strings (protocol tokens, companion-wire false friends, Open-aware),
+ *    connectionBanner serialReselectAction MT garbage, meshcoreGifHint bare-id false friends,
+ *    meshcoreReactionEmojiOption contact/fabric false friends, Ukrainian broken apostrophe spacing,
+ *    and roomsPanel collapse/expand hotel-room wording; connectionPanel Noble BLE wait/auto-connect
+ *    stage strings (Unicode ellipsis hygiene, autoReconnectInProgress reconnect false friends);
+ *    MeshCore path-hash hop-count brewing false
+ *    friends, CAT/Qt plural-form residue (&apos;, "plural form:"), short label parenthesis garbage,
+ *    and meshcorePathHashModeHint CLI literal set path.hash.mode {0|1|2}; Reticulum identity/interface/
+ *    peer/propagation UI (must-translate stack/config strings, disable parallax false friends, peer/
+ *    probe/host/transport colleague false friends, sidecar build/Rust/cargo literals); peerDetailModal
+ *    probe toasts; CAT HTML entities, bracket
+ *    [Data] placeholders, bare PH N / <ph> / HTML tag residue, and sample-name garbage on nameLabel;
+ *    rawPacketLog.reticulum RX/TX verbatim tokens and destination punctuation garbage;
+ *    reticulumTopology.self pronoun and hopBadge {{count}} placeholder;
+ *    flasher.noSerialPorts French inverted "trouvé(s):" empty-state wording;
+ *    TX/RX Texas on any key; tcp:// / Wi-Fi / I2P spacing; flood/advert/room/backbone
+ *    by English meaning; routing-port identifiers verbatim by English value; gamesPanel
+ *    resign/draw/challenge/threefold; rrc leftover-English errors.
+ *
+ * Backfill untranslated modulePanel copy: pnpm run i18n:auto-translate -- --audit --prefix modulePanel.
+ *
+ * Branch-only quality pass (keys new/changed in en vs git HEAD):
+ *   pnpm run check:i18n:branch
+ *
+ * Prune unused keys (dry-run by default):
+ *   pnpm run i18n:prune-unused
+ *   pnpm run i18n:prune-unused -- --write
+ *
+ * Add a comment  // i18n-ok <reason>  on the same line to suppress a dynamic-key warning.
+ */
+
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, dirname, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+
+import {
+  interpolationPlaceholderIssues,
+  localeStringQualityIssues,
+  protectedBrandIssues,
+  nodeListPanelConnectionCrossKeyIssues,
+  reticulumDefaultHubsCrossKeyIssues,
+  roomsSavedPasswordsCrossKeyIssues,
+  roomsSidebarMarkerCrossKeyIssues,
+} from './check-i18n-quality.mjs';
+import { collectUsedI18nKeys, DYNAMIC_T_PREFIXES } from './i18n-unused-keys.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const LOCALES_DIR =
+  process.env.MESH_CLIENT_LOCALES_DIR ?? join(__dirname, '../src/renderer/locales');
+
+/** Log copy for opaque rooms-hello-* codes from check-i18n-quality.mjs (kept here for CodeQL). */
+const ROOMS_HELLO_FALSE_FRIEND_LOG = {
+  cs: 'roomsPanel hello password: keep wire password "hello", not Czech greeting "ahoj"',
+  de: 'roomsPanel hello password: keep wire password "hello", not German greeting "Hallo"',
+  es: 'roomsPanel hello password: keep wire password "hello", not Spanish greeting "hola"',
+  fr: 'roomsPanel hello password: keep wire password "hello", not French greeting "bonjour"',
+  id: 'roomsPanel hello password: keep wire password "hello", not Indonesian greeting "halo"',
+  it: 'roomsPanel hello password: keep wire password "hello", not Italian greeting "ciao"',
+  'pt-BR': 'roomsPanel hello password: keep wire password "hello", not Portuguese greeting "olá"',
+  nl: 'roomsPanel hello password: keep wire password "hello", not Dutch greeting "hallo"',
+  pl: 'roomsPanel hello password: keep wire password "hello", not Polish greeting "witaj"',
+  ru: 'roomsPanel hello password: keep wire password "hello", not Russian greeting "привет"',
+  tr: 'roomsPanel hello password: keep wire password "hello", not Turkish greeting "merhaba"',
+  uk: 'roomsPanel hello password: keep wire password "hello", not Ukrainian greeting "привіт"',
+};
+
+const ROOMS_HELLO_MISSING_LITERAL_LOG =
+  'MeshCore default guest password must stay literal "hello" in this hint';
+
+function formatLocaleQualityIssueForLog(issue) {
+  if (issue === 'rooms-hello-missing-literal') {
+    return ROOMS_HELLO_MISSING_LITERAL_LOG;
+  }
+  const falseFriendPrefix = 'rooms-hello-false-friend:';
+  if (issue.startsWith(falseFriendPrefix)) {
+    const locale = issue.slice(falseFriendPrefix.length);
+    return (
+      ROOMS_HELLO_FALSE_FRIEND_LOG[locale] ??
+      `roomsPanel hello password false friend for locale "${locale}"`
+    );
+  }
+  return issue;
+}
+const SRC_DIR = join(__dirname, '../src/renderer');
+const EN_FILE = join(LOCALES_DIR, 'en/translation.json');
+const BRANCH_ONLY = process.argv.includes('--branch') || process.env.I18N_CHECK_BRANCH === '1';
+const EN_AT_HEAD_REF = 'HEAD:src/renderer/locales/en/translation.json';
+
+function readJsonFromGit(ref) {
+  const result = spawnSync('git', ['show', ref], { encoding: 'utf8' });
+  if (result.status !== 0) return null;
+  try {
+    return JSON.parse(result.stdout);
+  } catch {
+    return null;
+  }
+}
+
+/** Keys added or changed in working-tree English vs git HEAD (null when unavailable). */
+function resolveBranchEnglishKeys(enFlat) {
+  const headEn = readJsonFromGit(EN_AT_HEAD_REF);
+  if (!headEn) return null;
+  const headFlat = flatten(headEn);
+  const keys = new Set();
+  for (const [key, val] of Object.entries(enFlat)) {
+    if (!(key in headFlat) || headFlat[key] !== val) keys.add(key);
+  }
+  return keys;
+}
+
+function failLocalesDirAccess(err) {
+  const reason = err instanceof Error ? err.message : String(err);
+  console.error(
+    `Error: locales directory is missing or inaccessible: ${LOCALES_DIR} (${reason}). ` +
+      'Ensure src/renderer/locales exists and is readable.',
+  );
+  process.exit(1);
+}
+
+function readLocalesDirEntries() {
+  try {
+    return readdirSync(LOCALES_DIR);
+  } catch (err) {
+    failLocalesDirAccess(err);
+  }
+}
+
+readLocalesDirEntries();
+
+function flatten(obj, prefix = '') {
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    const key = prefix ? `${prefix}.${k}` : k;
+    if (typeof v === 'object' && v !== null) {
+      Object.assign(out, flatten(v, key));
+    } else {
+      out[key] = v;
+    }
+  }
+  return out;
+}
+
+function readJson(path) {
+  return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+function collectFiles(dir) {
+  const results = [];
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    const st = statSync(full);
+    if (st.isDirectory()) {
+      if (entry === 'locales' || entry === 'node_modules') continue;
+      results.push(...collectFiles(full));
+    } else if (/\.(ts|tsx)$/.test(entry) && !entry.includes('.test.')) {
+      results.push(full);
+    }
+  }
+  return results;
+}
+
+// Match t('some.key') / i18n.t('some.key') — only static string literals.
+const T_STATIC_RE = /\b(?:t|i18n\.t)\(\s*['"]([^'"]+)['"]\s*[),]/g;
+
+// Hardcoded English in aria-label/title/placeholder/label JSX attributes — these must always go through t().
+// Plain-string form: aria-label="Some text" (excludes aria-label="" and empty/whitespace-only).
+const HARDCODED_ARIA_TITLE_STRING_RE =
+  /\b(?:aria-label|title|placeholder|label)="([A-Za-z][^"]*)"/g;
+// Template-literal form starting with literal English prose rather than an interpolation or
+// a lowercase/data token, e.g. aria-label={`Manage members of ${name}`} (see ContactGroupsModal).
+const HARDCODED_ARIA_TITLE_TEMPLATE_RE =
+  /\b(?:aria-label|title|placeholder|label)=\{`([A-Z][a-zA-Z][^`]*)`\}/g;
+
+// Own-line JSX text nodes that look like English prose (e.g. button/label children).
+// Catches: previous line ends with `>` or `}`, this line is capitalized prose, next line starts with `<`.
+const OWN_LINE_JSX_ENGLISH_RE =
+  /^\s{2,}([A-Z][A-Za-z](?:[A-Za-z0-9 .,'…:—\-!?()/°]|\u00b0){2,})\s*$/;
+
+// Match t(`prefix.${expr}`) or i18n.t(`prefix.${expr}`) — dynamic keys with registered prefixes.
+const T_TEMPLATE_RE = /\b(?:t|i18n\.t)\(\s*`([^`]*)\$\{[^}]+\}([^`]*)`\s*[),]/g;
+
+const en = flatten(readJson(EN_FILE));
+const enKeys = new Set(Object.keys(en));
+const branchEnglishKeys = BRANCH_ONLY ? resolveBranchEnglishKeys(en) : null;
+
+if (BRANCH_ONLY) {
+  if (!branchEnglishKeys) {
+    console.error(
+      'Error: --branch requires git HEAD en/translation.json baseline. Commit or stage English keys first.',
+    );
+    process.exit(1);
+  }
+  if (branchEnglishKeys.size === 0) {
+    console.log('check:i18n:branch passed — no new/changed English keys vs HEAD.');
+    process.exit(0);
+  }
+  console.log(
+    `check:i18n:branch — quality pass on ${branchEnglishKeys.size} key(s) new/changed vs HEAD`,
+  );
+}
+
+let errors = 0;
+
+function keysWithPrefix(prefix) {
+  return [...enKeys].filter((k) => k.startsWith(prefix));
+}
+
+function verifyDynamicPrefix(prefixEntry) {
+  const { prefix, leafKeys, suffixes } = prefixEntry;
+  const matching = keysWithPrefix(prefix);
+  if (matching.length === 0) {
+    console.error(`Dynamic i18n prefix "${prefix}" has no keys in en/translation.json`);
+    return 1;
+  }
+  if (leafKeys) {
+    return 0;
+  }
+  let errCount = 0;
+  const prefixLen = prefix.length;
+  const ids = new Set();
+  for (const key of matching) {
+    if (!key.startsWith(prefix)) continue;
+    const rest = key.slice(prefixLen);
+    const dot = rest.indexOf('.');
+    if (dot <= 0) continue;
+    const id = rest.slice(0, dot);
+    const suffix = rest.slice(dot + 1);
+    if (suffixes.includes(suffix)) ids.add(id);
+  }
+  for (const id of ids) {
+    for (const suffix of suffixes) {
+      const full = `${prefix}${id}.${suffix}`;
+      if (!enKeys.has(full)) {
+        console.error(`Missing dynamic i18n key: "${full}" (required by prefix registry)`);
+        errCount++;
+      }
+    }
+  }
+  return errCount;
+}
+
+for (const entry of DYNAMIC_T_PREFIXES) {
+  errors += verifyDynamicPrefix(entry);
+}
+
+const registeredPrefixes = new Set(DYNAMIC_T_PREFIXES.map((e) => e.prefix));
+
+function extractTemplatePrefix(beforeExpr, afterExpr) {
+  const combined = `${beforeExpr}${afterExpr}`;
+  for (const prefix of registeredPrefixes) {
+    if (combined.startsWith(prefix)) return prefix;
+  }
+  return null;
+}
+
+// Resolve a t() key: the key itself OR a plural form (key_one, key_other, etc.)
+function keyExists(key) {
+  if (enKeys.has(key)) return true;
+  // i18next plural suffixes — any entry matching key_<suffix> counts
+  return [
+    `${key}_one`,
+    `${key}_other`,
+    `${key}_zero`,
+    `${key}_two`,
+    `${key}_few`,
+    `${key}_many`,
+  ].some((k) => enKeys.has(k));
+}
+
+function isLocaleSpecificPluralKey(key) {
+  const base = key.replace(/_(?:zero|one|two|few|many|other)$/, '');
+  return base !== key && keyExists(base);
+}
+
+// ── 1. Check call sites ──────────────────────────────────────────────────────
+const files = collectFiles(SRC_DIR);
+for (const file of files) {
+  const src = readFileSync(file, 'utf8');
+  const lines = src.split('\n');
+  lines.forEach((line, idx) => {
+    if (line.includes('// i18n-ok')) return;
+    for (const m of line.matchAll(T_STATIC_RE)) {
+      const key = m[1];
+      if (!keyExists(key)) {
+        console.error(
+          `Missing key: "${key}" used at ${relative(join(__dirname, '..'), file)}:${idx + 1}`,
+        );
+        errors++;
+      }
+    }
+    for (const m of line.matchAll(T_TEMPLATE_RE)) {
+      const prefix = extractTemplatePrefix(m[1], m[2]);
+      if (!prefix) {
+        console.error(
+          `Unregistered dynamic t() template at ${relative(join(__dirname, '..'), file)}:${idx + 1} — add prefix to DYNAMIC_T_PREFIXES in i18n-unused-keys.mjs`,
+        );
+        errors++;
+      }
+    }
+    const hardcodedMeshcoreDetail = line.match(
+      /t\(\s*['"]meshcore\.errors\.requestFailed['"]\s*,\s*\{[^}]*detail:\s*['"]([^'"]+)['"]/,
+    );
+    if (hardcodedMeshcoreDetail && !file.includes('.test.')) {
+      console.error(
+        `Hardcoded English detail in meshcore.errors.requestFailed at ${relative(join(__dirname, '..'), file)}:${idx + 1} — use a dedicated i18n key (detail: "${hardcodedMeshcoreDetail[1]}")`,
+      );
+      errors++;
+    }
+    if (!file.includes('.test.')) {
+      for (const m of line.matchAll(HARDCODED_ARIA_TITLE_STRING_RE)) {
+        console.error(
+          `Hardcoded English in aria-label/title/placeholder/label at ${relative(join(__dirname, '..'), file)}:${idx + 1} — use t() (found: "${m[1]}")`,
+        );
+        errors++;
+      }
+      for (const m of line.matchAll(HARDCODED_ARIA_TITLE_TEMPLATE_RE)) {
+        console.error(
+          `Hardcoded English in aria-label/title/placeholder/label template literal at ${relative(join(__dirname, '..'), file)}:${idx + 1} — use t() with interpolation (found: "${m[1]}")`,
+        );
+        errors++;
+      }
+      // Own-line JSX English prose (button/label children not wrapped in t()).
+      if (file.endsWith('.tsx')) {
+        const ownLineMatch = line.match(OWN_LINE_JSX_ENGLISH_RE);
+        if (ownLineMatch) {
+          const prev = lines[idx - 1] ?? '';
+          const next = lines[idx + 1] ?? '';
+          const prevEndsJsx = />\s*$/.test(prev.trimEnd()) || /}\s*$/.test(prev.trimEnd());
+          const nextStartsTag = /^\s*</.test(next);
+          if (prevEndsJsx && nextStartsTag) {
+            console.error(
+              `Hardcoded English JSX text at ${relative(join(__dirname, '..'), file)}:${idx + 1} — use t() (found: "${ownLineMatch[1]}")`,
+            );
+            errors++;
+          }
+        }
+      }
+    }
+  });
+}
+
+// ── 1b. Meshtastic SDK routing-error i18n keys (dynamic i18n.t(i18nKey)) ───
+const routingErrorFile = join(SRC_DIR, 'lib/meshtastic/meshtasticSdkRoutingErrorLog.ts');
+try {
+  const routingSrc = readFileSync(routingErrorFile, 'utf8');
+  const routingKeys = [
+    ...new Set(
+      [...routingSrc.matchAll(/return '([^']+)'/g)]
+        .map((m) => m[1])
+        .filter((k) => k.startsWith('chatPanel.routingErrors.')),
+    ),
+  ];
+  for (const key of routingKeys) {
+    if (!keyExists(key)) {
+      console.error(`Missing key: "${key}" referenced in meshtasticSdkRoutingErrorLog.ts`);
+      errors++;
+    }
+  }
+} catch (err) {
+  if (err?.code !== 'ENOENT') throw err;
+}
+
+// ── 2. Unused English keys (no static/dynamic/literal usage in src/) ─────────
+if (!BRANCH_ONLY) {
+  const { unused: unusedEnKeys } = collectUsedI18nKeys(join(__dirname, '../src'), EN_FILE);
+  for (const key of unusedEnKeys) {
+    console.error(
+      `Unused key in en/translation.json: "${key}" — remove or add usage (see pnpm run i18n:prune-unused)`,
+    );
+    errors++;
+  }
+}
+
+// ── 3. Check completeness across locale files (warn only — rate limits can leave gaps) ──
+const localeDirs = readLocalesDirEntries().filter((d) => {
+  const full = join(LOCALES_DIR, d);
+  return statSync(full).isDirectory() && d !== 'en';
+});
+
+const EN_PLURAL_FAMILIES = [...enKeys].filter((k) => k.endsWith('_one')).map((k) => k.slice(0, -4));
+
+/**
+ * Plural categories a locale actually selects for the small integer counts this app shows.
+ * Deliberately not `resolvedOptions().pluralCategories`: that also lists categories no such
+ * count can reach (Romance `many` starts at 1,000,000; Czech `many` is fractions-only), and
+ * requiring those would add dead keys.
+ */
+function reachablePluralCategories(locale) {
+  let pr;
+  try {
+    pr = new Intl.PluralRules(locale);
+  } catch {
+    return ['one', 'other'];
+  }
+  const cats = new Set();
+  for (let n = 0; n <= 200; n += 1) cats.add(pr.select(n));
+  return [...cats];
+}
+
+let warnings = 0;
+for (const dir of localeDirs) {
+  const path = join(LOCALES_DIR, dir, 'translation.json');
+  let existing;
+  try {
+    existing = new Set(Object.keys(flatten(readJson(path))));
+  } catch {
+    console.error(`Error: cannot read ${path}`);
+    errors++;
+    continue;
+  }
+  const missing = [...enKeys].filter((k) => !existing.has(k));
+  if (missing.length > 0) {
+    console.warn(
+      `Warning: locale "${dir}" is missing ${missing.length} key(s) — run: pnpm run i18n:auto-translate`,
+    );
+    warnings++;
+  }
+  // Languages may require plural categories English does not use (for example
+  // Polish `_few` / `_many`). Allow those when English defines the same plural family.
+  const extra = [...existing].filter((k) => !enKeys.has(k) && !isLocaleSpecificPluralKey(k));
+  if (extra.length > 0) {
+    console.error(`Orphan key(s) in "${dir}": ${extra.join(', ')}`);
+    errors++;
+  }
+
+  // A missing plural category is not a cosmetic gap: i18next finds no match in this locale
+  // and falls back through to English, so e.g. Russian at count=3 rendered "3 nodes".
+  // Only families the locale has already started are required, so a wholly untranslated
+  // locale still reports as the "missing key(s)" warning above rather than erroring here.
+  const requiredCategories = reachablePluralCategories(dir);
+  const missingPlural = [];
+  for (const family of EN_PLURAL_FAMILIES) {
+    if (!existing.has(`${family}_one`) && !existing.has(`${family}_other`)) continue;
+    for (const category of requiredCategories) {
+      if (!existing.has(`${family}_${category}`)) missingPlural.push(`${family}_${category}`);
+    }
+  }
+  if (missingPlural.length > 0) {
+    console.error(
+      `Missing plural form(s) in "${dir}" (${requiredCategories.join('/')} required; ` +
+        `absent forms fall back to English): ${missingPlural.slice(0, 10).join(', ')}` +
+        (missingPlural.length > 10 ? ` … +${missingPlural.length - 10} more` : ''),
+    );
+    errors++;
+  }
+}
+
+// These are protocol terms / acronyms intentionally displayed in English across all locales.
+// Checked by leaf key name so nesting differences don't matter.
+const VERBATIM_KEY_NAMES = new Set([
+  'floodAdvertButton', // "Flood Advert" — mesh routing protocol term, not a water-flood advertisement
+  'floodAdvertSection', // same
+  'buttonFloodAdvert', // same
+  'sendButtonDm', // "DM" — direct-message abbreviation, used verbatim internationally
+  'pinPlaceholder', // numeric pairing-code input placeholder — "PIN" the acronym, not a sewing/hair pin
+  'channelPsksPlaceholder', // MQTT ChannelName@index= syntax sample — must match English exactly
+]);
+
+// "Hops" in mesh routing keeps tripping auto-translators into the brewing
+// ingredient. If any of these tokens appear in a locale value, fail with a
+// pointer to use the routing term instead. Substring match (no \b) because
+// non-ASCII letters don't participate in JS regex word boundaries.
+const FORBIDDEN_HOP_TOKENS = [
+  // de
+  'Hopfen',
+  'hopfen',
+  // es / pt-BR
+  'Lúpulo',
+  'lúpulo',
+  // fr
+  'Houblon',
+  'houblon',
+  // it (include plural, MT sometimes emits "luppoli" instead of singular)
+  'Luppolo',
+  'luppolo',
+  'Luppoli',
+  'luppoli',
+  // tr (include the commonly mistyped two-word spacing "Şerbetçi otu")
+  'Şerbetçiotu',
+  'Şerbetçi otu',
+  'şerbetçiotu',
+  'şerbetçi otu',
+  // ru / uk / pl / cs (include declined forms that stem-only checks miss)
+  'Хмель',
+  'хмель',
+  'хмелю', // dative/locative of both ru хмель and uk хміль
+  'Хміль',
+  'хміль',
+  'Chmiel',
+  'chmiel',
+  // cs (Czech beer-hop plant "chmel", distinct from Polish "Chmiel" — substring
+  // match also catches declined forms: chmele, chmelu, chmelů, chmeli, chmelem)
+  'Chmel',
+  'chmel',
+  // zh: 酒花 = beer hops; 链路数目 (number of links) is the correct routing term.
+  '酒花',
+];
+
+// ── 4. Locale string quality: no CAT/XML artifacts; {{name}} sets match English;
+//      no leading/trailing whitespace or BOM that English lacks; brand names preserved.
+for (const dir of localeDirs) {
+  const localePath = join(LOCALES_DIR, dir, 'translation.json');
+  let localeFlat;
+  try {
+    localeFlat = flatten(readJson(localePath));
+  } catch {
+    continue;
+  }
+  for (const [key, val] of Object.entries(localeFlat)) {
+    if (typeof val !== 'string') continue;
+    if (branchEnglishKeys && !branchEnglishKeys.has(key)) continue;
+    const enVal = en[key];
+    if (typeof enVal !== 'string') continue;
+    for (const issue of interpolationPlaceholderIssues(enVal, val)) {
+      console.error(`Placeholder mismatch in "${dir}" key "${key}": ${issue}.`);
+      errors++;
+    }
+
+    // Whitespace / BOM parity. If English lacks leading or trailing whitespace
+    // (or the U+FEFF byte-order mark anywhere), the locale must too — those
+    // creep in via copy/paste from CAT tools or auto-translate output and
+    // cause visible gaps in the rendered UI.
+    if (val.includes('\uFEFF') && !enVal.includes('\uFEFF')) {
+      console.error(`Stray BOM (U+FEFF) in "${dir}" key "${key}": remove the byte-order mark.`);
+      errors++;
+    }
+    if (val !== val.trimStart() && enVal === enVal.trimStart()) {
+      console.error(
+        `Leading whitespace in "${dir}" key "${key}": value=${JSON.stringify(val)} (English has none).`,
+      );
+      errors++;
+    }
+    if (val !== val.trimEnd() && enVal === enVal.trimEnd()) {
+      console.error(
+        `Trailing whitespace in "${dir}" key "${key}": value=${JSON.stringify(val)} (English has none).`,
+      );
+      errors++;
+    }
+    const enNewlines = (enVal.match(/\n/g) ?? []).length;
+    const locNewlines = (val.match(/\n/g) ?? []).length;
+    if (enNewlines !== locNewlines) {
+      console.error(
+        `Newline count mismatch in "${dir}" key "${key}": locale has ${locNewlines}, English has ${enNewlines}.`,
+      );
+      errors++;
+    }
+
+    // Soft signal: multi-word English prose left byte-identical in a locale.
+    // Hard-fail would block commits until every key is translated; warn so
+    // `i18n:auto-translate --audit` gaps stay visible. Verbatim keys are exempt.
+    const untranslatedLeafKey = key.split('.').pop() ?? key;
+    if (
+      !VERBATIM_KEY_NAMES.has(untranslatedLeafKey) &&
+      val === enVal &&
+      enVal.trim().split(/\s+/).length >= 3 &&
+      /\b(the|and|or|for|with|from|this|that|are|is|not|you|your)\b/i.test(enVal)
+    ) {
+      console.warn(
+        `Untranslated English prose in "${dir}" key "${key}" (identical to en). Run pnpm run i18n:auto-translate --audit.`,
+      );
+    }
+
+    for (const issue of protectedBrandIssues(enVal, val)) {
+      console.error(
+        `Locale quality in "${dir}" key "${key}": ${issue}. EN=${JSON.stringify(enVal)} LOC=${JSON.stringify(val)}`,
+      );
+      errors++;
+    }
+
+    // Brewing-ingredient false-friend check. The English source uses "Hop"
+    // / "Hops" only in the mesh-routing sense, never the plant. If a
+    // forbidden hop-the-plant token leaks in, fail with guidance.
+    for (const tok of FORBIDDEN_HOP_TOKENS) {
+      if (val.includes(tok)) {
+        console.error(
+          `Brewing-hops false friend in "${dir}" key "${key}": "${tok}" should be the routing term (e.g. "Hops", "Saltos", "Sauts", "Хопи"). LOC=${JSON.stringify(val)}`,
+        );
+        errors++;
+      }
+    }
+
+    // Verbatim-key check. Certain protocol terms must display in English in
+    // all locales; their locale value must exactly equal the English value.
+    // Matched by leaf key name to be independent of nesting changes.
+    const leafKey = key.split('.').pop();
+    if (VERBATIM_KEY_NAMES.has(leafKey) && val !== enVal) {
+      console.error(
+        `Verbatim key "${dir}" key "${key}": must equal English value ${JSON.stringify(enVal)} but has ${JSON.stringify(val)}.`,
+      );
+      errors++;
+    }
+
+    for (const issue of localeStringQualityIssues({
+      locale: dir,
+      flatKey: key,
+      val,
+      enVal,
+    })) {
+      console.error(
+        `Locale quality in "${dir}" key "${key}": ${formatLocaleQualityIssueForLog(issue)}.`,
+      );
+      errors++;
+    }
+  }
+
+  for (const issue of reticulumDefaultHubsCrossKeyIssues(localeFlat)) {
+    if (branchEnglishKeys) continue;
+    console.error(`Locale quality in "${dir}" (reticulum default hubs): ${issue}.`);
+    errors++;
+  }
+
+  for (const issue of roomsSavedPasswordsCrossKeyIssues(localeFlat, en)) {
+    if (branchEnglishKeys) continue;
+    console.error(`Locale quality in "${dir}" (roomsPanel saved passwords): ${issue}.`);
+    errors++;
+  }
+
+  for (const issue of roomsSidebarMarkerCrossKeyIssues(localeFlat, en)) {
+    if (branchEnglishKeys) continue;
+    console.error(`Locale quality in "${dir}" (roomsPanel sidebar markers): ${issue}.`);
+    errors++;
+  }
+
+  for (const issue of nodeListPanelConnectionCrossKeyIssues(dir, localeFlat)) {
+    if (branchEnglishKeys) continue;
+    console.error(`Locale quality in "${dir}" (nodeListPanel connection tooltips): ${issue}.`);
+    errors++;
+  }
+}
+
+if (errors > 0) {
+  console.error(`\ncheck:i18n failed with ${errors} error(s). Run: pnpm run i18n:auto-translate`);
+  process.exit(1);
+}
+
+const localeStatus =
+  warnings > 0 ? ` (${warnings} locale(s) incomplete — run i18n:auto-translate)` : '';
+const branchStatus = branchEnglishKeys ? `, branch keys: ${branchEnglishKeys.size}` : '';
+console.log(
+  `check:i18n${BRANCH_ONLY ? ':branch' : ''} passed — ${enKeys.size} keys, ${localeDirs.length} locale(s) verified${branchStatus}${localeStatus}.`,
+);

@@ -1,0 +1,40 @@
+import { useMemo } from 'react';
+
+import type { ProtocolCapabilities } from '../lib/radio/BaseRadioProvider';
+import { useRadioProvider } from '../lib/radio/providerFactory';
+import type { IdentityId, MeshProtocol } from '../lib/types';
+import type { PanelActionsByProtocol } from './useAllProtocolPanelActions';
+import type { useMeshcorePanelActions } from './useMeshcorePanelActions';
+import type { useMeshtasticPanelActions } from './useMeshtasticPanelActions';
+import type { useReticulumPanelActions } from './useReticulumPanelActions';
+
+export type PanelActions =
+  | ReturnType<typeof useMeshtasticPanelActions>
+  | ReturnType<typeof useMeshcorePanelActions>
+  | ReturnType<typeof useReticulumPanelActions>;
+
+export interface PanelActionsBundle {
+  actions: PanelActions;
+  capabilities: ProtocolCapabilities;
+  protocol: MeshProtocol;
+  identityId: IdentityId | null;
+}
+
+/**
+ * Identity-scoped panel write facade ([#377]). Resolves runtime instances by protocol
+ * without App-level `protocol ===` for action selection.
+ */
+export function usePanelActions(
+  protocol: MeshProtocol,
+  identityId: IdentityId | null,
+  prebuilt: PanelActionsByProtocol,
+): PanelActionsBundle {
+  const capabilities = useRadioProvider(protocol);
+
+  const actions = prebuilt[protocol];
+
+  return useMemo(
+    () => ({ actions, capabilities, protocol, identityId }),
+    [actions, capabilities, protocol, identityId],
+  );
+}

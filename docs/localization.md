@@ -1,0 +1,84 @@
+# Localization & Languages
+
+Mesh-Client is designed to be accessible to mesh users worldwide. The application currently supports **16 languages** and uses static translation bundles to ensure full functionality even when offline.
+
+---
+
+## Supported Languages
+
+The following languages are currently supported:
+
+- **English** (Source of Truth)
+- **Spanish** (Español)
+- **Ukrainian** (Українська)
+- **German** (Deutsch)
+- **Chinese (Simplified)** (中文)
+- **Portuguese (Brazilian)** (Português do Brasil)
+- **French** (Français)
+- **Italian** (Italiano)
+- **Polish** (Polski)
+- **Czech** (Čeština)
+- **Japanese** (日本語)
+- **Russian** (Русский)
+- **Dutch** (Nederlands)
+- **Korean** (한국어)
+- **Turkish** (Türkçe)
+- **Indonesian** (Bahasa Indonesia)
+
+---
+
+## Changing Languages
+
+To change the interface language:
+
+1. Locate the **globe icon** in the application header.
+2. Click the icon to open the language selection dropdown.
+3. Select your preferred language.
+
+The application will immediately update the UI strings. Your language preference is saved to your local settings and will persist across app restarts.
+
+---
+
+## Contributing Translations
+
+Most translations in Mesh-Client are initially machine-generated using [MyMemory](https://mymemory.translated.net/). We rely on community contributions to improve translation quality and accuracy.
+
+### Reporting an Error
+
+If you find a mistranslation or an awkward phrasing:
+
+1. Go to the [Mesh-Client Issues](https://github.com/Colorado-Mesh/mesh-client/issues) page.
+2. Open a new [Translation Error](https://github.com/Colorado-Mesh/mesh-client/issues/new?assignees=&labels=translation&template=translation-error.md&title=Translation+Error) issue.
+3. Provide the current text and your suggested correction.
+
+CI does **not** run `check:i18n` as a standalone workflow step. Quality rules run via **pre-commit** (`pnpm run check:i18n`) and indirectly in CI through Vitest (`locale-quality.test.ts` subprocess). See [docs/agents/i18n.md](agents/i18n.md) for maintainer commands (`pnpm run check:i18n`, `pnpm run i18n:auto-translate`).
+
+### Quality checks (selected categories)
+
+`scripts/check-i18n-quality.mjs` enforces more than missing keys. Notable rule families:
+
+- **Boot sequence** (`bootSequence.transport*`, `bootSequence.radioInterfaceFallback`) — short transport labels must not be mistranslated as serial numbers, TV series, broadcast stations, or mixed-language RF interface text.
+- **Reticulum hub/stack** (`connectionPanel.reticulumInterfaces.*`, `reticulumStack*`, `reticulumPeers.*`) — “hub”, “stack”, “peer”, and “host” must not become unrelated words (pressure, colleague, chimney stack, etc.).
+- **TX/RX Texas** — radio `TX`/`RX` must not become the US state (Teksas, Техас, 德克萨斯) on any key.
+- **URI / token spacing** — `tcp://`, `Wi-Fi`, and `I2P` must stay contiguous (no CAT `tcp ://` / `Wi - Fi` / `I 2 P`).
+- **Flood / advert / room / backbone** — gated by English meaning, not a handful of leaf names (routing Flood, mesh advert, MeshCore/RRC room, network backbone — not water, ads, hotels, or spines).
+- **Routing-port identifiers** — `NodeInfo`, `Telemetry`, `NeighborInfo`, `DiscoveryFlood`, `RoomAdvert` must match English verbatim (matched on the English value, not camelCase leaf names).
+- **gamesPanel** — resign is forfeit (not quitting a job); draw is a tie (not a sketch/lottery); challenge/threefold are chess terms.
+- **Repeaters CLI danger confirm** (`repeatersPanel.cliDangerConfirmAction`) — confirm button must be translated and must not read like “delete” or other false friends.
+- **`repeatersPanel.cliMultiHopHint`** — must describe **multi-hop** CLI and automatic **Ping** before the first command, not multi-tab UI wording.
+
+Full rule set: `scripts/check-i18n-quality.mjs` and `scripts/check-i18n-quality.test.mjs`.
+
+### Adding a New Language
+
+If you would like to help us add support for a new language:
+
+1. Check existing issues to see if someone is already working on it.
+2. Open a [Feature Request](https://github.com/Colorado-Mesh/mesh-client/issues/new?template=feature_request.md) specifically for the new language.
+3. We will help you set up the initial locale files and guide you through the translation process.
+
+---
+
+## Offline Support
+
+Translations are bundled as static JSON files within the application. Unlike many web apps, Mesh-Client **does not make network calls** to fetch translations at runtime. This ensures that the interface remains in your preferred language even when you are operating off-grid or in environments with no internet access.

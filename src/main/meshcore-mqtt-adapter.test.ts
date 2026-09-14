@@ -1,0 +1,474 @@
+// @vitest-environment node
+import type { IClientOptions } from 'mqtt';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { MQTTSettings } from '../renderer/lib/types';
+import { MeshcoreMqttAdapter } from './meshcore-mqtt-adapter';
+
+vi.mock('mqtt', () => {
+  const mockClient = {
+    on: vi.fn(),
+    end: vi.fn(),
+    removeAllListeners: vi.fn(),
+    connected: false,
+    publish: vi.fn(),
+    subscribe: vi.fn(),
+    reschedulePing: vi.fn(),
+  };
+  return { connect: vi.fn(() => mockClient) };
+});
+
+const BASE_SETTINGS: MQTTSettings = {
+  server: 'broker.example.com',
+  port: 8883,
+  username: 'user',
+  password: 'token',
+  topicPrefix: 'msh',
+  autoLaunch: false,
+  mqttTransportProtocol: 'meshcore',
+};
+
+interface AdapterPrivate {
+  status: string;
+  lastSettings: MQTTSettings | null;
+  pendingReconnect: boolean;
+  _doConnect: (s: MQTTSettings) => void;
+}
+
+/** Force private state so we can test timer scheduling without a full connect. */
+function seedConnected(adapter: MeshcoreMqttAdapter, expiresAt: number): void {
+  const a = adapter as unknown as AdapterPrivate;
+  a.status = 'connected';
+  a.lastSettings = { ...BASE_SETTINGS, tokenExpiresAt: expiresAt };
+}
+
+describe('MeshcoreMqttAdapter — topicPrefix wildcards', () => {
+  let adapter: MeshcoreMqttAdapter;
+  const onError = vi.fn();
+  const onStatus = vi.fn();
+
+  beforeEach(async () => {
+    const mqtt = await import('mqtt');
+    vi.mocked(mqtt.connect).mockClear();
+    adapter = new MeshcoreMqttAdapter();
+    adapter.on('error', onError);
+    adapter.on('status', onStatus);
+    onError.mockClear();
+    onStatus.mockClear();
+  });
+
+  afterEach(() => {
+    adapter.disconnect();
+  });
+
+  it.each(['meshcore/+', 'meshcore/#', 'meshcore/DEN/#'])(
+    'rejects topicPrefix %s before creating a client',
+    async (topicPrefix) => {
+      const mqtt = await import('mqtt');
+      adapter.connect({ ...BASE_SETTINGS, topicPrefix });
+      expect(mqtt.connect).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining('wildcard'));
+      expect(onStatus).toHaveBeenCalledWith('error');
+    },
+  );
+});
+
+describe('MeshcoreMqttAdapter — PING logging', () => {
+  let adapter: MeshcoreMqttAdapter;
+
+  beforeEach(async () => {
+    const mqtt = await import('mqtt');
+    vi.mocked(mqtt.connect).mockClear();
+    adapter = new MeshcoreMqttAdapter();
+    adapter.on('error', () => {});
+  });
+
+  afterEach(() => {
+    adapter.disconnect();
+    vi.restoreAllMocks();
+  });
+
+  const lastHandler = (
+    client: { on: ReturnType<typeof vi.fn> },
+    name: string,
+  ): ((packet: { cmd: string }) => void) => {
+    const hits = client.on.mock.calls.filter((c: unknown[]) => c[0] === name);
+    return hits[hits.length - 1]?.[1] as (packet: { cmd: string }) => void;
+  };
+
+  it('logs PINGREQ and PINGRESP only once per connection', async () => {
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    const mqttMod = await import('mqtt');
+    adapter.connect({ ...BASE_SETTINGS });
+    const client = vi.mocked(mqttMod.connect).mock.results.at(-1)!.value as {
+      on: ReturnType<typeof vi.fn>;
+    };
+    const onSend = lastHandler(client, 'packetsend');
+    const onReceive = lastHandler(client, 'packetreceive');
+
+    onSend({ cmd: 'pingreq' });
+    onSend({ cmd: 'pingreq' });
+    onSend({ cmd: 'pingreq' });
+    onReceive({ cmd: 'pingresp' });
+    onReceive({ cmd: 'pingresp' });
+
+    const reqLogs = debugSpy.mock.calls.filter((c) => String(c[0]).includes('PINGREQ'));
+    const respLogs = debugSpy.mock.calls.filter((c) => String(c[0]).includes('PINGRESP'));
+    expect(reqLogs).toHaveLength(1);
+    expect(respLogs).toHaveLength(1);
+  });
+
+  it('re-logs PINGREQ once after a reconnect (flags reset)', async () => {
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    const mqttMod = await import('mqtt');
+
+    adapter.connect({ ...BASE_SETTINGS });
+    let client = vi.mocked(mqttMod.connect).mock.results.at(-1)!.value as {
+      on: ReturnType<typeof vi.fn>;
+    };
+    lastHandler(client, 'packetsend')({ cmd: 'pingreq' });
+    lastHandler(client, 'packetsend')({ cmd: 'pingreq' });
+
+    adapter.disconnect();
+    adapter.connect({ ...BASE_SETTINGS });
+    client = vi.mocked(mqttMod.connect).mock.results.at(-1)!.value as {
+      on: ReturnType<typeof vi.fn>;
+    };
+    lastHandler(client, 'packetsend')({ cmd: 'pingreq' });
+
+    const reqLogs = debugSpy.mock.calls.filter((c) => String(c[0]).includes('PINGREQ'));
+    expect(reqLogs).toHaveLength(2);
+  });
+});
+
+describe('MeshcoreMqttAdapter — stale client isolation', () => {
+  let adapter: MeshcoreMqttAdapter;
+
+  interface AdapterPacketPrivate {
+    lastPacketReceivedAt: number;
+  }
+
+  const makeClient = () => ({
+    on: vi.fn(),
+    end: vi.fn(),
+    removeAllListeners: vi.fn(),
+    connected: false,
+    publish: vi.fn(),
+    subscribe: vi.fn(),
+    reschedulePing: vi.fn(),
+    options: {},
+    stream: {},
+  });
+
+  const lastHandler = (
+    client: { on: ReturnType<typeof vi.fn> },
+    name: string,
+  ): ((packet: { cmd: string }) => void) => {
+    const hits = client.on.mock.calls.filter((c: unknown[]) => c[0] === name);
+    return hits[hits.length - 1]?.[1] as (packet: { cmd: string }) => void;
+  };
+
+  beforeEach(async () => {
+    const mqtt = await import('mqtt');
+    vi.mocked(mqtt.connect).mockClear();
+    adapter = new MeshcoreMqttAdapter();
+    adapter.on('error', () => {});
+  });
+
+  afterEach(() => {
+    adapter.disconnect();
+    vi.restoreAllMocks();
+  });
+
+  it('ignores packet events from a client that is no longer this.client', async () => {
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    const mqttMod = await import('mqtt');
+    const first = makeClient();
+    const second = makeClient();
+    vi.mocked(mqttMod.connect)
+      .mockImplementationOnce(() => first as never)
+      .mockImplementationOnce(() => second as never);
+
+    adapter.connect({ ...BASE_SETTINGS });
+    // Reconnect: connect() force-ends `first` and installs `second` as this.client.
+    adapter.connect({ ...BASE_SETTINGS });
+
+    const priv = adapter as unknown as AdapterPacketPrivate;
+    priv.lastPacketReceivedAt = 0;
+
+    // Stale `first` client emits after it was replaced — must be ignored entirely.
+    lastHandler(first, 'packetreceive')({ cmd: 'pingresp' });
+    lastHandler(first, 'packetsend')({ cmd: 'pingreq' });
+    expect(priv.lastPacketReceivedAt).toBe(0);
+    expect(debugSpy.mock.calls.filter((c) => String(c[0]).includes('PINGRESP'))).toHaveLength(0);
+    expect(debugSpy.mock.calls.filter((c) => String(c[0]).includes('PINGREQ'))).toHaveLength(0);
+
+    // Live `second` client still updates state and consumes the first-ping logs.
+    lastHandler(second, 'packetreceive')({ cmd: 'pingresp' });
+    lastHandler(second, 'packetsend')({ cmd: 'pingreq' });
+    expect(priv.lastPacketReceivedAt).toBeGreaterThan(0);
+    expect(debugSpy.mock.calls.filter((c) => String(c[0]).includes('PINGRESP'))).toHaveLength(1);
+    expect(debugSpy.mock.calls.filter((c) => String(c[0]).includes('PINGREQ'))).toHaveLength(1);
+  });
+});
+
+describe('MeshcoreMqttAdapter — clientId', () => {
+  let adapter: MeshcoreMqttAdapter;
+
+  beforeEach(async () => {
+    const mqtt = await import('mqtt');
+    vi.mocked(mqtt.connect).mockClear();
+    adapter = new MeshcoreMqttAdapter();
+  });
+
+  it('uses username as clientId if it matches v1_ pattern', async () => {
+    const mqtt = await import('mqtt');
+    const v1Username = `v1_${'A'.repeat(64)}`;
+    adapter.connect({ ...BASE_SETTINGS, username: v1Username });
+    expect(mqtt.connect).toHaveBeenCalledWith(expect.objectContaining({ clientId: v1Username }));
+  });
+
+  it('uses provided clientId when username does not match v1_ pattern', async () => {
+    const mqtt = await import('mqtt');
+    const stableId = 'meshcore-mqtt-abcdef0123456789';
+    adapter.connect({ ...BASE_SETTINGS, username: 'normal-user', clientId: stableId });
+    const call = vi.mocked(mqtt.connect).mock.calls[vi.mocked(mqtt.connect).mock.calls.length - 1];
+    const opts = call[0] as IClientOptions;
+    expect(opts.clientId).toBe(stableId);
+  });
+
+  it('reuses the same clientId on reconnect when provided', async () => {
+    const mqtt = await import('mqtt');
+    const stableId = 'meshcore-mqtt-fedcba9876543210';
+    adapter.connect({ ...BASE_SETTINGS, clientId: stableId });
+    adapter.disconnect();
+    adapter.connect({ ...BASE_SETTINGS, clientId: stableId });
+    const calls = vi.mocked(mqtt.connect).mock.calls;
+    expect((calls[calls.length - 1][0] as IClientOptions).clientId).toBe(stableId);
+    expect((calls[0][0] as IClientOptions).clientId).toBe(stableId);
+  });
+});
+
+describe('MeshcoreMqttAdapter — token refresh', () => {
+  let adapter: MeshcoreMqttAdapter;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    adapter = new MeshcoreMqttAdapter();
+  });
+
+  afterEach(() => {
+    adapter.disconnect();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  describe('scheduleTokenRefresh via updateToken', () => {
+    it('emits EVENT_PROACTIVE_TOKEN_REFRESH after the grace-period offset', () => {
+      // Use 30-min expiry so grace-period logic is the binding constraint,
+      // not the 54-min PROACTIVE_REFRESH_MS cap.
+      const TOKEN_GRACE_PERIOD_MS = 5 * 60 * 1000;
+      const expiresInMs = 30 * 60 * 1000;
+      const scheduleMs = expiresInMs - TOKEN_GRACE_PERIOD_MS; // 25 min
+      const expiresAt = Date.now() + expiresInMs;
+
+      seedConnected(adapter, expiresAt);
+
+      const handler = vi.fn();
+      adapter.on(MeshcoreMqttAdapter.EVENT_PROACTIVE_TOKEN_REFRESH, handler);
+
+      adapter.updateToken('new-token', expiresAt);
+
+      expect(handler).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(scheduleMs - 1);
+      expect(handler).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(2);
+      expect(handler).toHaveBeenCalledOnce();
+      expect(handler).toHaveBeenCalledWith(BASE_SETTINGS.server);
+    });
+
+    it('caps schedule at PROACTIVE_REFRESH_MS (54 min) for long-lived tokens', () => {
+      const PROACTIVE_REFRESH_MS = 54 * 60 * 1000;
+      const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 h from now
+
+      seedConnected(adapter, expiresAt);
+
+      const handler = vi.fn();
+      adapter.on(MeshcoreMqttAdapter.EVENT_PROACTIVE_TOKEN_REFRESH, handler);
+      adapter.updateToken('new-token', expiresAt);
+
+      vi.advanceTimersByTime(PROACTIVE_REFRESH_MS - 1);
+      expect(handler).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(2);
+      expect(handler).toHaveBeenCalledOnce();
+    });
+
+    it('does not schedule when token is already within grace period', () => {
+      const expiresAt = Date.now() + 4 * 60 * 1000; // 4 min — inside 5-min grace
+
+      seedConnected(adapter, expiresAt);
+
+      const handler = vi.fn();
+      adapter.on(MeshcoreMqttAdapter.EVENT_PROACTIVE_TOKEN_REFRESH, handler);
+      adapter.updateToken('new-token', expiresAt);
+
+      vi.advanceTimersByTime(10 * 60 * 1000);
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('does not schedule when not connected', () => {
+      const expiresAt = Date.now() + 60 * 60 * 1000;
+
+      const handler = vi.fn();
+      adapter.on(MeshcoreMqttAdapter.EVENT_PROACTIVE_TOKEN_REFRESH, handler);
+      adapter.updateToken('token', expiresAt);
+
+      vi.advanceTimersByTime(60 * 60 * 1000);
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('disconnect() clears pending token timer', () => {
+    it('cancels the refresh timer so the event never fires', () => {
+      const expiresAt = Date.now() + 60 * 60 * 1000;
+
+      seedConnected(adapter, expiresAt);
+
+      const handler = vi.fn();
+      adapter.on(MeshcoreMqttAdapter.EVENT_PROACTIVE_TOKEN_REFRESH, handler);
+      adapter.updateToken('token', expiresAt);
+
+      adapter.disconnect();
+
+      vi.advanceTimersByTime(60 * 60 * 1000);
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('JWT reconnect backoff', () => {
+    it('defers token refresh until exponential delay elapses', async () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const mqttMod = await import('mqtt');
+      const onToken = vi.fn();
+      adapter.on(MeshcoreMqttAdapter.EVENT_TOKEN_REFRESH_NEEDED, onToken);
+
+      const v1Username = `v1_${'A'.repeat(64)}`;
+      const expiresAt = Date.now() + 60 * 60 * 1000;
+      adapter.connect({
+        ...BASE_SETTINGS,
+        username: v1Username,
+        tokenExpiresAt: expiresAt,
+      });
+
+      const client = vi.mocked(mqttMod.connect).mock.results.at(-1)!.value as {
+        on: ReturnType<typeof vi.fn>;
+      };
+      const connectHits = client.on.mock.calls.filter((c: unknown[]) => c[0] === 'connect');
+      const connectFn = connectHits[connectHits.length - 1]?.[1] as () => void;
+      connectFn();
+
+      expect(adapter.getStatus()).toBe('connected');
+
+      const closeHits = client.on.mock.calls.filter((c: unknown[]) => c[0] === 'close');
+      const closeFn = closeHits[closeHits.length - 1]?.[1] as () => void;
+      closeFn();
+
+      expect(onToken).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(60_000 - 1);
+      expect(onToken).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(2);
+      expect(onToken).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('connack timeout during connect', () => {
+    it('schedules JWT token refresh after error then close while status is disconnected', async () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const mqttMod = await import('mqtt');
+      const onToken = vi.fn();
+      adapter.on(MeshcoreMqttAdapter.EVENT_TOKEN_REFRESH_NEEDED, onToken);
+      adapter.on('error', () => {});
+
+      const v1Username = `v1_${'A'.repeat(64)}`;
+      const expiresAt = Date.now() + 60 * 60 * 1000;
+      adapter.connect({
+        ...BASE_SETTINGS,
+        username: v1Username,
+        tokenExpiresAt: expiresAt,
+      });
+
+      const client = vi.mocked(mqttMod.connect).mock.results.at(-1)!.value as {
+        on: ReturnType<typeof vi.fn>;
+      };
+      expect(adapter.getStatus()).toBe('connecting');
+
+      const errorHits = client.on.mock.calls.filter((c: unknown[]) => c[0] === 'error');
+      const errorFn = errorHits[errorHits.length - 1]?.[1] as (err: Error) => void;
+      errorFn(new Error('connack timeout'));
+      expect(adapter.getStatus()).toBe('disconnected');
+
+      const closeHits = client.on.mock.calls.filter((c: unknown[]) => c[0] === 'close');
+      const closeFn = closeHits[closeHits.length - 1]?.[1] as () => void;
+      closeFn();
+
+      expect(onToken).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(60_000 - 1);
+      expect(onToken).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(2);
+      expect(onToken).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not schedule reconnect after intentional disconnect()', async () => {
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const mqttMod = await import('mqtt');
+      const onToken = vi.fn();
+      adapter.on(MeshcoreMqttAdapter.EVENT_TOKEN_REFRESH_NEEDED, onToken);
+
+      const expiresAt = Date.now() + 60 * 60 * 1000;
+      adapter.connect({ ...BASE_SETTINGS, tokenExpiresAt: expiresAt });
+
+      const client = vi.mocked(mqttMod.connect).mock.results.at(-1)!.value as {
+        on: ReturnType<typeof vi.fn>;
+      };
+      const closeHits = client.on.mock.calls.filter((c: unknown[]) => c[0] === 'close');
+      const closeFn = closeHits[closeHits.length - 1]?.[1] as () => void;
+
+      adapter.disconnect();
+      closeFn();
+
+      vi.advanceTimersByTime(120_000);
+      expect(onToken).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateToken with pendingReconnect', () => {
+    it('clears pendingReconnect and calls _doConnect', () => {
+      const expiresAt = Date.now() + 60 * 60 * 1000;
+      const a = adapter as unknown as AdapterPrivate;
+      a.pendingReconnect = true;
+      a.lastSettings = { ...BASE_SETTINGS, tokenExpiresAt: expiresAt };
+
+      const doConnectSpy = vi.spyOn(adapter as unknown as AdapterPrivate, '_doConnect');
+
+      adapter.updateToken('fresh-token', expiresAt);
+
+      expect(a.pendingReconnect).toBe(false);
+      expect(doConnectSpy).toHaveBeenCalledOnce();
+    });
+
+    it('does not call _doConnect when pendingReconnect is false', () => {
+      const expiresAt = Date.now() + 60 * 60 * 1000;
+      const a = adapter as unknown as AdapterPrivate;
+      a.lastSettings = { ...BASE_SETTINGS, tokenExpiresAt: expiresAt };
+
+      const doConnectSpy = vi.spyOn(adapter as unknown as AdapterPrivate, '_doConnect');
+
+      adapter.updateToken('token', expiresAt);
+
+      expect(doConnectSpy).not.toHaveBeenCalled();
+    });
+  });
+});

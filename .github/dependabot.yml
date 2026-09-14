@@ -1,0 +1,37 @@
+version: 2
+updates:
+  # Dependabot PRs intentionally disabled (limit 0) — the project manages npm
+  # and Actions updates via `pnpm run update` (scripts/update.sh) which runs
+  # dedupe, patch checks, and Ratspeak/rsReticulum verification in one pass.
+  # See AGENTS.md §6 and docs/ci-cd.md.
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'saturday'
+    open-pull-requests-limit: 0
+    versioning-strategy: lockfile-only
+    groups:
+      electron-framework:
+        patterns:
+          - 'electron'
+      all-other-deps:
+        patterns:
+          - '*'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 0
+    labels:
+      - 'dependencies'
+      - 'github-actions'
+    commit-message:
+      prefix: 'chore'
+      include: 'scope'
+    groups:
+      # Group all GitHub Actions updates into one PR to reduce noise
+      all-actions:
+        patterns:
+          - '*'

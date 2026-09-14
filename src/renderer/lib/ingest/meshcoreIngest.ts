@@ -1,0 +1,410 @@
+/**
+ * Post-`PacketRouter` MeshCore side effects: tapback parsing, SQLite persistence.
+ *
+ * Failure point: DB IPC errors — logged; Zustand store remains authoritative for UI.
+ * Fallback: skip DB write; live UI still updates from store upserts.
+ */
+import {
+  isMeshcoreRoomChatMessage,
+  meshcoreReconcileChannelSenderIds,
+  messageToDbRow,
+} from '../../hooks/meshcore/meshcoreHookPreamble';
+import { getConnection } from '../../stores/connectionStore';
+import { useDiagnosticsStore } from '../../stores/diagnosticsStore';
+import { useMessageStore } from '../../stores/messageStore';
+import { patchMeshcoreNodeLastHeardAt, upsertNode, useNodeStore } from '../../stores/nodeStore';
+import { packetRouter, type PacketRouterListener } from '../drivers/PacketRouter';
+import { errLikeToLogString } from '../errLikeToLogString';
+import { ensureMeshcoreChatSenderInNodeStore } from '../meshcore/meshcoreChatSenderNode';
+import {
+  persistMeshcoreNodeInfoAfterAdvert,
+  persistMeshcorePathUpdatedNewContact,
+} from '../meshcore/meshcoreLiveContactPersist';
+import {
+  registerMeshcorePubKey,
+  seedMeshcoreFourBytePrefixLookupMap,
+} from '../meshcore/meshcorePubKeyRegistry';
+import {
+  buildMeshcoreRoomIncomingMessage,
+  parseMeshcoreChannelIncomingFromThread,
+  parseMeshcoreDmIncomingFromThread,
+  resolveMeshcoreChannelMessageSender,
+} from '../meshcoreChannelText';
+import {
+  type ChatCorrelateRxLike,
+  resolveMeshcoreIngestRxHops,
+} from '../meshcoreRawPacketCorrelate';
+import {
+  isMeshcoreRoomServerHwModel,
+  meshcoreRoomPostBodyFromWire,
+  meshcoreRoomWireLooksLikeRoom,
+} from '../meshcoreRoomMessageRouting';
+import { meshcoreSortedStorePrior, upsertMeshcoreMessageWithDedup } from '../meshcoreStoreDedup';
+import {
+  MESHCORE_UNKNOWN_SENDER_STUB_ID,
+  meshcoreChatStubNodeIdFromDisplayName,
+  meshcoreIsChatStubNodeId,
+  meshcoreMinimalNodeFromAdvertEvent,
+} from '../meshcoreUtils';
+import { effectiveMessageTimestampMs } from '../nodeStatus';
+import type { DomainEvent } from '../protocols/Protocol';
+import type { ChatMessage, IdentityId } from '../types';
+
+export interface MeshcoreIngestOptions {
+  /** Runtime hook for path-updated side effects (outPath refresh, ping-route epoch). */
+  onPathUpdated?: (nodeId: number, publicKey: Uint8Array, isNewContact: boolean) => void;
+  /** Recent RF raw packet log rows for hop correlation when protocol events omit hopCount. */
+  rawPacketsForHopCorrelation?: () => readonly ChatCorrelateRxLike[];
+}
+
+function handleNodeInfo(
+  identityId: IdentityId,
+  event: Extract<DomainEvent, { type: 'node_info' }>,
+): void {
+  persistMeshcoreNodeInfoAfterAdvert(identityId, event.payload);
+}
+
+function handlePathUpdated(
+  identityId: IdentityId,
+  event: Extract<DomainEvent, { type: 'meshcore_path_updated' }>,
+  options: MeshcoreIngestOptions,
+): void {
+  const { nodeId, publicKey } = event.payload;
+  if (nodeId === 0 || publicKey.length !== 32) return;
+
+  registerMeshcorePubKey(nodeId, publicKey);
+  useDiagnosticsStore.getState().recordPathUpdated(nodeId);
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Identity bucket may be absent at runtime.
+  const existing = useNodeStore.getState().nodes[identityId]?.[nodeId];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime guard protects external or callback-mutated state.
+  const isNew = existing == null;
+  if (isNew) {
+    persistMeshcorePathUpdatedNewContact(nodeId, publicKey, nowSec);
+    const built = meshcoreMinimalNodeFromAdvertEvent(publicKey, { nowSec });
+    if (built) {
+      upsertNode(identityId, {
+        nodeId,
+        longName: built.node.long_name,
+        hwModel: built.node.hw_model,
+        lastHeardAt: built.lastHeardSec,
+        publicKey,
+      });
+    }
+  } else {
+    patchMeshcoreNodeLastHeardAt(identityId, nodeId, nowSec);
+  }
+
+  options.onPathUpdated?.(nodeId, publicKey, isNew);
+}
+
+function listChatMessages(identityId: IdentityId): ChatMessage[] {
+  return meshcoreSortedStorePrior(identityId);
+}
+
+function buildPrefixToNodeIdMap(identityId: IdentityId): Map<string, number> {
+  const map = new Map<string, number>();
+  seedMeshcoreFourBytePrefixLookupMap(map);
+  const nodes = useNodeStore.getState().nodes[identityId] ?? {};
+  for (const node of Object.values(nodes)) {
+    let key: Uint8Array | undefined =
+      node.publicKey instanceof Uint8Array && node.publicKey.length >= 4
+        ? node.publicKey
+        : undefined;
+    if (!key && typeof node.publicKeyHex === 'string') {
+      const hex = node.publicKeyHex.replace(/\s/g, '').toLowerCase();
+      if (/^[0-9a-f]{8,}$/.test(hex)) {
+        const pairs = hex.slice(0, 8).match(/.{2}/g);
+        if (pairs) key = new Uint8Array(pairs.map((b) => parseInt(b, 16)));
+      }
+    }
+    if (!key || key.length < 4 || node.nodeId === 0) continue;
+    const prefix = Array.from(key.slice(0, 4))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    if (!map.has(prefix)) map.set(prefix, node.nodeId);
+  }
+  return map;
+}
+
+function chatSourceFromReceivedVia(receivedVia: string | undefined): {
+  source: 'rf' | 'mqtt';
+  heardViaMqtt: boolean;
+} {
+  if (receivedVia === 'mqtt') return { source: 'mqtt', heardViaMqtt: true };
+  if (receivedVia === 'both') return { source: 'rf', heardViaMqtt: true };
+  return { source: 'rf', heardViaMqtt: false };
+}
+
+function bumpMeshcoreChatSenderLastHeard(
+  identityId: IdentityId,
+  nodeId: number,
+  opts: {
+    timestampMs: number;
+    displayName?: string;
+    receivedVia?: string;
+    hopCount?: number;
+  },
+): void {
+  if (nodeId <= 0) return;
+  const { source, heardViaMqtt } = chatSourceFromReceivedVia(opts.receivedVia);
+  ensureMeshcoreChatSenderInNodeStore(identityId, nodeId, {
+    lastHeardAtMs: opts.timestampMs,
+    displayName: opts.displayName,
+    source,
+    heardViaMqtt,
+    ...(opts.hopCount != null ? { hopsAway: opts.hopCount } : {}),
+  });
+}
+
+function resolveRoomServerIdForIngest(
+  identityId: IdentityId,
+  event: Extract<DomainEvent, { type: 'text_message' }>['payload'],
+): number {
+  if (event.roomServerId != null && event.roomServerId !== 0) {
+    return event.roomServerId;
+  }
+  if (
+    event.from !== 0 &&
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Identity bucket may be absent at runtime.
+    isMeshcoreRoomServerHwModel(useNodeStore.getState().nodes[identityId]?.[event.from]?.hwModel)
+  ) {
+    return event.from;
+  }
+  return event.from;
+}
+
+function handleTextMessage(
+  identityId: IdentityId,
+  event: Extract<DomainEvent, { type: 'text_message' }>,
+  options: MeshcoreIngestOptions = {},
+): void {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Identity bucket may be absent at runtime.
+  const record = useMessageStore.getState().messages[identityId]?.[event.payload.id];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime guard protects external or callback-mutated state.
+  if (!record) return;
+
+  const priorReplyId = record.replyTo != null ? Number(record.replyTo) : undefined;
+  const priorReplyPreviewText = record.replyPreviewText;
+  const priorReplyPreviewSender = record.replyPreviewSender;
+
+  const myNodeNum = getConnection(identityId)?.myNodeNum ?? 0;
+  const messages = listChatMessages(identityId);
+  const wireTimestampMs = effectiveMessageTimestampMs(event.payload.timestamp);
+  const isChannel = event.payload.id.startsWith('ch:');
+  const hopCount =
+    event.payload.hopCount ??
+    resolveMeshcoreIngestRxHops(
+      options.rawPacketsForHopCorrelation?.() ?? [],
+      isChannel,
+      Date.now(),
+      isChannel ? undefined : { fromNodeId: event.payload.from },
+    );
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Identity bucket may be absent at runtime.
+  const fromNode = useNodeStore.getState().nodes[identityId]?.[event.payload.from];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Node may be absent when its identity bucket is missing.
+  const isKnownRoomNode = isMeshcoreRoomServerHwModel(fromNode?.hwModel);
+  const looksLikeRoom = meshcoreRoomWireLooksLikeRoom({
+    txtType: event.payload.txtType,
+    roomServerId: event.payload.roomServerId,
+    channelIndex: event.payload.channelIndex,
+    messageId: event.payload.id,
+    senderNodeId: event.payload.from,
+    isKnownRoomNode,
+  });
+  const roomServerId = resolveRoomServerIdForIngest(identityId, event.payload);
+  const isRoomEvent = looksLikeRoom && roomServerId !== 0;
+
+  // Room BBS branch: SignedPlain strip + plain store — not `parseMeshcoreChannelIncomingFromThread`.
+  // See `meshcoreRoomMessageRouting.ts` for wire vs chat and protocol-alignment notes.
+  if (isRoomEvent) {
+    const prefixMap = buildPrefixToNodeIdMap(identityId);
+    const { authorId, payload } = meshcoreRoomPostBodyFromWire(
+      event.payload.payload,
+      event.payload.txtType,
+      prefixMap,
+      { isKnownRoomNode },
+    );
+    const authorNode =
+      authorId !== 0
+        ? // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Identity bucket may be absent at runtime.
+          useNodeStore.getState().nodes[identityId]?.[authorId]
+        : undefined;
+    const authorName =
+      authorNode?.longName?.trim() ||
+      (authorId !== 0 ? `Node-${authorId.toString(16).toUpperCase()}` : 'Unknown');
+    // Keep unresolved authors as sender_id 0 — never attribute them to self (myNodeNum).
+    const merged = buildMeshcoreRoomIncomingMessage({
+      rawText: payload,
+      roomServerId,
+      authorId,
+      authorName,
+      timestamp: wireTimestampMs,
+      receivedVia: record.receivedVia ?? 'rf',
+      rxHops: hopCount,
+    });
+    const { inserted, message: stored } = upsertMeshcoreMessageWithDedup(
+      identityId,
+      merged,
+      event.payload.id,
+    );
+    const isEcho = myNodeNum > 0 && authorId === myNodeNum;
+    if (!isEcho) {
+      bumpMeshcoreChatSenderLastHeard(identityId, authorId, {
+        timestampMs: wireTimestampMs,
+        displayName: authorName !== 'Unknown' ? authorName : undefined,
+        receivedVia: record.receivedVia,
+        hopCount,
+      });
+    }
+    if (inserted && !isEcho) {
+      void window.electronAPI.db.saveMeshcoreMessage(messageToDbRow(stored)).catch((e: unknown) => {
+        console.warn('[meshcoreIngest] saveMeshcoreMessage failed ' + errLikeToLogString(e));
+      });
+    }
+    return;
+  }
+
+  const channelSender = isChannel
+    ? resolveMeshcoreChannelMessageSender({
+        rawText: event.payload.payload,
+        fromNodeId: event.payload.from,
+        recordSenderName: record.senderName,
+      })
+    : null;
+  const displayName = isChannel
+    ? channelSender!.displayName
+    : record.senderName?.trim() || 'Unknown';
+  const senderId = isChannel
+    ? channelSender!.senderId
+    : event.payload.from !== 0
+      ? event.payload.from
+      : displayName !== 'Unknown'
+        ? meshcoreChatStubNodeIdFromDisplayName(displayName)
+        : 0;
+
+  const sortedPrior = messages;
+
+  const parsedRaw: ChatMessage = isChannel
+    ? parseMeshcoreChannelIncomingFromThread(sortedPrior, {
+        rawText: event.payload.payload,
+        senderId,
+        displayName,
+        channel: event.payload.channelIndex,
+        timestamp: wireTimestampMs,
+        receivedVia: 'rf',
+        rxHops: hopCount,
+      })
+    : parseMeshcoreDmIncomingFromThread(sortedPrior, {
+        rawText: event.payload.payload,
+        senderId,
+        displayName,
+        timestamp: wireTimestampMs,
+        receivedVia: 'rf',
+        peerNodeId: senderId,
+        myNodeId: myNodeNum,
+        to: myNodeNum > 0 ? myNodeNum : undefined,
+        rxHops: hopCount,
+      });
+
+  const merged: ChatMessage = {
+    ...parsedRaw,
+    status: record.status ?? parsedRaw.status,
+    receivedVia: record.receivedVia ?? parsedRaw.receivedVia,
+  };
+  const reconciled =
+    isChannel && messages.length > 0
+      ? (meshcoreReconcileChannelSenderIds([...messages, merged]).at(-1) ?? merged)
+      : merged;
+
+  if (isMeshcoreRoomChatMessage(reconciled)) {
+    return;
+  }
+
+  const {
+    inserted,
+    storeUpdated,
+    message: stored,
+  } = upsertMeshcoreMessageWithDedup(identityId, reconciled, event.payload.id);
+
+  const isEcho = myNodeNum > 0 && senderId === myNodeNum;
+  const isDm = !isChannel && event.payload.channelIndex === -1;
+  const mayBumpDmSender =
+    !isDm ||
+    (event.payload.from > 0 &&
+      senderId === event.payload.from &&
+      senderId !== MESHCORE_UNKNOWN_SENDER_STUB_ID &&
+      !meshcoreIsChatStubNodeId(senderId));
+  if (!isEcho && mayBumpDmSender && senderId > 0) {
+    bumpMeshcoreChatSenderLastHeard(identityId, senderId, {
+      timestampMs: wireTimestampMs,
+      displayName: displayName !== 'Unknown' ? displayName : undefined,
+      receivedVia: record.receivedVia,
+      hopCount,
+    });
+  }
+  const replyUpgraded =
+    stored.replyId !== priorReplyId ||
+    stored.replyPreviewText !== priorReplyPreviewText ||
+    stored.replyPreviewSender !== priorReplyPreviewSender;
+  if ((inserted || storeUpdated || replyUpgraded) && !isEcho) {
+    void window.electronAPI.db.saveMeshcoreMessage(messageToDbRow(stored)).catch((e: unknown) => {
+      console.warn('[meshcoreIngest] saveMeshcoreMessage failed ' + errLikeToLogString(e));
+    });
+  }
+}
+
+function createListener(
+  identityId: IdentityId,
+  options: MeshcoreIngestOptions,
+): PacketRouterListener {
+  return (event, routedIdentityId) => {
+    if (routedIdentityId !== identityId) return;
+    switch (event.type) {
+      case 'text_message':
+        handleTextMessage(identityId, event, options);
+        break;
+      case 'node_info':
+        handleNodeInfo(identityId, event);
+        break;
+      case 'meshcore_path_updated':
+        handlePathUpdated(identityId, event, options);
+        break;
+      case 'position': {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Identity bucket may be absent at runtime.
+        const record = useNodeStore.getState().nodes[identityId]?.[event.payload.nodeId];
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Node may be absent when its identity bucket is missing.
+        if (record?.publicKey instanceof Uint8Array) {
+          persistMeshcoreNodeInfoAfterAdvert(
+            identityId,
+            {
+              nodeId: event.payload.nodeId,
+              publicKey: record.publicKey,
+              lastHeardAt: Math.floor(event.payload.timestamp / 1000),
+            },
+            {
+              latitudeDeg: event.payload.latitude,
+              longitudeDeg: event.payload.longitude,
+            },
+          );
+        }
+        break;
+      }
+      case 'device_contacts':
+        break;
+      default:
+        break;
+    }
+  };
+}
+
+export function attachMeshcoreIngest(
+  identityId: IdentityId,
+  options: MeshcoreIngestOptions = {},
+): () => void {
+  return packetRouter.addListener(createListener(identityId, options));
+}
+
+/** @internal Exported for tests. */
+export { handleTextMessage as meshcoreIngestHandleTextMessage };

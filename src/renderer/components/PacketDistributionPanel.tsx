@@ -1,0 +1,502 @@
+import type { TFunction } from 'i18next';
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+
+import type { RxPacketEntry } from '../lib/meshcore/meshcoreHookTypes';
+import type {
+  MeshtasticRawPacketEntry,
+  ReticulumRawPacketEntry,
+} from '../lib/rawPacketLogConstants';
+import { formatReticulumWireEnumLabel } from '../lib/reticulum/reticulumRawPacketLog';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type Variant = 'meshtastic' | 'meshcore' | 'reticulum';
+
+type PacketDistributionPanelProps =
+  | {
+      variant: 'meshtastic';
+      packets: MeshtasticRawPacketEntry[];
+      getNodeLabel: (id: number) => string;
+    }
+  | {
+      variant: 'meshcore';
+      packets: RxPacketEntry[];
+      getNodeLabel: (id: number) => string;
+    }
+  | {
+      variant: 'reticulum';
+      packets: ReticulumRawPacketEntry[];
+      getNodeLabel: (id: number) => string;
+    };
+
+type MainView = 'overall' | 'by-type';
+type TimeFilter = 'hour' | 'day' | 'all';
+type SourceFilter = 'all' | 'rf' | 'mqtt';
+
+interface NormalizedPacket {
+  ts: number;
+  fromNodeId: number | null;
+  packetType: string;
+  viaMqtt: boolean;
+  isLocal?: boolean;
+  groupKey?: string;
+}
+
+interface SliceData {
+  name: string;
+  value: number;
+  fill: string;
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const COLORS = [
+  '#22d3ee', // cyan-400
+  '#4ade80', // green-400
+  '#facc15', // yellow-400
+  '#fb923c', // orange-400
+  '#f87171', // red-400
+  '#c084fc', // purple-400
+  '#60a5fa', // blue-400
+  '#f472b6', // pink-400
+];
+const OTHER_COLOR = '#6b7280'; // gray-500
+const OTHER_THRESHOLD = 0.02; // < 2% → "Other"
+
+const TIME_FILTER_VALUES: TimeFilter[] = ['hour', 'day', 'all'];
+
+const TOOLTIP_STYLE = {
+  backgroundColor: '#0f172a',
+  border: '1px solid #334155',
+  borderRadius: '6px',
+  color: '#e2e8f0',
+  fontSize: '12px',
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function normalize(
+  variant: Variant,
+  packets: MeshtasticRawPacketEntry[] | RxPacketEntry[] | ReticulumRawPacketEntry[],
+): NormalizedPacket[] {
+  if (variant === 'reticulum') {
+    return (packets as ReticulumRawPacketEntry[]).map((p) => ({
+      ts: p.ts,
+      fromNodeId: null,
+      packetType: formatReticulumWireEnumLabel(p.packetType) || 'UNKNOWN',
+      viaMqtt: false,
+      groupKey: p.interfaceName || tFallbackInterface(p.interfaceId),
+    }));
+  }
+  if (variant === 'meshtastic') {
+    return (packets as MeshtasticRawPacketEntry[]).map((p) => ({
+      ts: p.ts,
+      fromNodeId: p.fromNodeId,
+      packetType: p.portLabel || 'UNKNOWN',
+      viaMqtt: p.viaMqtt,
+      isLocal: p.isLocal,
+    }));
+  }
+  return (packets as RxPacketEntry[]).map((p) => ({
+    ts: p.ts,
+    fromNodeId: p.fromNodeId,
+    packetType: p.payloadTypeString || 'UNKNOWN',
+    viaMqtt: false,
+  }));
+}
+
+function tFallbackInterface(id: number): string {
+  return `iface_${id}`;
+}
+
+function applyTimeFilter(packets: NormalizedPacket[], filter: TimeFilter): NormalizedPacket[] {
+  if (filter === 'all') return packets;
+  const cutoff = filter === 'hour' ? Date.now() - 3_600_000 : Date.now() - 86_400_000;
+  return packets.filter((p) => p.ts >= cutoff);
+}
+
+function applySourceFilter(
+  packets: NormalizedPacket[],
+  filter: SourceFilter,
+  variant: Variant,
+): NormalizedPacket[] {
+  if (variant === 'meshcore' || variant === 'reticulum') return packets;
+  const nonLocal = packets.filter((p) => !p.isLocal);
+  if (filter === 'all') return nonLocal;
+  if (filter === 'rf') return nonLocal.filter((p) => !p.viaMqtt);
+  return nonLocal.filter((p) => p.viaMqtt);
+}
+
+function buildSlices(
+  items: { key: string; count: number }[],
+  labelFn: (key: string) => string,
+  otherLabel: string,
+): SliceData[] {
+  const total = items.reduce((s, i) => s + i.count, 0);
+  if (total === 0) return [];
+
+  const main: SliceData[] = [];
+  let otherCount = 0;
+  let colorIdx = 0;
+
+  for (const { key, count } of items) {
+    if (count / total < OTHER_THRESHOLD) {
+      otherCount += count;
+    } else {
+      main.push({ name: labelFn(key), value: count, fill: COLORS[colorIdx % COLORS.length] });
+      colorIdx++;
+    }
+  }
+
+  if (otherCount > 0) {
+    main.push({ name: otherLabel, value: otherCount, fill: OTHER_COLOR });
+  }
+
+  return main;
+}
+
+function countBy(packets: NormalizedPacket[], key: keyof NormalizedPacket): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const p of packets) {
+    const k = String(p[key] ?? 'UNKNOWN');
+    map.set(k, (map.get(k) ?? 0) + 1);
+  }
+  return map;
+}
+
+function resolveNodeKey(
+  k: string,
+  getNodeLabel: (id: number) => string,
+  variant: Variant,
+  t: TFunction,
+): string {
+  if (variant === 'reticulum') return k;
+  const id = parseInt(k, 10);
+  if (k === 'null' || isNaN(id)) {
+    return variant === 'meshcore' ? t('packetDistribution.noSenderId') : t('common.unknown');
+  }
+  return getNodeLabel(id);
+}
+
+function tooltipFormatter(value: unknown, total: number): [string, string] {
+  const n = typeof value === 'number' ? value : 0;
+  const pct = total > 0 ? ((n / total) * 100).toFixed(1) : '0';
+  return [`${n.toLocaleString()} (${pct}%)`, ''];
+}
+
+// ── Custom Legend ─────────────────────────────────────────────────────────────
+
+interface LegendEntryProps {
+  name: string;
+  value: number;
+  total: number;
+  fill: string;
+}
+
+function LegendEntry({ name, value, total, fill }: LegendEntryProps) {
+  const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: fill }} />
+      <span className="text-gray-300">
+        {name}:{' '}
+        <span className="text-gray-100">
+          {pct}% ({value.toLocaleString()})
+        </span>
+      </span>
+    </div>
+  );
+}
+
+// ── Donut Chart ───────────────────────────────────────────────────────────────
+
+interface DonutProps {
+  title: string;
+  slices: SliceData[];
+}
+
+function DonutChart({ title, slices }: DonutProps) {
+  const { t } = useTranslation();
+  const total = slices.reduce((s, d) => s + d.value, 0);
+
+  if (slices.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-2">
+        <p className="text-sm font-medium text-gray-400">{title}</p>
+        <p className="text-xs text-gray-600">{t('packetDistribution.noData')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-1 flex-col gap-3">
+      <p className="text-center text-sm font-medium text-gray-300">{title}</p>
+      <div className="flex flex-col items-center gap-4 md:flex-row md:items-start">
+        <div className="h-44 w-44 shrink-0">
+          <ResponsiveContainer width="100%" height={176}>
+            <PieChart>
+              <Pie
+                data={slices}
+                cx="50%"
+                cy="50%"
+                innerRadius="50%"
+                outerRadius="80%"
+                dataKey="value"
+                strokeWidth={0}
+              />
+              <Tooltip
+                contentStyle={TOOLTIP_STYLE}
+                formatter={(value) => tooltipFormatter(value, total)}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex flex-col gap-1.5 overflow-auto">
+          {slices.map((s) => (
+            <LegendEntry key={s.name} name={s.name} value={s.value} total={total} fill={s.fill} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
+
+export default function PacketDistributionPanel({
+  variant,
+  packets,
+  getNodeLabel,
+}: PacketDistributionPanelProps) {
+  const { t } = useTranslation();
+  const [mainView, setMainView] = useState<MainView>('overall');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all');
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
+  const [selectedType, setSelectedType] = useState<string>('');
+
+  const normalized = useMemo(() => normalize(variant, packets as never), [variant, packets]);
+
+  const filtered = useMemo(() => {
+    let result = applyTimeFilter(normalized, timeFilter);
+    result = applySourceFilter(result, sourceFilter, variant);
+    return result;
+  }, [normalized, timeFilter, sourceFilter, variant]);
+
+  // ── Overall Distribution data ─────────────────────────────────────────────
+
+  const deviceSlices = useMemo(() => {
+    const groupField: keyof NormalizedPacket = variant === 'reticulum' ? 'groupKey' : 'fromNodeId';
+    const counts = countBy(filtered, groupField);
+    const sorted = [...counts.entries()]
+      .map(([k, count]) => ({ key: k, count }))
+      .sort((a, b) => b.count - a.count);
+    return buildSlices(
+      sorted,
+      (k) => resolveNodeKey(k, getNodeLabel, variant, t),
+      t('packetDistribution.other'),
+    );
+  }, [filtered, getNodeLabel, variant, t]);
+
+  const typeSlices = useMemo(() => {
+    const counts = countBy(filtered, 'packetType');
+    const sorted = [...counts.entries()]
+      .map(([k, count]) => ({ key: k, count }))
+      .sort((a, b) => b.count - a.count);
+    return buildSlices(sorted, (k) => k, t('packetDistribution.other'));
+  }, [filtered, t]);
+
+  // ── Distribution by Type data ─────────────────────────────────────────────
+
+  const typeOptions = useMemo(() => {
+    const counts = countBy(normalized, 'packetType');
+    return [...counts.entries()]
+      .map(([k, count]) => ({ value: k, label: `${k} (${count.toLocaleString()})` }))
+      .sort((a, b) => b.label.localeCompare(a.label));
+  }, [normalized]);
+
+  const effectiveType =
+    selectedType && typeOptions.some((o) => o.value === selectedType)
+      ? selectedType
+      : (typeOptions[0]?.value ?? '');
+
+  const typeDeviceSlices = useMemo(() => {
+    if (!effectiveType) return [];
+    const subset = filtered.filter((p) => p.packetType === effectiveType);
+    const groupField: keyof NormalizedPacket = variant === 'reticulum' ? 'groupKey' : 'fromNodeId';
+    const counts = countBy(subset, groupField);
+    const sorted = [...counts.entries()]
+      .map(([k, count]) => ({ key: k, count }))
+      .sort((a, b) => b.count - a.count);
+    return buildSlices(
+      sorted,
+      (k) => resolveNodeKey(k, getNodeLabel, variant, t),
+      t('packetDistribution.other'),
+    );
+  }, [filtered, effectiveType, getNodeLabel, variant, t]);
+
+  const typeDeviceTotal = typeDeviceSlices.reduce((s, d) => s + d.value, 0);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
+  return (
+    <div className="bg-deep-black flex h-full flex-col gap-4 overflow-auto p-4">
+      {/* ── Top controls ── */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Main view toggle */}
+        <div className="flex rounded border border-gray-700 text-xs">
+          {(
+            [
+              { value: 'overall', label: t('packetDistribution.overallDistribution') },
+              { value: 'by-type', label: t('packetDistribution.distributionByType') },
+            ] as const
+          ).map(({ value, label }) => (
+            <button
+              type="button"
+              key={value}
+              onClick={() => {
+                setMainView(value);
+              }}
+              className={`px-3 py-1.5 transition-colors ${
+                mainView === value
+                  ? 'bg-gray-700 text-gray-100'
+                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Source filter — Meshtastic only */}
+        {variant === 'meshtastic' && (
+          <select
+            value={sourceFilter}
+            onChange={(e) => {
+              setSourceFilter(e.target.value as SourceFilter);
+            }}
+            className="rounded border border-gray-700 bg-gray-800 px-2 py-1.5 text-xs text-gray-300 focus:outline-none"
+          >
+            <option value="all">{t('packetDistribution.allSources')}</option>
+            <option value="rf">{t('packetDistribution.rfOnly')}</option>
+            <option value="mqtt">{t('packetDistribution.mqttOnly')}</option>
+          </select>
+        )}
+
+        {/* Time filter — Overall view only */}
+        {mainView === 'overall' && (
+          <div className="flex rounded border border-gray-700 text-xs">
+            {TIME_FILTER_VALUES.map((value) => {
+              const timeLabel = {
+                hour: t('packetDistribution.lastHour'),
+                day: t('packetDistribution.last24Hours'),
+                all: t('packetDistribution.allData'),
+              }[value];
+              return (
+                <button
+                  type="button"
+                  key={value}
+                  onClick={() => {
+                    setTimeFilter(value);
+                  }}
+                  className={`px-3 py-1.5 transition-colors ${
+                    timeFilter === value
+                      ? 'bg-gray-700 text-gray-100'
+                      : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                  }`}
+                >
+                  {timeLabel}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Type picker — by-type view only */}
+        {mainView === 'by-type' && (
+          <select
+            value={effectiveType}
+            onChange={(e) => {
+              setSelectedType(e.target.value);
+            }}
+            className="rounded border border-gray-700 bg-gray-800 px-2 py-1.5 text-xs text-gray-300 focus:outline-none"
+          >
+            {typeOptions.length === 0 ? (
+              <option value="">{t('packetDistribution.noData')}</option>
+            ) : (
+              typeOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))
+            )}
+          </select>
+        )}
+
+        <span className="text-muted ml-auto text-xs">
+          {t('packetDistribution.packets', { count: filtered.length })}
+        </span>
+      </div>
+
+      {/* ── Views ── */}
+      {mainView === 'overall' ? (
+        <div className="flex min-h-0 flex-1 flex-wrap gap-6">
+          <DonutChart title={t('packetDistribution.packetsByDevice')} slices={deviceSlices} />
+          <DonutChart title={t('packetDistribution.packetsByType')} slices={typeSlices} />
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
+          {effectiveType ? (
+            <>
+              <p className="text-sm text-gray-400">
+                {t('packetDistribution.devicesTransmitting')}{' '}
+                <span className="font-mono text-gray-200">{effectiveType}</span>
+                {' — '}
+                <span className="text-gray-300">
+                  {t('packetDistribution.packets', { count: typeDeviceTotal })}
+                </span>
+              </p>
+              <div className="flex flex-1 items-start justify-center">
+                <div className="flex flex-col items-center gap-4 md:flex-row md:items-start">
+                  <div className="h-64 w-64 shrink-0">
+                    <ResponsiveContainer width="100%" height={256}>
+                      <PieChart>
+                        <Pie
+                          data={typeDeviceSlices}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius="45%"
+                          outerRadius="80%"
+                          dataKey="value"
+                          strokeWidth={0}
+                        />
+                        <Tooltip
+                          contentStyle={TOOLTIP_STYLE}
+                          formatter={(value) => tooltipFormatter(value, typeDeviceTotal)}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex flex-col gap-1.5 overflow-auto pt-2">
+                    {typeDeviceSlices.map((s) => (
+                      <LegendEntry
+                        key={s.name}
+                        name={s.name}
+                        value={s.value}
+                        total={typeDeviceTotal}
+                        fill={s.fill}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-gray-600">{t('packetDistribution.noPacketsYet')}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

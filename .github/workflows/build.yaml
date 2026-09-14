@@ -1,0 +1,302 @@
+name: Build Binaries (no release)
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  workflow_dispatch:
+
+jobs:
+  schema-release-compare:
+    name: Schema vs last official release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      schema_bumped: ${{ steps.compare.outputs.schema_bumped }}
+      curr_schema: ${{ steps.compare.outputs.curr_schema }}
+      prev_schema: ${{ steps.compare.outputs.prev_schema }}
+      prev_tag: ${{ steps.compare.outputs.prev_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Compare schema to last published release
+        id: compare
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/ci-schema-release-compare.mjs --write-readme READ-ME-FIRST-test-build.md
+
+      - name: Upload READ-ME-FIRST warning
+        uses: actions/upload-artifact@v7
+        with:
+          name: READ-ME-FIRST-test-build
+          path: READ-ME-FIRST-test-build.md
+          retention-days: 30
+
+  build:
+    needs: schema-release-compare
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            build_script: pnpm run dist:mac
+            sidecar_platform: darwin
+            rust_targets: x86_64-apple-darwin,aarch64-apple-darwin
+          - os: ubuntu-latest
+            build_script: pnpm run dist:linux
+            sidecar_platform: linux
+            rust_targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu
+          - os: windows-latest
+            build_script: pnpm run dist:win
+            sidecar_platform: win32
+            rust_targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+
+      # pnpm 12 native bootstrap: PowerShell prefers broken .bin/pnpm.ps1 (silent exit 0).
+      - name: Prefer native pnpm.exe on Windows PATH
+        if: runner.os == 'Windows'
+        run: node scripts/ci-prefer-windows-pnpm-exe.mjs
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Verify pnpm
+        run: node scripts/ci-verify-pnpm.mjs
+
+      - name: Install Linux build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          bash scripts/ci-setup-linux-arm64-apt.sh
+          sudo apt-get install -y \
+            libudev-dev \
+            libnss3 \
+            libxshmfence-dev \
+            libx11-xcb1 \
+            libxcb1 \
+            libxext6 \
+            libxfixes3 \
+            libxrender1 \
+            libxi6 \
+            rpm \
+            libdbus-1-dev \
+            libdbus-1-dev:arm64 \
+            pkg-config \
+            gcc-aarch64-linux-gnu
+
+      - name: Install Rust toolchain for Reticulum sidecar
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - name: Build Reticulum sidecar for Electron packaging
+        env:
+          WORKSPACE_ROOT: ${{ github.workspace }}/.rsstack
+        run: node scripts/build-reticulum-sidecar-release.mjs --platform ${{ matrix.sidecar_platform }}
+
+      - name: Verify staged Reticulum sidecars
+        run: node scripts/verify-reticulum-sidecar-staged.mjs --platform ${{ matrix.sidecar_platform }}
+
+      - name: Validate Windows build runner
+        if: contains(matrix.build_script, 'dist:win') && matrix.os != 'windows-latest'
+        run: |
+          echo "Windows build scripts must run on windows-latest."
+          exit 1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild native dependencies
+        run: pnpm run rebuild
+
+      - name: Write schema upgrade installer notice
+        env:
+          MESH_CLIENT_SCHEMA_BUMPED: ${{ needs.schema-release-compare.outputs.schema_bumped }}
+          MESH_CLIENT_SCHEMA_CURR: ${{ needs.schema-release-compare.outputs.curr_schema }}
+          MESH_CLIENT_SCHEMA_PREV: ${{ needs.schema-release-compare.outputs.prev_schema }}
+          MESH_CLIENT_SCHEMA_PREV_TAG: ${{ needs.schema-release-compare.outputs.prev_tag }}
+        run: node scripts/write-schema-upgrade-notice.mjs
+
+      - name: Download READ-ME-FIRST warning
+        uses: actions/download-artifact@v7
+        with:
+          name: READ-ME-FIRST-test-build
+          path: release-warnings
+
+      # Embeds buildChannel=test + Actions runUrl into the main bundle (support exports / logs).
+      - name: Stamp CI build info
+        env:
+          MESH_CLIENT_BUILD_CHANNEL: test
+          MESH_CLIENT_BUILD_WORKFLOW: Build Binaries (no release)
+        run: node scripts/ci-write-build-info-env.mjs
+
+      - name: Build
+        env:
+          # ── macOS code signing (only effective on macOS runners) ────────────
+          CSC_LINK: ${{ matrix.os == 'macos-latest' && secrets.CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.os == 'macos-latest' && secrets.CSC_KEY_PASSWORD || '' }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ matrix.os == 'macos-latest' && secrets.CSC_LINK && 'true' || 'false' }}
+          # ── macOS notarization ─────────────────────────────────────────────
+          APPLE_ID: ${{ matrix.os == 'macos-latest' && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.os == 'macos-latest' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ matrix.os == 'macos-latest' && secrets.APPLE_TEAM_ID || '' }}
+        run: ${{ matrix.build_script }}
+
+      # Stamp downloadable installer basenames with -run{N} so same-semver test
+      # builds do not overwrite each other after unzip. Runs after dist:* verify
+      # (unstamped names) and before upload (packaging-smoke downloads stamped names).
+      - name: Rename test-build installers with run number
+        run: node scripts/rename-test-build-artifacts.mjs --root release
+
+      # Fail closed before upload: README alone must not satisfy a green Windows job.
+      - name: Assert Windows NSIS installers present
+        if: matrix.os == 'windows-latest'
+        run: node scripts/assert-win-setup-installers.mjs --root release
+
+      # Stage under release/ so upload-artifact@v7's least-common-ancestor stays
+      # release/ (paths outside release/ nest installers as release/release/*.exe and
+      # break packaging-smoke, which downloads to path: release).
+      - name: Stage READ-ME-FIRST into release output
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          cp release-warnings/READ-ME-FIRST-test-build.md release/READ-ME-FIRST-test-build.md
+
+      # Do not upload raw Mesh-client.app — upload-artifact@v7 dereferences framework
+      # symlinks (~3× Electron Framework size). DMG/ZIP preserve correct layout.
+      - name: Upload macOS Artifact
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          name: mesh-client-macos-${{ github.sha }}
+          path: |
+            release/mac/**/*.dmg
+            release/mac/**/*.zip
+            release/mac-x64/**/*.dmg
+            release/mac-x64/**/*.zip
+            release/mac-arm64/**/*.dmg
+            release/mac-arm64/**/*.zip
+            release/mac-universal/**/*.dmg
+            release/mac-universal/**/*.zip
+            release/*.dmg
+            release/*.zip
+            release/latest-mac.yml
+            release/READ-ME-FIRST-test-build.md
+          retention-days: 30
+
+      - name: Upload Linux Artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          name: mesh-client-linux-${{ github.sha }}
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.rpm
+            release/latest-linux.yml
+            release/latest-linux-arm64.yml
+            release/READ-ME-FIRST-test-build.md
+          retention-days: 30
+
+      - name: Upload Windows Artifact
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          name: mesh-client-windows-${{ github.sha }}
+          path: |
+            # Per-arch NSIS installers (test builds: …-run{N}.exe / …-run{N}-arm64.exe)
+            release/*.exe
+            release/latest.yml
+            release/READ-ME-FIRST-test-build.md
+          if-no-files-found: error
+          retention-days: 30
+
+  packaging-smoke:
+    name: Smoke test ${{ matrix.label }}
+    needs: build
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            label: macOS packaging
+            artifact: mesh-client-macos-${{ github.sha }}
+            smoke_run: >-
+              node scripts/assert-update-yml-artifacts.mjs --require latest-mac.yml
+              && node scripts/verify-mac-packaging.mjs
+          - os: ubuntu-latest
+            label: Linux packaging
+            artifact: mesh-client-linux-${{ github.sha }}
+            smoke_run: >-
+              node scripts/assert-update-yml-artifacts.mjs --require latest-linux.yml
+              --require latest-linux-arm64.yml && node scripts/verify-linux-packaging.mjs
+              && node scripts/test-linux-appimage-reticulum-sidecar.mjs
+          - os: windows-latest
+            label: x64 NSIS install
+            artifact: mesh-client-windows-${{ github.sha }}
+            smoke_run: >-
+              node scripts/assert-update-yml-artifacts.mjs --require latest.yml
+              && node scripts/test-win-nsis-install.mjs --arch x64
+          - os: windows-11-vs2026-arm
+            label: arm64 NSIS install (WoA)
+            artifact: mesh-client-windows-${{ github.sha }}
+            smoke_run: >-
+              node scripts/assert-update-yml-artifacts.mjs --require latest.yml
+              && node scripts/test-win-nsis-install.mjs --arch arm64 --probe-7z
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: release
+
+      - name: Install squashfs-tools (cross-arch AppImage extract)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y squashfs-tools
+
+      - name: Run packaging smoke test
+        run: ${{ matrix.smoke_run }}
+
+      - name: Upload Windows x64 install failure logs
+        if: failure() && matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          name: mesh-client-win-x64-install-logs-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/mesh-client-install-x64.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload Windows arm64 install failure logs
+        if: failure() && matrix.os == 'windows-11-vs2026-arm'
+        uses: actions/upload-artifact@v7
+        with:
+          name: mesh-client-win-arm64-install-logs-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/mesh-client-install-arm64.log
+            ${{ runner.temp }}/mesh-client-7z-probe/**
+          if-no-files-found: ignore
+          retention-days: 7

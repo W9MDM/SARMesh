@@ -1,0 +1,5389 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { axe } from 'vitest-axe';
+
+import { hydrateAxeThemeColors } from '../lib/a11yTestHelpers';
+import * as chatNotifications from '../lib/chatNotifications';
+import {
+  draftsStorageKey,
+  lastReadStorageKey,
+  loadActiveChannelInitial,
+  saveActiveChannel,
+  saveDraft,
+} from '../lib/chatPanelProtocolStorage';
+import { CHAT_SCROLL_END_THRESHOLD, getDistFromChatBottom } from '../lib/chatScrollUtils';
+import i18n from '../lib/i18n';
+import { ensureLocaleLoaded } from '../lib/localeResources';
+import { messageRecordsToChatMessages } from '../lib/storeRecordAdapters';
+import type { ChatMessage, MeshNode } from '../lib/types';
+import type { MessageRecord } from '../stores/messageStore';
+import { useReticulumPeerStore } from '../stores/reticulumPeerStore';
+import ChatPanel from './ChatPanel';
+import { ToastProvider } from './Toast';
+
+const probeReticulumPeerMock = vi.hoisted(() => vi.fn());
+const requestReticulumPeerPathMock = vi.hoisted(() => vi.fn());
+const isReticulumSidecarRunningMock = vi.hoisted(() => vi.fn());
+const refreshReticulumPeersFromSidecarMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/renderer/lib/reticulum/reticulumSidecarReads', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    probeReticulumPeer: (...args: unknown[]) => probeReticulumPeerMock(...args),
+    requestReticulumPeerPath: (...args: unknown[]) => requestReticulumPeerPathMock(...args),
+    isReticulumSidecarRunning: (...args: unknown[]) => isReticulumSidecarRunningMock(...args),
+  };
+});
+
+vi.mock('@/renderer/stores/reticulumPeerStore', async (importOriginal) => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- vi.importOriginal needs typeof import()
+  const actual = await importOriginal<typeof import('@/renderer/stores/reticulumPeerStore')>();
+  return {
+    ...actual,
+    refreshReticulumPeersFromSidecar: (...args: unknown[]) =>
+      refreshReticulumPeersFromSidecarMock(...args),
+  };
+});
+
+async function waitForComposer(): Promise<HTMLTextAreaElement> {
+  const boxes = await screen.findAllByRole('textbox');
+  const textarea = boxes.find((el): el is HTMLTextAreaElement => el.tagName === 'TEXTAREA');
+  if (!textarea) throw new Error('Chat composer textarea not found');
+  return textarea;
+}
+
+vi.mock('../lib/chatNotifications', () => ({ playMessageNotification: vi.fn() }));
+
+let mockIsAtEnd = true;
+let mockScrollDirection: 'forward' | 'backward' | null = 'forward';
+const mockScrollToEnd = vi.fn();
+const mockScrollToIndex = vi.fn();
+let lastVirtualizerOptions: Record<string, unknown> | undefined;
+let lastVirtualizerInstance: Record<string, unknown> | undefined;
+
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: (opts: Record<string, unknown> & { count: number }) => {
+    lastVirtualizerOptions = opts;
+    const count = opts.count;
+    const instance = {
+      getVirtualItems: () =>
+        Array.from({ length: count }, (_, index) => ({
+          index,
+          key: index,
+          start: index * 96,
+        })),
+      getTotalSize: () => count * 96,
+      measureElement: () => {},
+      containerRef: { current: null },
+      isAtEnd: () => mockIsAtEnd,
+      scrollToEnd: mockScrollToEnd,
+      scrollToIndex: mockScrollToIndex,
+      get scrollDirection() {
+        return mockScrollDirection;
+      },
+      shouldAdjustScrollPositionOnItemSizeChange: undefined as
+        | ((
+            item: { index: number },
+            delta: number,
+            inst: { scrollDirection: string | null },
+          ) => boolean)
+        | undefined,
+    };
+    lastVirtualizerInstance = instance;
+    return instance;
+  },
+}));
+
+beforeEach(() => {
+  localStorage.clear();
+  mockIsAtEnd = true;
+  mockScrollDirection = 'forward';
+  mockScrollToEnd.mockClear();
+  mockScrollToIndex.mockClear();
+  lastVirtualizerOptions = undefined;
+  lastVirtualizerInstance = undefined;
+  probeReticulumPeerMock.mockReset();
+  probeReticulumPeerMock.mockResolvedValue({ ok: true, hops: 1 });
+  requestReticulumPeerPathMock.mockReset();
+  requestReticulumPeerPathMock.mockResolvedValue({ ok: true });
+  isReticulumSidecarRunningMock.mockReset();
+  isReticulumSidecarRunningMock.mockResolvedValue(true);
+  refreshReticulumPeersFromSidecarMock.mockReset();
+  refreshReticulumPeersFromSidecarMock.mockResolvedValue([]);
+});
+
+describe('ChatPanel accessibility', () => {
+  const defaultProps = {
+    messages: [],
+    channels: [{ index: 0, name: 'General' }],
+    myNodeNum: 0,
+    onSend: vi.fn().mockResolvedValue(undefined),
+    onReact: vi.fn().mockResolvedValue(undefined),
+    onResend: vi.fn(),
+    onNodeClick: vi.fn(),
+    isConnected: false,
+    nodes: new Map(),
+    isActive: true,
+  };
+
+  it('has no axe violations with empty messages', async () => {
+    const { container } = render(
+      <ToastProvider>
+        <ChatPanel {...defaultProps} />
+      </ToastProvider>,
+    );
+    await screen.findByPlaceholderText('Connect to send messages');
+    hydrateAxeThemeColors(container);
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it('does not render the top-right globe global-search button', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel {...defaultProps} />
+      </ToastProvider>,
+    );
+    expect(screen.queryByLabelText('Search all channels')).not.toBeInTheDocument();
+  });
+
+  it('clears message filter when search is closed', async () => {
+    const now = Date.now();
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          isConnected
+          messages={[
+            {
+              sender_id: 1,
+              sender_name: 'A',
+              payload: 'alpha message',
+              channel: 0,
+              timestamp: now - 2000,
+              status: 'acked',
+            },
+            {
+              sender_id: 1,
+              sender_name: 'A',
+              payload: 'beta message',
+              channel: 0,
+              timestamp: now - 1000,
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByLabelText('Search messages'));
+    const searchInput = screen.getByLabelText('Search messages...');
+    await user.type(searchInput, 'alpha');
+    await waitFor(() => {
+      expect(lastVirtualizerOptions?.count).toBe(1);
+    });
+    // Search highlight wraps matches in <mark>, so assert the highlighted token.
+    expect(screen.getByText('alpha')).toBeInTheDocument();
+    expect(screen.queryByText('beta message')).not.toBeInTheDocument();
+    await user.click(screen.getByLabelText('Search messages'));
+    expect(screen.queryByLabelText('Search messages...')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(lastVirtualizerOptions?.count).toBe(2);
+    });
+    expect(screen.getByText('alpha message')).toBeInTheDocument();
+    expect(screen.getByText('beta message')).toBeInTheDocument();
+  });
+
+  it('clears message filter via search clear button without closing search', async () => {
+    const now = Date.now();
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          isConnected
+          messages={[
+            {
+              sender_id: 1,
+              sender_name: 'A',
+              payload: 'alpha message',
+              channel: 0,
+              timestamp: now - 2000,
+              status: 'acked',
+            },
+            {
+              sender_id: 1,
+              sender_name: 'A',
+              payload: 'beta message',
+              channel: 0,
+              timestamp: now - 1000,
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByLabelText('Search messages'));
+    const searchInput = screen.getByLabelText('Search messages...');
+    await user.type(searchInput, 'alpha');
+    await waitFor(() => {
+      expect(lastVirtualizerOptions?.count).toBe(1);
+    });
+    await user.click(screen.getByLabelText('Clear'));
+    expect(searchInput).toHaveValue('');
+    await waitFor(() => {
+      expect(lastVirtualizerOptions?.count).toBe(2);
+    });
+    expect(screen.getByLabelText('Search messages...')).toBeInTheDocument();
+  });
+
+  it('emoji picker opens for the correct message when messages have no packetId', async () => {
+    // Messages without packetId must use timestamp as picker key so re-renders
+    // don't shift the picker to a different message (regression: was using -(i+1)).
+    const now = Date.now();
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          isConnected
+          myNodeNum={999}
+          messages={[
+            {
+              sender_id: 1,
+              sender_name: 'A',
+              payload: 'first',
+              channel: 0,
+              timestamp: now - 2000,
+              status: 'acked',
+            },
+            {
+              sender_id: 1,
+              sender_name: 'A',
+              payload: 'second',
+              channel: 0,
+              timestamp: now - 1000,
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    // Open picker for the second message (Linux default mock → emoji-picker-element)
+    const reactButtons = screen.getAllByTitle('React');
+    await user.click(reactButtons[1]);
+    await waitFor(() => {
+      expect(document.querySelector('emoji-picker')).toBeInTheDocument();
+    });
+  });
+
+  it('displays full hex ID for stub nodes with no short_name', () => {
+    // Regression: stub nodes (chat-only, no NodeInfo) were shown with only
+    // the last 4 hex chars of their ID (e.g. "4697") instead of the full
+    // "!be1f4697". This happened because short_name was set to hex.slice(-4)
+    // and ChatPanel preferred short_name over long_name.
+    const stubId = 0xbe1f4697;
+    const stubNode: MeshNode = {
+      node_id: stubId,
+      long_name: '!be1f4697',
+      short_name: '',
+      hw_model: '',
+      snr: 0,
+      battery: 0,
+      last_heard: Date.now(),
+      latitude: null,
+      longitude: null,
+    };
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          myNodeNum={1}
+          nodes={new Map([[stubId, stubNode]])}
+          messages={[
+            {
+              sender_id: stubId,
+              sender_name: '!be1f4697',
+              payload: 'Hello',
+              channel: 0,
+              timestamp: Date.now(),
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByText('!be1f4697')).toBeInTheDocument();
+    // The 4-char suffix should not appear as a standalone sender label
+    expect(screen.queryByText('4697')).not.toBeInTheDocument();
+  });
+
+  it('shows RF transport badge for incoming messages with receivedVia rf', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          myNodeNum={1}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Other',
+              payload: 'Hello',
+              channel: 0,
+              timestamp: Date.now(),
+              status: 'acked',
+              receivedVia: 'rf',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByTitle('Received via RF')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Received via RF' })).toBeInTheDocument();
+  });
+
+  it('shows hybrid RF + MQTT transport badge for incoming messages with receivedVia both', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          myNodeNum={1}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Other',
+              payload: 'Hello',
+              channel: 0,
+              timestamp: Date.now(),
+              status: 'acked',
+              receivedVia: 'both',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByTitle('Received via RF + MQTT')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Received via RF + MQTT' })).toBeInTheDocument();
+  });
+
+  it('shows Store & Forward badge alongside RF transport badge', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          myNodeNum={1}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Other',
+              payload: 'Cached hello',
+              channel: 0,
+              timestamp: Date.now(),
+              receivedVia: 'rf',
+              viaStoreForward: true,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByTitle('Replayed from Store & Forward')).toBeInTheDocument();
+    expect(screen.getByTitle('Received via RF')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Replayed from Store & Forward' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Received via RF' })).toBeInTheDocument();
+  });
+
+  it('shows RF transport badge in MeshCore mode', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="meshcore"
+          myNodeNum={1}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Other',
+              payload: 'Hello',
+              channel: 0,
+              timestamp: Date.now(),
+              status: 'acked',
+              receivedVia: 'rf',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.queryByTitle('Received via RF')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Received via RF' })).toBeInTheDocument();
+  });
+
+  it('still shows MQTT transport badge in MeshCore mode when receivedVia is mqtt', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="meshcore"
+          myNodeNum={1}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Other',
+              payload: 'Hello',
+              channel: 0,
+              timestamp: Date.now(),
+              status: 'acked',
+              receivedVia: 'mqtt',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByTitle('Received via MQTT')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Received via MQTT' })).toBeInTheDocument();
+  });
+
+  it('localizes MeshCore Unknown sender sentinel via common.unknown', async () => {
+    await ensureLocaleLoaded(i18n, 'es');
+    await i18n.changeLanguage('es');
+    try {
+      expect(i18n.t('common.unknown')).toBe('Desconocido');
+      render(
+        <ToastProvider>
+          <ChatPanel
+            {...defaultProps}
+            protocol="meshcore"
+            myNodeNum={1}
+            messages={[
+              {
+                sender_id: 2,
+                sender_name: 'Unknown',
+                payload: 'hola',
+                channel: 0,
+                timestamp: Date.now(),
+                status: 'acked',
+              },
+            ]}
+          />
+        </ToastProvider>,
+      );
+      expect(screen.getByRole('button', { name: 'Desconocido' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Unknown' })).not.toBeInTheDocument();
+    } finally {
+      await i18n.changeLanguage('en');
+    }
+  });
+
+  it.each(['meshtastic', 'reticulum'] as const)(
+    'preserves literal Unknown sender name for %s',
+    async (protocol) => {
+      await ensureLocaleLoaded(i18n, 'es');
+      await i18n.changeLanguage('es');
+      try {
+        render(
+          <ToastProvider>
+            <ChatPanel
+              {...defaultProps}
+              protocol={protocol}
+              myNodeNum={1}
+              {...(protocol === 'reticulum'
+                ? { dmOnlyChat: true, ownNodeIds: [1], initialDmTarget: 2 }
+                : {})}
+              messages={[
+                {
+                  sender_id: 2,
+                  sender_name: 'Unknown',
+                  payload: 'hello',
+                  channel: 0,
+                  timestamp: Date.now(),
+                  status: 'acked',
+                },
+              ]}
+            />
+          </ToastProvider>,
+        );
+        expect(screen.getByRole('button', { name: 'Unknown' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Desconocido' })).not.toBeInTheDocument();
+      } finally {
+        await i18n.changeLanguage('en');
+      }
+    },
+  );
+
+  it('shows Reticulum RF/TCP/network transport badges for incoming messages', async () => {
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="reticulum"
+          dmOnlyChat
+          myNodeNum={1}
+          ownNodeIds={[1]}
+          initialDmTarget={2}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Peer',
+              payload: 'RF hello',
+              channel: 0,
+              timestamp: Date.now(),
+              status: 'acked',
+              receivedVia: 'rf',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByTitle('Received via RF')).toBeInTheDocument();
+    });
+
+    rerender(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="reticulum"
+          dmOnlyChat
+          myNodeNum={1}
+          ownNodeIds={[1]}
+          initialDmTarget={2}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Peer',
+              payload: 'TCP hello',
+              channel: 0,
+              timestamp: Date.now(),
+              status: 'acked',
+              receivedVia: 'tcp',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByLabelText('Received via TCP')).toHaveTextContent('TCP');
+    });
+
+    rerender(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="reticulum"
+          dmOnlyChat
+          myNodeNum={1}
+          ownNodeIds={[1]}
+          initialDmTarget={2}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Peer',
+              payload: 'Network hello',
+              channel: 0,
+              timestamp: Date.now(),
+              status: 'acked',
+              receivedVia: 'network',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByTitle('Received via network')).toBeInTheDocument();
+    });
+  });
+
+  it('shows Reticulum outbound transport status for own messages', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="reticulum"
+          dmOnlyChat
+          isConnected
+          showLxmfDeliveryStatus
+          myNodeNum={42}
+          messages={[
+            {
+              sender_id: 42,
+              sender_name: 'Self',
+              payload: 'Outbound',
+              channel: 0,
+              timestamp: Date.now(),
+              status: 'acked',
+              receivedVia: 'tcp',
+              to: 2,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByText(/TCP/)).toBeInTheDocument();
+  });
+
+  it('shows explicit multi-egress Reticulum outbound badge (RF+TCP)', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="reticulum"
+          dmOnlyChat
+          isConnected
+          showLxmfDeliveryStatus
+          myNodeNum={42}
+          messages={[
+            {
+              sender_id: 42,
+              sender_name: 'Self',
+              payload: 'Outbound dual',
+              channel: 0,
+              timestamp: Date.now(),
+              status: 'sending',
+              receivedVia: 'rf+tcp',
+              to: 2,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByText(/RF\+TCP/)).toBeInTheDocument();
+  });
+
+  it('surfaces incoming DM conversations and renders them in DM view', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="meshtastic"
+          isConnected
+          myNodeNum={1}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'Private hello',
+              channel: -1,
+              timestamp: Date.now(),
+              status: 'acked',
+              to: 1,
+            },
+          ]}
+          nodes={
+            new Map([
+              [
+                2,
+                {
+                  node_id: 2,
+                  long_name: 'Alice',
+                  short_name: '',
+                  hw_model: '',
+                  snr: 0,
+                  battery: 0,
+                  last_heard: Date.now(),
+                  latitude: null,
+                  longitude: null,
+                },
+              ],
+            ])
+          }
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.queryByText('Private hello')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Alice' }));
+    await waitFor(() => {
+      expect(screen.getByText('Private hello')).toBeInTheDocument();
+    });
+  });
+
+  it('shows close button for inferred DM tabs in Meshtastic', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="meshtastic"
+          isConnected
+          myNodeNum={1}
+          nodes={
+            new Map([
+              [
+                2,
+                {
+                  node_id: 2,
+                  long_name: 'Alice',
+                  short_name: 'Alice',
+                  hw_model: '',
+                  snr: 0,
+                  battery: 0,
+                  last_heard: Date.now(),
+                  latitude: null,
+                  longitude: null,
+                },
+              ],
+            ])
+          }
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'Private hello',
+              channel: -1,
+              timestamp: Date.now(),
+              status: 'acked',
+              to: 1,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.getByTitle('Close DM')).toBeInTheDocument();
+  });
+
+  it('does not infer a DM tab for Meshtastic broadcast (!ffffffff)', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="meshtastic"
+          isConnected
+          myNodeNum={1}
+          messages={[
+            {
+              sender_id: 1,
+              sender_name: 'Me',
+              payload: 'history request',
+              channel: 0,
+              timestamp: Date.now(),
+              to: 0xffffffff,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.queryByText('!ffffffff')).not.toBeInTheDocument();
+    expect(screen.getByText('No conversations yet')).toBeInTheDocument();
+  });
+
+  it('allows closing inferred DM tab and resurfaces on subsequent message (even if timestamp is stale)', async () => {
+    const user = userEvent.setup();
+    const firstTs = Date.now();
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="meshtastic"
+          isConnected
+          myNodeNum={1}
+          nodes={
+            new Map([
+              [
+                2,
+                {
+                  node_id: 2,
+                  long_name: 'Alice',
+                  short_name: 'Alice',
+                  hw_model: '',
+                  snr: 0,
+                  battery: 0,
+                  last_heard: Date.now(),
+                  latitude: null,
+                  longitude: null,
+                },
+              ],
+            ])
+          }
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'First DM',
+              channel: -1,
+              timestamp: firstTs,
+              status: 'acked',
+              to: 1,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Alice' })).toBeInTheDocument();
+    await user.click(screen.getByTitle('Close DM'));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Alice' })).toBeInTheDocument();
+    });
+
+    rerender(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          isConnected
+          myNodeNum={1}
+          nodes={
+            new Map([
+              [
+                2,
+                {
+                  node_id: 2,
+                  long_name: 'Alice',
+                  short_name: 'Alice',
+                  hw_model: '',
+                  snr: 0,
+                  battery: 0,
+                  last_heard: Date.now(),
+                  latitude: null,
+                  longitude: null,
+                },
+              ],
+            ])
+          }
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'First DM',
+              channel: -1,
+              timestamp: firstTs,
+              status: 'acked',
+              to: 1,
+            },
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'Second DM',
+              channel: -1,
+              // Must resurface even if timestamp is not newer (regression: older/stale timestamps
+              // can happen across transports/hydration).
+              timestamp: firstTs,
+              status: 'acked',
+              to: 1,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Alice' })).toBeInTheDocument();
+  });
+
+  it('shows close button for inferred DM tabs in MeshCore', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="meshcore"
+          isConnected
+          myNodeNum={1}
+          nodes={
+            new Map([
+              [
+                2,
+                {
+                  node_id: 2,
+                  long_name: 'Alice',
+                  short_name: 'Alice',
+                  hw_model: '',
+                  snr: 0,
+                  battery: 0,
+                  last_heard: Date.now(),
+                  latitude: null,
+                  longitude: null,
+                },
+              ],
+            ])
+          }
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'Private hello',
+              channel: -1,
+              timestamp: Date.now(),
+              status: 'acked',
+              to: 1,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.getByTitle('Close DM')).toBeInTheDocument();
+  });
+
+  it('allows closing inferred DM tab in MeshCore and does not resurface without new messages', async () => {
+    const user = userEvent.setup();
+    const ts = Date.now();
+    localStorage.setItem('mesh-client:lastRead:meshcore', JSON.stringify({ 'dm:2': ts }));
+    const messages = [
+      {
+        sender_id: 2,
+        sender_name: 'Alice',
+        payload: 'Private hello',
+        channel: -1,
+        timestamp: ts,
+        status: 'acked' as const,
+        to: 1,
+      },
+    ];
+    const nodes = new Map([
+      [
+        2,
+        {
+          node_id: 2,
+          long_name: 'Alice',
+          short_name: 'Alice',
+          hw_model: '',
+          snr: 0,
+          battery: 0,
+          last_heard: Date.now(),
+          latitude: null,
+          longitude: null,
+        },
+      ],
+    ]);
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="meshcore"
+          isConnected
+          myNodeNum={1}
+          nodes={nodes}
+          messages={messages}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Alice' })).toBeInTheDocument();
+    await user.click(screen.getByTitle('Close DM'));
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Alice' })).not.toBeInTheDocument();
+    });
+
+    // Re-render with same messages — tab should stay dismissed
+    rerender(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="meshcore"
+          isConnected
+          myNodeNum={1}
+          nodes={nodes}
+          messages={messages}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Alice' })).not.toBeInTheDocument();
+  });
+
+  it('shows Jump to Latest when content overflows without manual scroll event', async () => {
+    const baseTs = Date.now() - 50_000;
+    const longMessages = Array.from({ length: 30 }, (_, idx) => ({
+      sender_id: idx % 2 === 0 ? 2 : 1,
+      sender_name: idx % 2 === 0 ? 'Alice' : 'Me',
+      payload: `message ${idx} `.repeat(20),
+      channel: 0,
+      timestamp: baseTs + idx * 1000,
+      status: 'acked' as const,
+    }));
+
+    const { container } = render(
+      <ToastProvider>
+        <ChatPanel {...defaultProps} isConnected myNodeNum={1} messages={longMessages} />
+      </ToastProvider>,
+    );
+
+    const scrollContainer = container.querySelector('div.overflow-y-auto')!;
+    Object.defineProperty(scrollContainer, 'scrollHeight', { value: 2000, configurable: true });
+    Object.defineProperty(scrollContainer, 'clientHeight', { value: 400, configurable: true });
+    Object.defineProperty(scrollContainer, 'scrollTop', {
+      value: 0,
+      writable: true,
+      configurable: true,
+    });
+
+    // The useLayoutEffect RAF already fired during render() before mock properties were
+    // set. Fire a scroll event so handleScroll re-evaluates with the mocked dimensions.
+    fireEvent.scroll(scrollContainer);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Jump to Latest' })).toBeInTheDocument();
+    });
+  });
+
+  it('shows Jump to Latest when slightly scrolled from bottom', async () => {
+    const baseTs = Date.now() - 50_000;
+    const longMessages = Array.from({ length: 30 }, (_, idx) => ({
+      sender_id: idx % 2 === 0 ? 2 : 1,
+      sender_name: idx % 2 === 0 ? 'Alice' : 'Me',
+      payload: `message ${idx} `.repeat(20),
+      channel: 0,
+      timestamp: baseTs + idx * 1000,
+      status: 'acked' as const,
+    }));
+
+    const { container } = render(
+      <ToastProvider>
+        <ChatPanel {...defaultProps} isConnected myNodeNum={1} messages={longMessages} />
+      </ToastProvider>,
+    );
+
+    const scrollContainer = container.querySelector('div.overflow-y-auto')!;
+    Object.defineProperty(scrollContainer, 'scrollHeight', { value: 2000, configurable: true });
+    Object.defineProperty(scrollContainer, 'clientHeight', { value: 400, configurable: true });
+    // distFromBottom = 300 → showScrollButton on (>200), label should be "Jump to Latest" (no divider)
+    Object.defineProperty(scrollContainer, 'scrollTop', {
+      value: 1300,
+      writable: true,
+      configurable: true,
+    });
+    fireEvent.scroll(scrollContainer);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Jump to Latest' })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: 'Jump to Unread' })).not.toBeInTheDocument();
+  });
+
+  it('queues failed send to outbox when onSend rejects', async () => {
+    const user = userEvent.setup();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const onSend = vi.fn().mockRejectedValue(new Error('send failed'));
+    render(
+      <ToastProvider>
+        <ChatPanel {...defaultProps} isConnected onSend={onSend} />
+      </ToastProvider>,
+    );
+    const input = screen.getByPlaceholderText('Enter message here');
+    await user.type(input, 'hello');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(onSend).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByText('hello')).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Failed|Queued/)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/\[ChatComposer\].*Send failed/s),
+    );
+    consoleErrorSpy.mockRestore();
+  });
+});
+
+describe('ChatPanel compact mode', () => {
+  const defaultProps = {
+    messages: [] as ChatMessage[],
+    channels: [{ index: 0, name: 'General' }],
+    myNodeNum: 1,
+    onSend: vi.fn().mockResolvedValue(undefined),
+    onReact: vi.fn().mockResolvedValue(undefined),
+    onResend: vi.fn(),
+    onNodeClick: vi.fn(),
+    isConnected: true,
+    nodes: new Map(),
+    isActive: true,
+    compactMode: true,
+  };
+
+  it('merges consecutive same-sender channel bubbles and shows only one sender header', () => {
+    const base = new Date('2026-05-09T12:00:00').getTime();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'JCR2',
+              payload: 'Painting the front door',
+              channel: 0,
+              timestamp: base,
+              status: 'acked',
+            },
+            {
+              sender_id: 2,
+              sender_name: 'JCR2',
+              payload: 'Test 123',
+              channel: 0,
+              timestamp: base + 10 * 60 * 1000,
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.getAllByRole('button', { name: 'JCR2' })).toHaveLength(1);
+    expect(screen.getByText('Painting the front door')).toBeInTheDocument();
+    expect(screen.getByText('Test 123')).toBeInTheDocument();
+  });
+
+  it('renders compact continuation segment with flush top border so bubbles visually merge', () => {
+    const base = new Date('2026-05-09T12:00:00').getTime();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'JCR2',
+              payload: 'first line',
+              channel: 0,
+              timestamp: base,
+              status: 'acked',
+            },
+            {
+              sender_id: 2,
+              sender_name: 'JCR2',
+              payload: 'second line',
+              channel: 0,
+              timestamp: base + 60_000,
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    const firstBubble = screen.getByText('first line').closest('.rounded-b-none');
+    const secondBubble = screen.getByText('second line').closest('.rounded-t-none');
+    expect(firstBubble).not.toBeNull();
+    expect(secondBubble).not.toBeNull();
+    expect(firstBubble).toHaveClass('border-b-0');
+    expect(secondBubble).toHaveClass('border-t-0');
+  });
+});
+
+describe('getDistFromChatBottom', () => {
+  it('uses inner scroller when it overflows', () => {
+    const inner = document.createElement('div');
+    Object.defineProperty(inner, 'scrollHeight', { value: 500, configurable: true });
+    Object.defineProperty(inner, 'clientHeight', { value: 100, configurable: true });
+    inner.scrollTop = 50;
+    expect(getDistFromChatBottom(inner, null, null)).toBe(350);
+  });
+
+  it('uses max of inner and sentinel when inner is at bottom but end is below outer root', () => {
+    const inner = document.createElement('div');
+    Object.defineProperty(inner, 'scrollHeight', { value: 500, configurable: true });
+    Object.defineProperty(inner, 'clientHeight', { value: 100, configurable: true });
+    inner.scrollTop = 400;
+
+    const root = document.createElement('div');
+    const end = document.createElement('div');
+    vi.spyOn(root, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      left: 0,
+      right: 800,
+      bottom: 600,
+      width: 800,
+      height: 600,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    vi.spyOn(end, 'getBoundingClientRect').mockReturnValue({
+      top: 100,
+      left: 0,
+      right: 400,
+      bottom: 680,
+      width: 400,
+      height: 580,
+      x: 0,
+      y: 100,
+      toJSON: () => ({}),
+    });
+    expect(getDistFromChatBottom(inner, end, root)).toBe(80);
+  });
+
+  it('uses message end vs outer root when inner does not overflow', () => {
+    const inner = document.createElement('div');
+    Object.defineProperty(inner, 'scrollHeight', { value: 400, configurable: true });
+    Object.defineProperty(inner, 'clientHeight', { value: 400, configurable: true });
+
+    const root = document.createElement('div');
+    const end = document.createElement('div');
+    vi.spyOn(root, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      left: 0,
+      right: 800,
+      bottom: 600,
+      width: 800,
+      height: 600,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    vi.spyOn(end, 'getBoundingClientRect').mockReturnValue({
+      top: 100,
+      left: 0,
+      right: 400,
+      bottom: 750,
+      width: 400,
+      height: 650,
+      x: 0,
+      y: 100,
+      toJSON: () => ({}),
+    });
+    expect(getDistFromChatBottom(inner, end, root)).toBe(150);
+  });
+});
+
+describe('ChatPanel scroll pinning', () => {
+  const baseProps = {
+    channels: [{ index: 0, name: 'General' }],
+    myNodeNum: 1,
+    onSend: vi.fn().mockResolvedValue(undefined),
+    onReact: vi.fn().mockResolvedValue(undefined),
+    onResend: vi.fn(),
+    onNodeClick: vi.fn(),
+    isConnected: true,
+    nodes: new Map(),
+    isActive: true,
+  };
+
+  const makeMsg = (idx: number): ChatMessage => ({
+    sender_id: 2,
+    sender_name: 'Alice',
+    payload: `message ${idx}`,
+    channel: 0,
+    timestamp: Date.now() - (100 - idx) * 1000,
+    status: 'acked',
+  });
+
+  it('configures TanStack Virtual with chat scroll contract', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[makeMsg(0)]} />
+      </ToastProvider>,
+    );
+    expect(lastVirtualizerOptions?.anchorTo).toBe('end');
+    expect(lastVirtualizerOptions?.followOnAppend).toBe(true);
+    expect(lastVirtualizerOptions?.scrollEndThreshold).toBe(CHAT_SCROLL_END_THRESHOLD);
+    expect(lastVirtualizerOptions?.measureElement).toBeTypeOf('function');
+    const adjust = lastVirtualizerInstance?.shouldAdjustScrollPositionOnItemSizeChange as (
+      item: { index: number },
+      delta: number,
+      instance: {
+        scrollDirection: 'forward' | 'backward' | null;
+        isAtEnd: () => boolean;
+      },
+    ) => boolean;
+    expect(adjust).toBeTypeOf('function');
+    expect(adjust({ index: 0 }, 0, { scrollDirection: 'forward', isAtEnd: () => true })).toBe(true);
+    expect(adjust({ index: 0 }, 0, { scrollDirection: 'backward', isAtEnd: () => true })).toBe(
+      false,
+    );
+    expect(adjust({ index: 0 }, 0, { scrollDirection: 'forward', isAtEnd: () => false })).toBe(
+      false,
+    );
+  });
+
+  it('scrolls to unread via scrollToIndex on view switch, not scrollIntoView', async () => {
+    mockIsAtEnd = false;
+    const scrollIntoView = vi.fn();
+    vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(scrollIntoView);
+
+    const ts = Date.now();
+    localStorage.setItem(lastReadStorageKey('meshtastic'), JSON.stringify({ 'ch:0': ts - 5000 }));
+
+    const messages: ChatMessage[] = [
+      {
+        sender_id: 1,
+        sender_name: 'Me',
+        payload: 'Old message',
+        channel: 0,
+        timestamp: ts - 3000,
+        status: 'acked',
+      },
+      {
+        sender_id: 2,
+        sender_name: 'Alice',
+        payload: 'Unread message',
+        channel: 0,
+        timestamp: ts,
+        status: 'acked',
+      },
+    ];
+
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={messages} />
+      </ToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect(mockScrollToIndex).toHaveBeenCalledWith(1, { align: 'center' });
+    });
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it('Jump to Unread uses scrollToIndex with align start', async () => {
+    mockIsAtEnd = false;
+    const user = userEvent.setup();
+    const ts = Date.now();
+    localStorage.setItem(lastReadStorageKey('meshtastic'), JSON.stringify({ 'ch:0': ts - 5000 }));
+
+    const messages: ChatMessage[] = [
+      {
+        sender_id: 1,
+        sender_name: 'Me',
+        payload: 'Old message',
+        channel: 0,
+        timestamp: ts - 3000,
+        status: 'acked',
+      },
+      {
+        sender_id: 2,
+        sender_name: 'Alice',
+        payload: 'Unread message',
+        channel: 0,
+        timestamp: ts,
+        status: 'acked',
+      },
+    ];
+
+    const { container } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={messages} />
+      </ToastProvider>,
+    );
+
+    mockScrollToIndex.mockClear();
+
+    const scrollContainer = container.querySelector('div.overflow-y-auto')!;
+    Object.defineProperty(scrollContainer, 'scrollHeight', { value: 2000, configurable: true });
+    Object.defineProperty(scrollContainer, 'clientHeight', { value: 400, configurable: true });
+    Object.defineProperty(scrollContainer, 'scrollTop', {
+      value: 0,
+      writable: true,
+      configurable: true,
+    });
+    fireEvent.scroll(scrollContainer);
+
+    await user.click(await screen.findByRole('button', { name: 'Jump to Unread' }));
+
+    expect(mockScrollToIndex).toHaveBeenCalledWith(1, { align: 'start', behavior: 'smooth' });
+  });
+
+  it('dismisses unread divider when scrolled past without marking read until near bottom', async () => {
+    mockIsAtEnd = false;
+    const ts = Date.now();
+    localStorage.setItem(lastReadStorageKey('meshtastic'), JSON.stringify({ 'ch:0': ts - 5000 }));
+
+    const messages: ChatMessage[] = [
+      {
+        sender_id: 1,
+        sender_name: 'Me',
+        payload: 'Old message',
+        channel: 0,
+        timestamp: ts - 3000,
+        status: 'acked',
+      },
+      {
+        sender_id: 2,
+        sender_name: 'Alice',
+        payload: 'Unread message',
+        channel: 0,
+        timestamp: ts,
+        status: 'acked',
+      },
+    ];
+
+    const { container } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={messages} />
+      </ToastProvider>,
+    );
+
+    const scrollContainer = container.querySelector('div.overflow-y-auto')!;
+    Object.defineProperty(scrollContainer, 'scrollHeight', { value: 2000, configurable: true });
+    Object.defineProperty(scrollContainer, 'clientHeight', { value: 400, configurable: true });
+    Object.defineProperty(scrollContainer, 'scrollTop', {
+      value: 0,
+      writable: true,
+      configurable: true,
+    });
+
+    await screen.findByText('New messages');
+
+    Object.defineProperty(scrollContainer, 'scrollTop', {
+      value: 1500,
+      writable: true,
+      configurable: true,
+    });
+
+    const divider = container.querySelector('[class*="border-red-500"]')?.parentElement;
+    expect(divider).toBeTruthy();
+    vi.spyOn(scrollContainer, 'getBoundingClientRect').mockReturnValue({
+      top: 100,
+      bottom: 500,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 400,
+      x: 0,
+      y: 100,
+      toJSON: () => ({}),
+    });
+    vi.spyOn(divider!, 'getBoundingClientRect').mockReturnValue({
+      top: 50,
+      bottom: 90,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 40,
+      x: 0,
+      y: 50,
+      toJSON: () => ({}),
+    });
+
+    fireEvent.scroll(scrollContainer);
+
+    await waitFor(() => {
+      expect(screen.queryByText('New messages')).not.toBeInTheDocument();
+    });
+
+    const stored = JSON.parse(
+      localStorage.getItem(lastReadStorageKey('meshtastic')) ?? '{}',
+    ) as Record<string, number>;
+    expect(stored['ch:0']).toBe(ts - 5000);
+  });
+
+  it('does not scroll to end when message count increases while reading history', async () => {
+    mockIsAtEnd = false;
+    const scrollIntoView = vi.fn();
+    vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(scrollIntoView);
+
+    const initial = Array.from({ length: 5 }, (_, i) => makeMsg(i));
+    const { container, rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={initial} />
+      </ToastProvider>,
+    );
+
+    const scrollContainer = container.querySelector('div.overflow-y-auto')!;
+    Object.defineProperty(scrollContainer, 'scrollHeight', { value: 2000, configurable: true });
+    Object.defineProperty(scrollContainer, 'clientHeight', { value: 400, configurable: true });
+    Object.defineProperty(scrollContainer, 'scrollTop', {
+      value: 0,
+      writable: true,
+      configurable: true,
+    });
+    fireEvent.scroll(scrollContainer);
+
+    mockScrollToEnd.mockClear();
+    scrollIntoView.mockClear();
+
+    const more = [...initial, makeMsg(5), makeMsg(6)];
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={more} />
+      </ToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect(mockScrollToEnd).not.toHaveBeenCalled();
+    });
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it.each(
+    (['linux', 'darwin', 'win32'] as const).flatMap((platform) =>
+      (
+        [
+          { protocol: 'meshtastic', view: 'channel' },
+          { protocol: 'meshtastic', view: 'dm' },
+          { protocol: 'meshcore', view: 'channel' },
+          { protocol: 'meshcore', view: 'dm' },
+          { protocol: 'reticulum', view: 'dm' },
+        ] as const
+      ).map((chat) => ({ platform, ...chat })),
+    ),
+  )(
+    'preserves a small scroll away from latest through repeated $protocol $view arrivals on $platform',
+    async ({ platform, protocol, view }) => {
+      vi.mocked(window.electronAPI.getPlatform).mockReturnValue(platform);
+      const props = {
+        ...baseProps,
+        protocol,
+        dmOnlyChat: protocol === 'reticulum',
+        initialDmTarget: view === 'dm' ? 2 : undefined,
+        ownNodeIds: [1],
+      };
+      const makeViewMessage = (index: number): ChatMessage => ({
+        ...makeMsg(index),
+        ...(view === 'dm' ? { channel: -1, to: 1 } : {}),
+      });
+      let messages = Array.from({ length: 5 }, (_, i) => makeViewMessage(i));
+      const { container, rerender } = render(
+        <ToastProvider>
+          <ChatPanel {...props} messages={messages} />
+        </ToastProvider>,
+      );
+      const stream = container.querySelector<HTMLDivElement>('div.overflow-y-auto')!;
+      Object.defineProperties(stream, {
+        scrollHeight: { value: 2000, configurable: true },
+        clientHeight: { value: 400, configurable: true },
+        scrollTop: { value: 1600, writable: true, configurable: true },
+      });
+      for (const distance of [3, 8, 60, 150]) {
+        stream.scrollTop = 1600 - distance;
+        fireEvent.scroll(stream);
+        mockScrollToEnd.mockClear();
+        messages = [...messages, makeViewMessage(messages.length)];
+        rerender(
+          <ToastProvider>
+            <ChatPanel {...props} messages={messages} />
+          </ToastProvider>,
+        );
+        await waitFor(() => {
+          expect(screen.getByText(messages.at(-1)!.payload)).toBeInTheDocument();
+          expect(
+            screen.getByRole('button', { name: /Jump to (Latest|Unread)/ }),
+          ).toBeInTheDocument();
+        });
+        expect(mockScrollToEnd).not.toHaveBeenCalled();
+        expect(stream.scrollTop).toBe(1600 - distance);
+      }
+      stream.scrollTop = 1600 - 2;
+      fireEvent.scroll(stream);
+      mockScrollToEnd.mockClear();
+      messages = [...messages, makeViewMessage(messages.length)];
+      rerender(
+        <ToastProvider>
+          <ChatPanel {...props} messages={messages} />
+        </ToastProvider>,
+      );
+      await waitFor(() => {
+        expect(mockScrollToEnd).toHaveBeenCalled();
+      });
+    },
+  );
+
+  it('shows Jump to Latest when virtualizer reports not at end', async () => {
+    mockIsAtEnd = false;
+    const longMessages = Array.from({ length: 20 }, (_, idx) => makeMsg(idx));
+
+    const { container } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={longMessages} />
+      </ToastProvider>,
+    );
+
+    const scrollContainer = container.querySelector('div.overflow-y-auto')!;
+    Object.defineProperty(scrollContainer, 'scrollHeight', { value: 2000, configurable: true });
+    Object.defineProperty(scrollContainer, 'clientHeight', { value: 400, configurable: true });
+    Object.defineProperty(scrollContainer, 'scrollTop', {
+      value: 0,
+      writable: true,
+      configurable: true,
+    });
+
+    fireEvent.scroll(scrollContainer);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Jump to Latest' })).toBeInTheDocument();
+    });
+  });
+
+  it('jumps to quoted parent via scrollToIndex, not scrollIntoView', async () => {
+    mockScrollToIndex.mockClear();
+    const scrollIntoView = vi.fn();
+    vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(scrollIntoView);
+    const t0 = Date.now() - 5000;
+    const t1 = t0 + 1000;
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'original',
+              channel: 0,
+              timestamp: t0,
+              packetId: 77,
+              status: 'acked',
+            },
+            {
+              sender_id: 3,
+              sender_name: 'Bob',
+              payload: 'reply text',
+              channel: 0,
+              timestamp: t1,
+              replyId: 77,
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByRole('button', { name: /Jump to quoted message from Alice/i }));
+    expect(mockScrollToIndex).toHaveBeenCalledWith(0, { align: 'center', behavior: 'smooth' });
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it('restores scrollTop on tab re-entry instead of leaving it at the value set while hidden', () => {
+    mockIsAtEnd = false;
+    const { container, rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[makeMsg(0)]} isActive />
+      </ToastProvider>,
+    );
+
+    const scrollContainer = container.querySelector('div.overflow-y-auto')!;
+    Object.defineProperty(scrollContainer, 'scrollTop', {
+      value: 500,
+      writable: true,
+      configurable: true,
+    });
+    fireEvent.scroll(scrollContainer);
+
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[makeMsg(0)]} isActive={false} />
+      </ToastProvider>,
+    );
+
+    // Simulate the scroll position drifting while the tab is hidden (e.g. a stale
+    // virtualizer recalculation against the collapsed 0x0 `display: none` container).
+    (scrollContainer as HTMLDivElement).scrollTop = 0;
+
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[makeMsg(0)]} isActive />
+      </ToastProvider>,
+    );
+
+    expect((scrollContainer as HTMLDivElement).scrollTop).toBe(500);
+  });
+
+  it('scrolls to end on tab re-entry when pinned and messages grew while away', () => {
+    mockIsAtEnd = true;
+    const initialMessages = Array.from({ length: 5 }, (_, i) => makeMsg(i));
+    const { container, rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={initialMessages} isActive />
+      </ToastProvider>,
+    );
+
+    const scrollContainer = container.querySelector('div.overflow-y-auto')!;
+    Object.defineProperty(scrollContainer, 'scrollTop', {
+      value: 400,
+      writable: true,
+      configurable: true,
+    });
+    fireEvent.scroll(scrollContainer);
+
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={initialMessages} isActive={false} />
+      </ToastProvider>,
+    );
+
+    mockScrollToEnd.mockClear();
+    mockScrollToEnd.mockImplementation(() => {
+      (scrollContainer as HTMLDivElement).scrollTop = 900;
+    });
+
+    const messagesWhileAway = Array.from({ length: 10 }, (_, i) => makeMsg(i));
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={messagesWhileAway} isActive />
+      </ToastProvider>,
+    );
+
+    expect(mockScrollToEnd).toHaveBeenCalled();
+    expect((scrollContainer as HTMLDivElement).scrollTop).toBe(900);
+  });
+
+  it('restores raw scrollTop on tab re-entry instead of re-centering on a still-present unread divider', () => {
+    mockIsAtEnd = false;
+    const ts = Date.now();
+    localStorage.setItem(lastReadStorageKey('meshtastic'), JSON.stringify({ 'ch:0': ts - 5000 }));
+
+    const messages: ChatMessage[] = [
+      {
+        sender_id: 1,
+        sender_name: 'Me',
+        payload: 'Old message',
+        channel: 0,
+        timestamp: ts - 3000,
+        status: 'acked',
+      },
+      {
+        sender_id: 2,
+        sender_name: 'Alice',
+        payload: 'Unread message',
+        channel: 0,
+        timestamp: ts,
+        status: 'acked',
+      },
+    ];
+
+    const { container, rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={messages} isActive />
+      </ToastProvider>,
+    );
+
+    const scrollContainer = container.querySelector('div.overflow-y-auto')!;
+    // Keep distFromBottom large so applyNearBottomReadState doesn't clear the
+    // divider via setUnreadDividerTimestamp(0) before the test exercises it.
+    Object.defineProperty(scrollContainer, 'scrollHeight', { value: 2000, configurable: true });
+    Object.defineProperty(scrollContainer, 'clientHeight', { value: 400, configurable: true });
+    Object.defineProperty(scrollContainer, 'scrollTop', {
+      value: 250,
+      writable: true,
+      configurable: true,
+    });
+    fireEvent.scroll(scrollContainer);
+
+    mockScrollToIndex.mockClear();
+
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={messages} isActive={false} />
+      </ToastProvider>,
+    );
+
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={messages} isActive />
+      </ToastProvider>,
+    );
+
+    // A bare tab return must not re-fire the unread-divider scroll (it would
+    // clobber the restored position with a re-center on the divider — the jump).
+    expect(mockScrollToIndex).not.toHaveBeenCalled();
+    expect((scrollContainer as HTMLDivElement).scrollTop).toBe(250);
+  });
+});
+
+describe('ChatPanel StatusBadge', () => {
+  const baseProps = {
+    messages: [],
+    channels: [{ index: 0, name: 'General' }],
+    myNodeNum: 1,
+    onSend: vi.fn().mockResolvedValue(undefined),
+    onReact: vi.fn().mockResolvedValue(undefined),
+    onResend: vi.fn(),
+    onNodeClick: vi.fn(),
+    isConnected: true,
+    nodes: new Map(),
+    isActive: true,
+  };
+
+  const failedMsg = {
+    sender_id: 1,
+    sender_name: 'Me',
+    payload: 'Hello',
+    channel: 0,
+    timestamp: Date.now(),
+    status: 'failed' as const,
+  };
+
+  it('renders "USB no ACK" with a space (not "USBno ACK") for serial failed messages', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} connectionType="serial" messages={[failedMsg]} />
+      </ToastProvider>,
+    );
+    expect(screen.getByText('USB no ACK')).toBeInTheDocument();
+    expect(screen.queryByText('USBno ACK')).not.toBeInTheDocument();
+  });
+
+  it('passes full message to onResend so App can forward replyId', async () => {
+    const user = userEvent.setup();
+    const onResend = vi.fn();
+    const failedWithReply = {
+      ...failedMsg,
+      replyId: 4242,
+      packetId: 99,
+    };
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} onResend={onResend} messages={[failedWithReply]} />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByTitle('Resend message'));
+    expect(onResend).toHaveBeenCalledTimes(1);
+    expect(onResend.mock.calls[0][0]).toMatchObject({
+      payload: 'Hello',
+      replyId: 4242,
+      channel: 0,
+    });
+  });
+
+  it('does not show Resend for Reticulum messages that are still sending', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="reticulum"
+          messages={[{ ...failedMsg, status: 'sending' }]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.queryByTitle('Resend message')).not.toBeInTheDocument();
+  });
+
+  it('shows Resend for failed Reticulum messages', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="reticulum"
+          messages={[{ ...failedMsg, status: 'failed', storeId: 'reticulum-pending-1' }]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByTitle('Resend message')).toBeInTheDocument();
+  });
+
+  it('renders "BT ✓" with a space for BLE acked messages', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          connectionType="ble"
+          messages={[{ ...failedMsg, status: 'acked' }]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByText('BT ✓')).toBeInTheDocument();
+  });
+
+  it('shows per-reactor tap-back labels; hides own name on others’ messages', () => {
+    const t0 = Date.now() - 10_000;
+    const t1 = t0 + 1000;
+    const t2 = t0 + 2000;
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          myNodeNum={99}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'hi',
+              channel: 0,
+              timestamp: t0,
+              packetId: 100,
+              status: 'acked',
+            },
+            {
+              sender_id: 3,
+              sender_name: 'Bob',
+              payload: '👍',
+              channel: 0,
+              timestamp: t1,
+              emoji: 0x1f44d,
+              replyId: 100,
+              status: 'acked',
+            },
+            {
+              sender_id: 99,
+              sender_name: 'Me',
+              payload: '❤️',
+              channel: 0,
+              timestamp: t2,
+              emoji: 0x2764,
+              replyId: 100,
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByLabelText(/Bob reacted with Like/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Your reaction: Love/i)).toBeInTheDocument();
+  });
+
+  it('renders US flag tapback from full payload when stored scalar is first regional indicator only', () => {
+    const US_FLAG = '\u{1F1FA}\u{1F1F8}';
+    const t0 = Date.now() - 10_000;
+    const t1 = t0 + 1000;
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'hello',
+              channel: 0,
+              timestamp: t0,
+              packetId: 200,
+              status: 'acked',
+            },
+            {
+              sender_id: 3,
+              sender_name: 'Bob',
+              payload: US_FLAG,
+              channel: 0,
+              timestamp: t1,
+              emoji: 0x1f1fa,
+              replyId: 200,
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    const badge = screen.getByLabelText(`Bob reacted with ${US_FLAG}`);
+    expect(badge).toBeInTheDocument();
+    expect(badge.textContent).toContain(US_FLAG);
+  });
+
+  it('renders quoted reply control with jump label for Meshtastic-style replyId', () => {
+    const t0 = Date.now() - 5000;
+    const t1 = t0 + 1000;
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'original',
+              channel: 0,
+              timestamp: t0,
+              packetId: 77,
+              status: 'acked',
+            },
+            {
+              sender_id: 3,
+              sender_name: 'Bob',
+              payload: 'reply text',
+              channel: 0,
+              timestamp: t1,
+              replyId: 77,
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(
+      screen.getByRole('button', { name: /Jump to quoted message from Alice/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('renders quoted preview from replyPreviewSender without replyId (MeshCore unresolved parent)', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshcore"
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'TB-Dek',
+              payload: 'agreed, coffee',
+              channel: 0,
+              timestamp: Date.now(),
+              replyPreviewSender: '🛩️ W0STR mobl',
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByText(/W0STR mobl/)).toBeInTheDocument();
+    expect(screen.getByText('agreed, coffee')).toBeInTheDocument();
+    expect(screen.queryByText('@[')).not.toBeInTheDocument();
+  });
+
+  it('renders quoted preview from stored replyPreview fields when parent is not in messages', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          messages={[
+            {
+              sender_id: 3,
+              sender_name: 'Bob',
+              payload: 'reply text',
+              channel: 0,
+              timestamp: Date.now(),
+              replyId: 424242,
+              replyPreviewText: 'Saved parent snippet',
+              replyPreviewSender: 'Alice',
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByLabelText(/Jump to quoted message from Alice/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Jump to quoted message from Alice/i })).toBeNull();
+    expect(screen.getByText('Saved parent snippet')).toBeInTheDocument();
+  });
+
+  it('renders Reticulum quote bubble from reticulum_reply_to_hash and jumps to parent', () => {
+    const parentHash = 'ab'.repeat(32);
+    const t0 = Date.now() - 5000;
+    const t1 = t0 + 1000;
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="reticulum"
+          dmOnlyChat
+          myNodeNum={1}
+          ownNodeIds={[1]}
+          initialDmTarget={2}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'Parent LXMF text',
+              channel: 0,
+              timestamp: t0,
+              status: 'acked',
+              to: 1,
+              reticulum_message_hash: parentHash,
+            },
+            {
+              sender_id: 1,
+              sender_name: 'Me',
+              payload: 'Child reply',
+              channel: 0,
+              timestamp: t1,
+              status: 'acked',
+              to: 2,
+              reticulum_message_hash: 'cd'.repeat(32),
+              reticulum_reply_to_hash: parentHash,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(
+      screen.getByRole('button', { name: /Jump to quoted message from Alice/i }),
+    ).toBeInTheDocument();
+    // Parent payload appears in the original bubble and again in the quote strip.
+    expect(screen.getAllByText('Parent LXMF text').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('Child reply')).toBeInTheDocument();
+  });
+
+  it('renders Reticulum quote from stored preview when parent hash is missing from thread', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="reticulum"
+          dmOnlyChat
+          myNodeNum={1}
+          ownNodeIds={[1]}
+          initialDmTarget={2}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Bob',
+              payload: 'orphan reply',
+              channel: 0,
+              timestamp: Date.now(),
+              status: 'acked',
+              to: 1,
+              reticulum_reply_to_hash: 'ef'.repeat(32),
+              replyPreviewText: 'Remote parent quote',
+              replyPreviewSender: 'Alice',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByText('Remote parent quote')).toBeInTheDocument();
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Jump to quoted message from Alice/i })).toBeNull();
+  });
+
+  it('shows tooltip on hover and does not use a native title attribute', async () => {
+    // Regression: StatusBadge previously used `title` which is silently dropped
+    // in Electron. It must use HelpTooltip so the tooltip mounts in the DOM.
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} connectionType="serial" messages={[failedMsg]} />
+      </ToastProvider>,
+    );
+    const badge = screen.getByText('USB no ACK').closest('.cursor-help')!;
+    expect(badge.getAttribute('title')).toBeNull();
+    await user.hover(badge);
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip.textContent?.trim()).toBeTruthy();
+  });
+});
+
+describe('ChatPanel unread watermarks', () => {
+  const baseProps = {
+    messages: [],
+    channels: [
+      { index: 0, name: 'General' },
+      { index: 1, name: 'Ops' },
+    ],
+    myNodeNum: 1,
+    onSend: vi.fn().mockResolvedValue(undefined),
+    onReact: vi.fn().mockResolvedValue(undefined),
+    onResend: vi.fn(),
+    onNodeClick: vi.fn(),
+    isConnected: true,
+    nodes: new Map(),
+    isActive: true,
+  };
+
+  it('keeps DM tab open after unread clears when conversation was opened via DM tab', async () => {
+    const user = userEvent.setup();
+    const ts = Date.now();
+    const nodes = new Map([
+      [
+        2,
+        {
+          node_id: 2,
+          long_name: 'Alice',
+          short_name: 'Alice',
+          hw_model: '',
+          snr: 0,
+          battery: 0,
+          last_heard: ts,
+          latitude: null,
+          longitude: null,
+        },
+      ],
+    ]);
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshcore"
+          myNodeNum={0x12345678}
+          ownNodeIds={[0x12345678]}
+          nodes={nodes}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'DM ping',
+              channel: 0,
+              timestamp: ts,
+              status: 'acked',
+              to: 0x12345678,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Alice' }));
+
+    rerender(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshcore"
+          myNodeNum={0x12345678}
+          ownNodeIds={[0x12345678]}
+          nodes={nodes}
+          messages={[
+            {
+              sender_id: 0x12345678,
+              sender_name: 'Me',
+              payload: 'My reply',
+              channel: 0,
+              timestamp: ts + 1,
+              status: 'acked',
+              to: 2,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Alice' })).toBeInTheDocument();
+    });
+  });
+
+  it('shows MeshCore inbound DM with to:0 in thread and clears DM unread when opened', async () => {
+    const user = userEvent.setup();
+    const ts = Date.now();
+    const selfId = 0x12345678;
+    const nodes = new Map([
+      [
+        2,
+        {
+          node_id: 2,
+          long_name: 'Alice',
+          short_name: 'Alice',
+          hw_model: '',
+          snr: 0,
+          battery: 0,
+          last_heard: ts,
+          latitude: null,
+          longitude: null,
+        },
+      ],
+    ]);
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshcore"
+          myNodeNum={selfId}
+          ownNodeIds={[selfId]}
+          nodes={nodes}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'orphan DM',
+              channel: -1,
+              timestamp: ts,
+              status: 'acked',
+              to: 0,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Alice' })).toBeInTheDocument();
+    const aliceTab = screen.getByRole('button', { name: 'Alice' }).closest('.relative');
+    expect(aliceTab?.querySelector('.bg-red-600')?.textContent).toBe('1');
+
+    await user.click(screen.getByRole('button', { name: 'Alice' }));
+    expect(screen.getByText('orphan DM')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'General' }));
+
+    await waitFor(() => {
+      expect(aliceTab?.querySelector('.bg-red-600')).toBeNull();
+    });
+  });
+
+  it('keeps dismissed DM tab visible while unread remains', async () => {
+    const user = userEvent.setup();
+    const ts = Date.now();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshcore"
+          myNodeNum={0x12345678}
+          ownNodeIds={[0x12345678]}
+          nodes={
+            new Map([
+              [
+                2,
+                {
+                  node_id: 2,
+                  long_name: 'Alice',
+                  short_name: 'Alice',
+                  hw_model: '',
+                  snr: 0,
+                  battery: 0,
+                  last_heard: ts,
+                  latitude: null,
+                  longitude: null,
+                },
+              ],
+            ])
+          }
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'DM ping',
+              channel: 0,
+              timestamp: ts,
+              status: 'acked',
+              to: 0x12345678,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Alice' })).toBeInTheDocument();
+    await user.click(screen.getByTitle('Close DM'));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Alice' })).toBeInTheDocument();
+    });
+  });
+
+  it('does not count MeshCore unread on unconfigured zero-PSK channel slots', () => {
+    const ts = Date.now();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshcore"
+          myNodeNum={0x12345678}
+          ownNodeIds={[0x12345678]}
+          channels={[{ index: 0, name: 'General' }]}
+          meshcoreChannelSources={[
+            { index: 0, name: 'General', secret: new Uint8Array(16).fill(0x11) },
+            { index: 1, name: 'Unset', secret: new Uint8Array(16) },
+          ]}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'Stale channel 1',
+              channel: 1,
+              timestamp: ts,
+              status: 'acked' as const,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'General' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /General 1/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Unset/ })).not.toBeInTheDocument();
+  });
+
+  it('clears a non-primary channel badge after that channel is viewed', async () => {
+    const user = userEvent.setup();
+    const ts = Date.now();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'Ops ping',
+              channel: 1,
+              timestamp: ts,
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Ops 1' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Ops 1' }));
+    await user.click(screen.getByRole('button', { name: 'General' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Ops' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Ops 1' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('keeps a read channel cleared when delayed history rows are merged later', async () => {
+    const user = userEvent.setup();
+    const ts = Date.now();
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'Ops ping',
+              channel: 1,
+              timestamp: ts,
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Ops 1' }));
+    await user.click(screen.getByRole('button', { name: 'General' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Ops 1' })).not.toBeInTheDocument();
+    });
+
+    rerender(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'Ops ping',
+              channel: 1,
+              timestamp: ts,
+              status: 'acked',
+            },
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'Delayed history replay',
+              channel: 1,
+              timestamp: ts + 60_000,
+              status: 'acked',
+              isHistory: true,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Ops' })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: 'Ops 1' })).not.toBeInTheDocument();
+  });
+
+  it('clears future-dated channel messages once that channel is read', async () => {
+    const user = userEvent.setup();
+    const futureTs = Date.now() + 300_000;
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'Clock skewed future message',
+              channel: 1,
+              timestamp: futureTs,
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Ops 1' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Ops 1' }));
+    await user.click(screen.getByRole('button', { name: 'General' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Ops' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Ops 1' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('does not render the All channel button', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} />
+      </ToastProvider>,
+    );
+    expect(screen.queryByRole('button', { name: 'All' })).not.toBeInTheDocument();
+  });
+
+  it.each(['meshtastic', 'meshcore'] as const)(
+    'keeps unread badge on another channel when isActive becomes true (%s)',
+    (protocol) => {
+      const ts = Date.now();
+      const unreadMsg = {
+        sender_id: 2,
+        sender_name: 'Alice',
+        payload: 'Ops ping',
+        channel: 1,
+        timestamp: ts,
+        status: 'acked' as const,
+      };
+      const { rerender } = render(
+        <ToastProvider>
+          <ChatPanel {...baseProps} protocol={protocol} isActive={false} messages={[unreadMsg]} />
+        </ToastProvider>,
+      );
+      expect(screen.getByRole('button', { name: 'Ops 1' })).toBeInTheDocument();
+
+      rerender(
+        <ToastProvider>
+          <ChatPanel {...baseProps} protocol={protocol} isActive messages={[unreadMsg]} />
+        </ToastProvider>,
+      );
+      expect(screen.getByRole('button', { name: 'Ops 1' })).toBeInTheDocument();
+    },
+  );
+
+  it.each(['meshtastic', 'meshcore'] as const)(
+    'does not advance last-read when isActive toggles on the same view (%s)',
+    (protocol) => {
+      const ts = Date.now();
+      localStorage.removeItem(`mesh-client:lastRead:${protocol}`);
+      const unreadMsg = {
+        sender_id: 2,
+        sender_name: 'Alice',
+        payload: 'General ping',
+        channel: 0,
+        timestamp: ts,
+        status: 'acked' as const,
+      };
+      const { rerender } = render(
+        <ToastProvider>
+          <ChatPanel {...baseProps} protocol={protocol} isActive={false} messages={[unreadMsg]} />
+        </ToastProvider>,
+      );
+
+      rerender(
+        <ToastProvider>
+          <ChatPanel {...baseProps} protocol={protocol} isActive messages={[unreadMsg]} />
+        </ToastProvider>,
+      );
+
+      const stored = JSON.parse(
+        localStorage.getItem(`mesh-client:lastRead:${protocol}`) ?? '{}',
+      ) as Record<string, number>;
+      expect(stored['ch:0']).toBeUndefined();
+    },
+  );
+
+  it('does not mark channel read while hidden when a new message arrives on another channel', () => {
+    const ts = Date.now();
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} isActive={false} messages={[]} />
+      </ToastProvider>,
+    );
+
+    const newMsg = {
+      sender_id: 2,
+      sender_name: 'Alice',
+      payload: 'New while away',
+      channel: 1,
+      timestamp: ts,
+      status: 'acked' as const,
+    };
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} isActive={false} messages={[newMsg]} />
+      </ToastProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'Ops 1' })).toBeInTheDocument();
+
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} isActive messages={[newMsg]} />
+      </ToastProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'Ops 1' })).toBeInTheDocument();
+  });
+
+  it('wraps channel pills in a dedicated column so toolbar utilities stay visible', () => {
+    const manyChannels = Array.from({ length: 24 }, (_, index) => ({
+      index,
+      name: `Ch${index}`,
+    }));
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} channels={manyChannels} />
+      </ToastProvider>,
+    );
+
+    const label = screen.getByText('Channels');
+    const channelsContainer = label.parentElement;
+    expect(channelsContainer?.className).toMatch(/flex-wrap/);
+    expect(channelsContainer?.className).not.toMatch(/whitespace-nowrap/);
+
+    const headerRow = channelsContainer?.parentElement;
+    expect(headerRow?.className).toMatch(/grid-cols-\[minmax\(0,1fr\)_auto\]/);
+
+    const exportBtn = screen.getByRole('button', { name: 'Export chat' });
+    const starredBtn = screen.getByRole('button', { name: 'Starred messages' });
+    expect(channelsContainer?.contains(exportBtn)).toBe(false);
+    expect(channelsContainer?.contains(starredBtn)).toBe(false);
+    expect(headerRow?.contains(exportBtn)).toBe(true);
+    expect(headerRow?.contains(starredBtn)).toBe(true);
+    expect(screen.getByRole('button', { name: 'Ch23' })).toBeInTheDocument();
+  });
+
+  it('clears the unread divider without scrolling when all unread messages are visible', async () => {
+    const ts = 1_781_469_336_193;
+    // Seed a stored watermark so the component treats the last message as unread.
+    localStorage.setItem(lastReadStorageKey('meshtastic'), JSON.stringify({ 'ch:0': ts - 1000 }));
+
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'Old message',
+              channel: 0,
+              timestamp: ts - 2000,
+              status: 'acked',
+            },
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'Unread message',
+              channel: 0,
+              timestamp: ts,
+              status: 'acked',
+            },
+          ]}
+          isActive={true}
+        />
+      </ToastProvider>,
+    );
+
+    // The divider should disappear via the layout-effect rAF without requiring a scroll event.
+    await waitFor(() => {
+      expect(screen.queryByText('New messages')).not.toBeInTheDocument();
+    });
+
+    // Persist runs in a useEffect after setPersistedLastRead — wait for localStorage on slow CI.
+    await waitFor(() => {
+      const stored = JSON.parse(
+        localStorage.getItem(lastReadStorageKey('meshtastic')) ?? '{}',
+      ) as Record<string, number>;
+      expect(stored['ch:0']).toBe(ts);
+    });
+  });
+
+  it('marks MeshCore DM read when opened with all messages visible', async () => {
+    const user = userEvent.setup();
+    const ts = Date.now();
+    const selfId = 0x12345678;
+    const peerId = 2;
+    localStorage.removeItem('mesh-client:lastRead:meshcore');
+    const nodes = new Map([
+      [
+        peerId,
+        {
+          node_id: peerId,
+          long_name: 'Alice',
+          short_name: 'Alice',
+          hw_model: '',
+          snr: 0,
+          battery: 0,
+          last_heard: ts,
+          latitude: null,
+          longitude: null,
+        },
+      ],
+    ]);
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshcore"
+          myNodeNum={selfId}
+          ownNodeIds={[selfId]}
+          nodes={nodes}
+          messages={[
+            {
+              sender_id: peerId,
+              sender_name: 'Alice',
+              payload: 'DM ping',
+              channel: -1,
+              timestamp: ts,
+              status: 'acked',
+              to: selfId,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Alice' }));
+
+    await waitFor(() => {
+      const stored = JSON.parse(
+        localStorage.getItem('mesh-client:lastRead:meshcore') ?? '{}',
+      ) as Record<string, number>;
+      expect(stored[`dm:${peerId}`]).toBe(ts);
+    });
+  });
+
+  it('marks active MeshCore DM read when a new inbound message arrives near the bottom', async () => {
+    const user = userEvent.setup();
+    const ts = Date.now();
+    const selfId = 0x12345678;
+    const peerId = 2;
+    localStorage.removeItem('mesh-client:lastRead:meshcore');
+    const nodes = new Map([
+      [
+        peerId,
+        {
+          node_id: peerId,
+          long_name: 'Alice',
+          short_name: 'Alice',
+          hw_model: '',
+          snr: 0,
+          battery: 0,
+          last_heard: ts,
+          latitude: null,
+          longitude: null,
+        },
+      ],
+    ]);
+    const firstMsg = {
+      sender_id: peerId,
+      sender_name: 'Alice',
+      payload: 'first',
+      channel: -1,
+      timestamp: ts,
+      status: 'acked' as const,
+      to: selfId,
+    };
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshcore"
+          myNodeNum={selfId}
+          ownNodeIds={[selfId]}
+          nodes={nodes}
+          messages={[firstMsg]}
+        />
+      </ToastProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Alice' }));
+    await waitFor(() => {
+      expect(screen.getByText('first')).toBeInTheDocument();
+    });
+
+    const secondTs = ts + 5000;
+    rerender(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshcore"
+          myNodeNum={selfId}
+          ownNodeIds={[selfId]}
+          nodes={nodes}
+          messages={[
+            firstMsg,
+            {
+              sender_id: peerId,
+              sender_name: 'Alice',
+              payload: 'second',
+              channel: -1,
+              timestamp: secondTs,
+              status: 'acked' as const,
+              to: selfId,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    await waitFor(() => {
+      const stored = JSON.parse(
+        localStorage.getItem('mesh-client:lastRead:meshcore') ?? '{}',
+      ) as Record<string, number>;
+      expect(stored[`dm:${peerId}`]).toBe(secondTs);
+    });
+  });
+
+  it.each(['linux', 'darwin', 'win32'] as const)(
+    'holds unread on the open DM while the window is visible but unfocused, then clears on refocus (%s)',
+    async (platform) => {
+      vi.mocked(window.electronAPI.getPlatform).mockReturnValue(platform);
+      const user = userEvent.setup();
+      const ts = Date.now();
+      const selfId = 0x12345678;
+      const peerId = 2;
+      // Seed the open DM as already read so any advance is attributable to the new inbound.
+      localStorage.setItem(
+        'mesh-client:lastRead:meshcore',
+        JSON.stringify({ [`dm:${peerId}`]: ts }),
+      );
+      const readStored = () =>
+        JSON.parse(localStorage.getItem('mesh-client:lastRead:meshcore') ?? '{}') as Record<
+          string,
+          number
+        >;
+      const nodes = new Map<number, MeshNode>([
+        [
+          peerId,
+          {
+            node_id: peerId,
+            long_name: 'Alice',
+            short_name: 'Alice',
+            hw_model: '',
+            snr: 0,
+            battery: 0,
+            last_heard: ts,
+            latitude: null,
+            longitude: null,
+          },
+        ],
+      ]);
+      const firstMsg = {
+        sender_id: peerId,
+        sender_name: 'Alice',
+        payload: 'first',
+        channel: -1,
+        timestamp: ts,
+        status: 'acked' as const,
+        to: selfId,
+      };
+      const { rerender } = render(
+        <ToastProvider>
+          <ChatPanel
+            {...baseProps}
+            protocol="meshcore"
+            myNodeNum={selfId}
+            ownNodeIds={[selfId]}
+            nodes={nodes}
+            messages={[firstMsg]}
+          />
+        </ToastProvider>,
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Alice' }));
+      await waitFor(() => {
+        expect(screen.getByText('first')).toBeInTheDocument();
+      });
+
+      // Window is visible but not focused (e.g. user switched to another app).
+      const hasFocusSpy = vi.spyOn(document, 'hasFocus').mockReturnValue(false);
+
+      const secondTs = ts + 5000;
+      const withSecond = [
+        firstMsg,
+        {
+          sender_id: peerId,
+          sender_name: 'Alice',
+          payload: 'second',
+          channel: -1,
+          timestamp: secondTs,
+          status: 'acked' as const,
+          to: selfId,
+        },
+      ];
+      rerender(
+        <ToastProvider>
+          <ChatPanel
+            {...baseProps}
+            protocol="meshcore"
+            myNodeNum={selfId}
+            ownNodeIds={[selfId]}
+            nodes={nodes}
+            messages={withSecond}
+          />
+        </ToastProvider>,
+      );
+
+      // Give the inbound mark-read effect (rAF) a chance to run and confirm it stayed read-gated.
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(readStored()[`dm:${peerId}`]).toBe(ts);
+
+      // Refocusing (clicking the dock/taskbar badge) clears unread on the open conversation.
+      hasFocusSpy.mockReturnValue(true);
+      fireEvent(window, new Event('focus'));
+
+      await waitFor(() => {
+        expect(readStored()[`dm:${peerId}`]).toBe(secondTs);
+      });
+
+      hasFocusSpy.mockRestore();
+      vi.mocked(window.electronAPI.getPlatform).mockReturnValue('linux');
+    },
+  );
+});
+
+describe('ChatPanel compose emoji picker', () => {
+  const defaultProps = {
+    messages: [],
+    channels: [{ index: 0, name: 'General' }],
+    myNodeNum: 1,
+    onSend: vi.fn().mockResolvedValue(undefined),
+    onReact: vi.fn().mockResolvedValue(undefined),
+    onResend: vi.fn(),
+    onNodeClick: vi.fn(),
+    isConnected: true,
+    nodes: new Map(),
+    isActive: true,
+  };
+
+  beforeEach(() => {
+    vi.mocked(window.electronAPI.getPlatform).mockReturnValue('linux');
+    vi.mocked(window.electronAPI.showEmojiPanel).mockClear().mockResolvedValue(undefined);
+  });
+
+  it('shows emoji-picker element on Linux when emoji button is clicked', async () => {
+    vi.mocked(window.electronAPI.getPlatform).mockReturnValue('linux');
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...defaultProps} />
+      </ToastProvider>,
+    );
+    const emojiBtn = screen.getByRole('button', { name: 'Emoji' });
+    await user.click(emojiBtn);
+    expect(document.querySelector('emoji-picker')).toBeInTheDocument();
+    expect(window.electronAPI.showEmojiPanel).not.toHaveBeenCalled();
+  });
+
+  it('calls showEmojiPanel and does not render emoji-picker on macOS', async () => {
+    vi.mocked(window.electronAPI.getPlatform).mockReturnValue('darwin');
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...defaultProps} />
+      </ToastProvider>,
+    );
+    const emojiBtn = screen.getByRole('button', { name: 'Emoji' });
+    await user.click(emojiBtn);
+    expect(window.electronAPI.showEmojiPanel).toHaveBeenCalledOnce();
+    expect(document.querySelector('emoji-picker')).not.toBeInTheDocument();
+  });
+
+  it('calls showEmojiPanel and does not render emoji-picker on Windows', async () => {
+    vi.mocked(window.electronAPI.getPlatform).mockReturnValue('win32');
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...defaultProps} />
+      </ToastProvider>,
+    );
+    const emojiBtn = screen.getByRole('button', { name: 'Emoji' });
+    await user.click(emojiBtn);
+    expect(window.electronAPI.showEmojiPanel).toHaveBeenCalledOnce();
+    expect(document.querySelector('emoji-picker')).not.toBeInTheDocument();
+  });
+});
+
+describe('ChatPanel tapback reaction picker', () => {
+  const baseMessage = {
+    sender_id: 2,
+    sender_name: 'Alice',
+    payload: 'hello',
+    channel: 0,
+    timestamp: Date.now() - 1000,
+    status: 'acked' as const,
+  };
+
+  const defaultProps = {
+    messages: [baseMessage],
+    channels: [{ index: 0, name: 'General' }],
+    myNodeNum: 1,
+    onSend: vi.fn().mockResolvedValue(undefined),
+    onReact: vi.fn().mockResolvedValue(undefined),
+    onResend: vi.fn(),
+    onNodeClick: vi.fn(),
+    isConnected: true,
+    nodes: new Map(),
+    isActive: true,
+  };
+
+  beforeEach(() => {
+    vi.mocked(window.electronAPI.getPlatform).mockReturnValue('linux');
+    vi.mocked(window.electronAPI.showEmojiPanel).mockClear().mockResolvedValue(undefined);
+  });
+
+  it.each(['meshtastic', 'meshcore'] as const)(
+    'shows emoji-picker element on Linux when React button is clicked (%s)',
+    async (protocol) => {
+      vi.mocked(window.electronAPI.getPlatform).mockReturnValue('linux');
+      const user = userEvent.setup();
+      render(
+        <ToastProvider>
+          <ChatPanel {...defaultProps} protocol={protocol} />
+        </ToastProvider>,
+      );
+      const reactBtn = screen.getByTitle('React');
+      await user.click(reactBtn);
+      await waitFor(() => {
+        expect(document.querySelector('emoji-picker')).toBeInTheDocument();
+      });
+      expect(window.electronAPI.showEmojiPanel).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['meshtastic', 'meshcore'] as const)(
+    'calls onReact with full grapheme when Linux emoji-picker fires emoji-click (%s)',
+    async (protocol) => {
+      const US_FLAG = '\u{1F1FA}\u{1F1F8}';
+      const onReact = vi.fn().mockResolvedValue(undefined);
+      const user = userEvent.setup();
+      render(
+        <ToastProvider>
+          <ChatPanel
+            {...defaultProps}
+            protocol={protocol}
+            onReact={onReact}
+            messages={[{ ...baseMessage, packetId: 42 }]}
+          />
+        </ToastProvider>,
+      );
+      await user.click(screen.getByTitle('React'));
+      await waitFor(() => {
+        expect(document.querySelector('emoji-picker')).toBeInTheDocument();
+      });
+      const picker = document.querySelector('emoji-picker');
+      expect(picker).not.toBeNull();
+      picker!.dispatchEvent(
+        new CustomEvent('emoji-click', { detail: { emoji: { unicode: US_FLAG } }, bubbles: true }),
+      );
+      await waitFor(() => {
+        expect(onReact).toHaveBeenCalledWith(US_FLAG, 42, 0);
+      });
+    },
+  );
+
+  it.each([
+    ['darwin', 'meshtastic'] as const,
+    ['darwin', 'meshcore'] as const,
+    ['win32', 'meshtastic'] as const,
+    ['win32', 'meshcore'] as const,
+  ])(
+    'calls showEmojiPanel and does not render emoji-picker on %s when React button is clicked (%s)',
+    async (platform, protocol) => {
+      vi.mocked(window.electronAPI.getPlatform).mockReturnValue(platform);
+      const user = userEvent.setup();
+      render(
+        <ToastProvider>
+          <ChatPanel {...defaultProps} protocol={protocol} />
+        </ToastProvider>,
+      );
+      const reactBtn = screen.getByTitle('React');
+      await user.click(reactBtn);
+      expect(window.electronAPI.showEmojiPanel).toHaveBeenCalledOnce();
+      expect(document.querySelector('emoji-picker')).not.toBeInTheDocument();
+    },
+  );
+
+  function reactionHiddenInput(): HTMLInputElement {
+    const input = document.querySelector<HTMLInputElement>(
+      'input[aria-hidden="true"][tabindex="-1"]',
+    );
+    expect(input).not.toBeNull();
+    return input!;
+  }
+
+  function composeTextarea(): HTMLTextAreaElement {
+    return screen.getByPlaceholderText('Enter message here');
+  }
+
+  it.each(['linux', 'darwin', 'win32'] as const)(
+    'clears replyTo when React is clicked (%s)',
+    async (platform) => {
+      vi.mocked(window.electronAPI.getPlatform).mockReturnValue(platform);
+      const user = userEvent.setup();
+      render(
+        <ToastProvider>
+          <ChatPanel {...defaultProps} />
+        </ToastProvider>,
+      );
+      await user.click(screen.getByTitle('Reply'));
+      expect(screen.getByText(/Replying to/)).toBeInTheDocument();
+      await user.click(screen.getByTitle('React'));
+      expect(screen.queryByText(/Replying to/)).not.toBeInTheDocument();
+    },
+  );
+
+  it.each(['darwin', 'win32'] as const)(
+    'calls onReact when native panel inserts emoji into hidden input (%s)',
+    async (platform) => {
+      vi.mocked(window.electronAPI.getPlatform).mockReturnValue(platform);
+      const onReact = vi.fn().mockResolvedValue(undefined);
+      const user = userEvent.setup();
+      render(
+        <ToastProvider>
+          <ChatPanel
+            {...defaultProps}
+            onReact={onReact}
+            messages={[{ ...baseMessage, packetId: 42 }]}
+          />
+        </ToastProvider>,
+      );
+      await user.click(screen.getByTitle('React'));
+      const hidden = reactionHiddenInput();
+      hidden.value = '👍';
+      fireEvent.input(hidden);
+      await waitFor(() => {
+        expect(onReact).toHaveBeenCalledWith('👍', 42, 0);
+      });
+      expect(onReact).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each(['darwin', 'win32'] as const)(
+    'refocuses composer after native emoji reaction (%s)',
+    async (platform) => {
+      vi.mocked(window.electronAPI.getPlatform).mockReturnValue(platform);
+      const onReact = vi.fn().mockResolvedValue(undefined);
+      const user = userEvent.setup();
+      render(
+        <ToastProvider>
+          <ChatPanel
+            {...defaultProps}
+            onReact={onReact}
+            messages={[{ ...baseMessage, packetId: 42 }]}
+          />
+        </ToastProvider>,
+      );
+      await user.click(screen.getByTitle('React'));
+      const hidden = reactionHiddenInput();
+      hidden.value = '👍';
+      fireEvent.input(hidden);
+      await waitFor(() => {
+        expect(onReact).toHaveBeenCalledWith('👍', 42, 0);
+      });
+      expect(composeTextarea()).toBe(document.activeElement);
+    },
+  );
+
+  it.each(['darwin', 'win32'] as const)(
+    'does not send plain keystrokes as reactions after emoji reaction (%s)',
+    async (platform) => {
+      vi.mocked(window.electronAPI.getPlatform).mockReturnValue(platform);
+      const onReact = vi.fn().mockResolvedValue(undefined);
+      const user = userEvent.setup();
+      render(
+        <ToastProvider>
+          <ChatPanel
+            {...defaultProps}
+            onReact={onReact}
+            messages={[{ ...baseMessage, packetId: 42 }]}
+          />
+        </ToastProvider>,
+      );
+      await user.click(screen.getByTitle('React'));
+      const hidden = reactionHiddenInput();
+      hidden.value = '👍';
+      fireEvent.input(hidden);
+      await waitFor(() => {
+        expect(onReact).toHaveBeenCalledWith('👍', 42, 0);
+      });
+      hidden.value = 'j';
+      fireEvent.input(hidden);
+      await waitFor(() => {
+        expect(onReact).toHaveBeenCalledTimes(1);
+      });
+    },
+  );
+
+  it.each(['darwin', 'win32'] as const)(
+    'redirects printable keys from hidden input to composer while capture is pending (%s)',
+    async (platform) => {
+      vi.mocked(window.electronAPI.getPlatform).mockReturnValue(platform);
+      const onReact = vi.fn().mockResolvedValue(undefined);
+      const user = userEvent.setup();
+      render(
+        <ToastProvider>
+          <ChatPanel
+            {...defaultProps}
+            onReact={onReact}
+            messages={[{ ...baseMessage, packetId: 42 }]}
+          />
+        </ToastProvider>,
+      );
+      await user.click(screen.getByTitle('React'));
+      const hidden = reactionHiddenInput();
+      fireEvent.keyDown(hidden, { key: 'g' });
+      await waitFor(() => {
+        expect(onReact).not.toHaveBeenCalled();
+        expect(composeTextarea()).toHaveValue('g');
+        expect(composeTextarea()).toBe(document.activeElement);
+      });
+    },
+  );
+
+  it.each(['darwin', 'win32'] as const)(
+    'clears capture on window focus and refocuses composer (%s)',
+    async (platform) => {
+      vi.mocked(window.electronAPI.getPlatform).mockReturnValue(platform);
+      const onReact = vi.fn().mockResolvedValue(undefined);
+      const user = userEvent.setup();
+      render(
+        <ToastProvider>
+          <ChatPanel
+            {...defaultProps}
+            onReact={onReact}
+            messages={[{ ...baseMessage, packetId: 42 }]}
+          />
+        </ToastProvider>,
+      );
+      await user.click(screen.getByTitle('React'));
+      fireEvent.focus(window);
+      const hidden = reactionHiddenInput();
+      hidden.value = 'a';
+      fireEvent.input(hidden);
+      await waitFor(() => {
+        expect(onReact).not.toHaveBeenCalled();
+        expect(composeTextarea()).toBe(document.activeElement);
+      });
+    },
+  );
+
+  it('does not send keystrokes as reactions after dismissing native panel without selection', async () => {
+    vi.mocked(window.electronAPI.getPlatform).mockReturnValue('win32');
+    const onReact = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          onReact={onReact}
+          messages={[{ ...baseMessage, packetId: 42 }]}
+        />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByTitle('React'));
+    const hidden = reactionHiddenInput();
+    fireEvent.blur(hidden);
+    hidden.value = 'a';
+    fireEvent.input(hidden);
+    await waitFor(() => {
+      expect(onReact).not.toHaveBeenCalled();
+    });
+  });
+
+  it('does not send a second Linux emoji-click after reaction without re-opening React', async () => {
+    vi.mocked(window.electronAPI.getPlatform).mockReturnValue('linux');
+    const US_FLAG = '\u{1F1FA}\u{1F1F8}';
+    const onReact = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          onReact={onReact}
+          messages={[{ ...baseMessage, packetId: 42 }]}
+        />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByTitle('React'));
+    await waitFor(() => {
+      expect(document.querySelector('emoji-picker')).toBeInTheDocument();
+    });
+    const picker = document.querySelector('emoji-picker');
+    expect(picker).not.toBeNull();
+    picker!.dispatchEvent(
+      new CustomEvent('emoji-click', { detail: { emoji: { unicode: US_FLAG } }, bubbles: true }),
+    );
+    await waitFor(() => {
+      expect(onReact).toHaveBeenCalledWith(US_FLAG, 42, 0);
+    });
+    picker!.dispatchEvent(
+      new CustomEvent('emoji-click', { detail: { emoji: { unicode: '👍' } }, bubbles: true }),
+    );
+    await waitFor(() => {
+      expect(onReact).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('clears Linux capture on window focus while inline picker is open', async () => {
+    vi.mocked(window.electronAPI.getPlatform).mockReturnValue('linux');
+    const onReact = vi.fn().mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          onReact={onReact}
+          messages={[{ ...baseMessage, packetId: 42 }]}
+        />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByTitle('React'));
+    await waitFor(() => {
+      expect(document.querySelector('emoji-picker')).toBeInTheDocument();
+    });
+    fireEvent.focus(window);
+    const picker = document.querySelector('emoji-picker');
+    expect(picker).not.toBeNull();
+    picker!.dispatchEvent(
+      new CustomEvent('emoji-click', { detail: { emoji: { unicode: '👍' } }, bubbles: true }),
+    );
+    await waitFor(() => {
+      expect(onReact).not.toHaveBeenCalled();
+      expect(composeTextarea()).toBe(document.activeElement);
+    });
+  });
+});
+
+describe('ChatPanel RF hop label', () => {
+  const defaultProps = {
+    messages: [] as ChatMessage[],
+    channels: [{ index: 0, name: 'General' }],
+    myNodeNum: 99,
+    onSend: vi.fn().mockResolvedValue(undefined),
+    onReact: vi.fn().mockResolvedValue(undefined),
+    onResend: vi.fn(),
+    onNodeClick: vi.fn(),
+    isConnected: true,
+    nodes: new Map(),
+    isActive: true,
+  };
+
+  it('shows rx hops for MeshCore RF incoming messages', async () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="meshcore"
+          messages={[
+            {
+              sender_id: 1,
+              sender_name: 'Peer',
+              payload: 'hello mesh',
+              channel: 0,
+              timestamp: Date.now(),
+              receivedVia: 'rf',
+              rxHops: 3,
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(await screen.findByText('3 hops')).toBeInTheDocument();
+  });
+
+  it('shows rx hops when messages come from MessageRecord store adapters', async () => {
+    const records: MessageRecord[] = [
+      {
+        id: 'ch:0:1700000010',
+        from: 1,
+        senderName: 'Peer',
+        to: 0xffffffff,
+        payload: 'hello from store',
+        channelIndex: 0,
+        timestamp: Date.now(),
+        receivedVia: 'rf',
+        rxHops: 3,
+      },
+    ];
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...defaultProps}
+          protocol="meshcore"
+          messages={messageRecordsToChatMessages(records)}
+        />
+      </ToastProvider>,
+    );
+    expect(await screen.findByText('3 hops')).toBeInTheDocument();
+  });
+});
+
+// ─── New feature tests ──────────────────────────────────────────────────────
+
+const baseProps = {
+  messages: [] as ChatMessage[],
+  channels: [
+    { index: 0, name: 'General' },
+    { index: 1, name: 'Admin' },
+  ],
+  myNodeNum: 1,
+  onSend: vi.fn().mockResolvedValue(undefined),
+  onReact: vi.fn().mockResolvedValue(undefined),
+  onResend: vi.fn(),
+  onNodeClick: vi.fn(),
+  isConnected: true,
+  nodes: new Map<number, MeshNode>(),
+  isActive: true,
+};
+
+function makeMsg(overrides: Partial<ChatMessage>): ChatMessage {
+  return {
+    sender_id: 2,
+    sender_name: 'Alice',
+    payload: 'hello',
+    channel: 0,
+    timestamp: Date.now(),
+    ...overrides,
+  };
+}
+
+describe('ChatPanel — copy button', () => {
+  it('shows a Copy button on each message and writes payload to clipboard', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.mocked(window.electronAPI.clipboard.writeText);
+
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[makeMsg({ payload: 'copy me' })]} />
+      </ToastProvider>,
+    );
+
+    const btn = await screen.findByTitle('Copy message');
+    await user.click(btn);
+    expect(writeText).toHaveBeenCalledWith('copy me');
+  });
+});
+
+describe('ChatPanel — always show message actions', () => {
+  it('keeps the action bar opacity-100 when alwaysShowMessageActions is set', async () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          alwaysShowMessageActions
+          messages={[makeMsg({ payload: 'visible actions' })]}
+        />
+      </ToastProvider>,
+    );
+    const btn = await screen.findByTitle('Copy message');
+    const bar = btn.parentElement;
+    expect(bar?.className).toContain('opacity-100');
+    expect(bar?.className).not.toMatch(/(?:^|\s)opacity-0(?:\s|$)/);
+  });
+
+  it('uses hover/focus-within visibility for the action bar by default', async () => {
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[makeMsg({ payload: 'hover actions' })]} />
+      </ToastProvider>,
+    );
+    const btn = await screen.findByTitle('Copy message');
+    const bar = btn.parentElement;
+    expect(bar?.className).toMatch(/(?:^|\s)opacity-0(?:\s|$)/);
+    expect(bar?.className).toContain('group-focus-within/msg:opacity-100');
+    expect(bar?.className).toContain('group-hover/msg:opacity-100');
+  });
+});
+
+describe('ChatPanel — sender filter', () => {
+  it('shows all messages by default, filter banner absent', () => {
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          messages={[
+            makeMsg({ sender_id: 2, sender_name: 'Alice', payload: 'from alice' }),
+            makeMsg({ sender_id: 3, sender_name: 'Bob', payload: 'from bob' }),
+          ]}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByText('from alice')).toBeInTheDocument();
+    expect(screen.getByText('from bob')).toBeInTheDocument();
+    expect(screen.queryByText(/Filtering by/)).not.toBeInTheDocument();
+  });
+
+  it('filters to sender when filter button is clicked, shows banner', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          messages={[
+            makeMsg({ sender_id: 2, sender_name: 'Alice', payload: 'from alice' }),
+            makeMsg({ sender_id: 3, sender_name: 'Bob', payload: 'from bob' }),
+          ]}
+          nodes={
+            new Map([
+              [
+                2,
+                {
+                  node_id: 2,
+                  long_name: 'Alice',
+                  short_name: 'A',
+                  hw_model: '',
+                  snr: 0,
+                  battery: 0,
+                  last_heard: Date.now(),
+                  latitude: null,
+                  longitude: null,
+                },
+              ],
+            ])
+          }
+        />
+      </ToastProvider>,
+    );
+    const filterBtns = screen.getAllByLabelText('Filter by sender');
+    await user.click(filterBtns[0]);
+    expect(screen.queryByText('from bob')).not.toBeInTheDocument();
+    expect(screen.getByText('from alice')).toBeInTheDocument();
+    expect(screen.getByText(/Filtering by/)).toBeInTheDocument();
+  });
+
+  it('clears filter when × is clicked', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          messages={[
+            makeMsg({ sender_id: 2, sender_name: 'Alice', payload: 'from alice' }),
+            makeMsg({ sender_id: 3, sender_name: 'Bob', payload: 'from bob' }),
+          ]}
+          nodes={
+            new Map([
+              [
+                2,
+                {
+                  node_id: 2,
+                  long_name: 'Alice',
+                  short_name: 'A',
+                  hw_model: '',
+                  snr: 0,
+                  battery: 0,
+                  last_heard: Date.now(),
+                  latitude: null,
+                  longitude: null,
+                },
+              ],
+            ])
+          }
+        />
+      </ToastProvider>,
+    );
+    const filterBtns = screen.getAllByLabelText('Filter by sender');
+    await user.click(filterBtns[0]);
+    await user.click(screen.getByLabelText('Clear filter'));
+    expect(screen.getByText('from alice')).toBeInTheDocument();
+    expect(screen.getByText('from bob')).toBeInTheDocument();
+  });
+});
+
+describe('ChatPanel — draft persistence', () => {
+  it('preserves unsent input when switching channels', async () => {
+    const user = userEvent.setup();
+    localStorage.clear();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshtastic"
+          channels={[
+            { index: 0, name: 'General' },
+            { index: 1, name: 'Admin' },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    const textarea = screen.getByRole('textbox');
+    await user.type(textarea, 'unsent draft');
+    expect(textarea).toHaveValue('unsent draft');
+
+    // Switch to channel 1 (second channel button)
+    const channelButtons = screen.getAllByRole('button', { name: /General|Admin|ch0|ch1/i });
+    const adminBtn = channelButtons.find((b) => /Admin|ch1|1/i.test(b.textContent ?? ''));
+    if (adminBtn) {
+      await user.click(adminBtn);
+      expect(textarea).toHaveValue('');
+      // Switch back
+      const generalBtn = screen
+        .getAllByRole('button')
+        .find((b) => /General|ch0/i.test(b.textContent ?? ''));
+      if (generalBtn) {
+        await user.click(generalBtn);
+        expect(textarea).toHaveValue('unsent draft');
+      }
+    }
+  });
+});
+
+describe('ChatPanel — DM node info header', () => {
+  it('shows battery and signal info when DM tab is active', async () => {
+    const dmNode: MeshNode = {
+      node_id: 2,
+      long_name: 'Alice',
+      short_name: 'A',
+      hw_model: '',
+      snr: 5,
+      battery: 72,
+      last_heard: Date.now() - 120_000,
+      latitude: null,
+      longitude: null,
+    };
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshtastic"
+          nodes={new Map([[2, dmNode]])}
+          messages={[makeMsg({ sender_id: 2, sender_name: 'Alice', payload: 'hi', to: 1 })]}
+          initialDmTarget={2}
+        />
+      </ToastProvider>,
+    );
+    // The DM info bar should be visible once the DM tab auto-opens
+    const infoBar = await screen.findByRole('status', { name: 'DM peer info' });
+    expect(infoBar).toBeInTheDocument();
+    expect(infoBar.textContent).toContain('72%');
+    expect(infoBar.textContent).toContain('5');
+  });
+
+  it('shows correct last-heard time for meshcore (last_heard in seconds, not ms)', async () => {
+    const twoMinutesAgoSec = Math.floor((Date.now() - 120_000) / 1000);
+    const dmNode: MeshNode = {
+      node_id: 2,
+      long_name: 'Bob',
+      short_name: 'B',
+      hw_model: '',
+      snr: 3,
+      battery: 50,
+      last_heard: twoMinutesAgoSec,
+      latitude: null,
+      longitude: null,
+    };
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshcore"
+          nodes={new Map([[2, dmNode]])}
+          messages={[makeMsg({ sender_id: 2, sender_name: 'Bob', payload: 'hey', to: 1 })]}
+          initialDmTarget={2}
+        />
+      </ToastProvider>,
+    );
+    const infoBar = await screen.findByRole('status', { name: 'DM peer info' });
+    // Should show "2m ago", not a wildly inflated day count
+    expect(infoBar.textContent).toMatch(/\d+m ago/);
+    expect(infoBar.textContent).not.toMatch(/\d{4,}d ago/);
+  });
+});
+
+describe('ChatPanel — @mention autocomplete', () => {
+  const aliceNode: MeshNode = {
+    node_id: 2,
+    long_name: 'Alice',
+    short_name: 'Al',
+    hw_model: '',
+    snr: 0,
+    battery: 0,
+    last_heard: Date.now(),
+    latitude: null,
+    longitude: null,
+  };
+
+  it('shows autocomplete dropdown when @ is typed', async () => {
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} protocol="meshtastic" nodes={new Map([[2, aliceNode]])} />
+      </ToastProvider>,
+    );
+    const textarea = screen.getByRole('textbox');
+    // fireEvent.change gives us reliable selectionStart control
+    fireEvent.change(textarea, { target: { value: '@' } });
+    // After @ alone, candidates = all nodes; dropdown should appear
+    const listbox = await screen.findByRole('listbox', { name: 'Mention suggestions' });
+    expect(listbox).toBeInTheDocument();
+  });
+
+  it('inserts @[Name] token when dropdown option is clicked', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} protocol="meshtastic" nodes={new Map([[2, aliceNode]])} />
+      </ToastProvider>,
+    );
+    const textarea = screen.getByRole('textbox');
+    fireEvent.change(textarea, { target: { value: '@Al' } });
+    const option = await screen.findByRole('option');
+    await user.click(option);
+    // Value should contain @[ ... ] mention token (name is short_name for meshtastic)
+    expect((textarea as HTMLTextAreaElement).value).toContain('@[');
+  });
+});
+
+describe('ChatPanel — jump to date', () => {
+  it('shows date input when calendar button is clicked', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} />
+      </ToastProvider>,
+    );
+    const calBtn = screen.getByLabelText('Jump to date');
+    expect(screen.queryByLabelText('Jump to date', { selector: 'input' })).not.toBeInTheDocument();
+    await user.click(calBtn);
+    expect(screen.getByLabelText('Jump to date', { selector: 'input' })).toBeInTheDocument();
+  });
+
+  it('scrolls to matching day via scrollToIndex, not scrollIntoView', async () => {
+    mockScrollToIndex.mockClear();
+    const scrollIntoView = vi.fn();
+    vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(scrollIntoView);
+    const day = new Date(2026, 5, 10, 14, 0, 0);
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          messages={[
+            {
+              sender_id: 2,
+              sender_name: 'Alice',
+              payload: 'June tenth',
+              channel: 0,
+              timestamp: day.getTime(),
+              status: 'acked',
+            },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByLabelText('Jump to date'));
+    const input = screen.getByLabelText('Jump to date', { selector: 'input' });
+    fireEvent.change(input, { target: { value: '2026-06-10' } });
+    expect(mockScrollToIndex).toHaveBeenCalledWith(0, { align: 'start', behavior: 'smooth' });
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+});
+
+describe('ChatPanel — export chat', () => {
+  it('calls window.electronAPI.chat.export with current messages', async () => {
+    const user = userEvent.setup();
+    const exportFn = vi.fn().mockResolvedValue({ success: true, path: '/tmp/chat.txt' });
+    (window.electronAPI as any).chat = {
+      export: exportFn,
+      linkPreview: { fetch: vi.fn().mockResolvedValue(null) },
+      outbox: {
+        list: vi.fn().mockResolvedValue([]),
+        add: vi.fn().mockResolvedValue(null),
+        updateStatus: vi.fn().mockResolvedValue(undefined),
+        remove: vi.fn().mockResolvedValue(undefined),
+      },
+    };
+
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[makeMsg({ payload: 'exported message' })]} />
+      </ToastProvider>,
+    );
+    const exportBtn = screen.getByRole('button', { name: 'Export chat' });
+    await user.click(exportBtn);
+    expect(exportFn).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ payload: 'exported message' })]),
+    );
+  });
+});
+
+describe('ChatPanel — draft restored on initial mount', () => {
+  it('loads a previously saved draft for the initial view on mount', async () => {
+    localStorage.clear();
+    saveDraft('meshtastic', 'ch:0', 'persisted draft');
+
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} protocol="meshtastic" />
+      </ToastProvider>,
+    );
+
+    const textarea = await waitForComposer();
+    expect(textarea).toHaveValue('persisted draft');
+
+    localStorage.setItem(draftsStorageKey('meshtastic'), '{}');
+  });
+});
+
+describe('ChatPanel — channel selection restored across reconnect', () => {
+  it('restores the previously selected channel for this node on mount', async () => {
+    localStorage.clear();
+    saveActiveChannel('meshtastic', 1, 1); // baseProps.myNodeNum is 1; select channel index 1
+    saveDraft('meshtastic', 'ch:1', 'admin draft'); // distinguishes which channel is active
+
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshtastic"
+          channels={[
+            { index: 0, name: 'General' },
+            { index: 1, name: 'Admin' },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    const textarea = await waitForComposer();
+    expect(textarea).toHaveValue('admin draft');
+
+    localStorage.setItem(draftsStorageKey('meshtastic'), '{}');
+  });
+
+  it('falls back to the default channel when the persisted selection belongs to a different node', async () => {
+    localStorage.clear();
+    saveActiveChannel('meshtastic', 999, 1); // a different node's saved selection
+    saveDraft('meshtastic', 'ch:0', 'general draft');
+
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshtastic"
+          channels={[
+            { index: 0, name: 'General' },
+            { index: 1, name: 'Admin' },
+          ]}
+        />
+      </ToastProvider>,
+    );
+
+    const textarea = await waitForComposer();
+    expect(textarea).toHaveValue('general draft');
+
+    localStorage.setItem(draftsStorageKey('meshtastic'), '{}');
+  });
+
+  it('restores a saved channel once myNodeNum becomes known after mount, without clobbering it', async () => {
+    // ChatPanel mounts once per protocol tab and can do so before the radio finishes
+    // connecting (myNodeNum still 0) — the restore must re-run once myNodeNum arrives,
+    // and must not immediately overwrite the just-restored value with the pre-restore
+    // default (regression: both the restore and the save effect fire on the same
+    // myNodeNum-changing commit).
+    localStorage.clear();
+    saveActiveChannel('meshtastic', 1, 1); // saved from a prior session for node 1
+    saveDraft('meshtastic', 'ch:1', 'admin draft');
+
+    const channels = [
+      { index: 0, name: 'General' },
+      { index: 1, name: 'Admin' },
+    ];
+
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} protocol="meshtastic" myNodeNum={0} channels={channels} />
+      </ToastProvider>,
+    );
+    await waitForComposer();
+
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} protocol="meshtastic" myNodeNum={1} channels={channels} />
+      </ToastProvider>,
+    );
+
+    const textarea = await waitForComposer();
+    await waitFor(() => {
+      expect(textarea).toHaveValue('admin draft');
+    });
+    // The saved value must survive the restore — not get clobbered back to the default.
+    expect(loadActiveChannelInitial('meshtastic', 1)).toBe(1);
+
+    localStorage.setItem(draftsStorageKey('meshtastic'), '{}');
+  });
+
+  it("does not leak the previous node's channel into a different node's saved key on a live switch", async () => {
+    // Regression (CodeRabbit, PR #858): switching from node A (has a saved
+    // selection) to node B (no saved value yet) while ChatPanel stays mounted
+    // must not persist A's channel under B's key — even though `channels` can
+    // transiently still show A's stale, carried-forward list right after the
+    // switch (see useMeshtasticRuntime's lastKnownChannelsRef).
+    localStorage.clear();
+    saveActiveChannel('meshtastic', 1, 1); // node 1 (A) previously selected Admin (index 1)
+
+    const channels = [
+      { index: 0, name: 'General' },
+      { index: 1, name: 'Admin' },
+    ];
+
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} protocol="meshtastic" myNodeNum={1} channels={channels} />
+      </ToastProvider>,
+    );
+    await waitForComposer();
+
+    // Switch to node 2 (B) while the panel stays mounted; channels prop still
+    // shows A's list, as it would transiently during a live node switch.
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} protocol="meshtastic" myNodeNum={2} channels={channels} />
+      </ToastProvider>,
+    );
+    await waitForComposer();
+
+    await waitFor(() => {
+      expect(loadActiveChannelInitial('meshtastic', 2)).not.toBeNull();
+    });
+    expect(loadActiveChannelInitial('meshtastic', 2)).not.toBe(1); // A's index must not leak
+    expect(loadActiveChannelInitial('meshtastic', 1)).toBe(1); // A's own saved value untouched
+  });
+
+  it("keeps node B's saved channel pending (not overwritten) while the list still belongs to node A, then restores it once B's real channels arrive", async () => {
+    // Regression (CodeRabbit, PR #858 second pass): a saved value for the new
+    // node/scope must not be treated as "nothing saved" just because the
+    // current (stale, carried-forward) channels list doesn't contain it yet —
+    // that previously forced a default selection and then persisted it,
+    // clobbering the real saved value the moment it became visible.
+    localStorage.clear();
+    saveActiveChannel('meshtastic', 2, 2); // node B (2) previously selected channel index 2
+    saveDraft('meshtastic', 'ch:2', 'node b draft');
+
+    const staleChannelsFromNodeA = [
+      { index: 0, name: 'General' },
+      { index: 1, name: 'Admin' },
+    ];
+
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshtastic"
+          myNodeNum={1}
+          channels={staleChannelsFromNodeA}
+        />
+      </ToastProvider>,
+    );
+    await waitForComposer();
+
+    // Switch to node B; channels prop still shows A's stale list (no index 2).
+    rerender(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshtastic"
+          myNodeNum={2}
+          channels={staleChannelsFromNodeA}
+        />
+      </ToastProvider>,
+    );
+    await waitForComposer();
+
+    // While pending: must NOT have clobbered node B's saved value with a default.
+    expect(loadActiveChannelInitial('meshtastic', 2)).toBe(2);
+
+    // Node B's real channel list arrives.
+    const realChannelsFromNodeB = [
+      { index: 0, name: 'General' },
+      { index: 2, name: 'Ops' },
+    ];
+    rerender(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshtastic"
+          myNodeNum={2}
+          channels={realChannelsFromNodeB}
+        />
+      </ToastProvider>,
+    );
+
+    const textarea = await waitForComposer();
+    await waitFor(() => {
+      expect(textarea).toHaveValue('node b draft');
+    });
+    expect(loadActiveChannelInitial('meshtastic', 2)).toBe(2);
+  });
+
+  it('stops waiting for a saved channel that no longer exists once the list stabilizes, so a later selection still saves', async () => {
+    // Self-caught regression: without a bound on "pending", a saved channel
+    // that's genuinely gone from this node's config (removed since the last
+    // session) would leave restoration pending forever — and since saving is
+    // suppressed while pending, that would silently disable persisting *any*
+    // future selection for this node, not just fail to restore the old one.
+    localStorage.clear();
+    saveActiveChannel('meshtastic', 3, 99); // node 3 previously had channel 99 — no longer present
+
+    const channelsAttempt1 = [
+      { index: 0, name: 'General' },
+      { index: 1, name: 'Admin' },
+    ];
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} protocol="meshtastic" myNodeNum={3} channels={channelsAttempt1} />
+      </ToastProvider>,
+    );
+    await waitForComposer();
+
+    // Channel list re-renders with the same content (new array reference, same
+    // indices) — simulates the list having settled without ever containing 99.
+    const channelsAttempt2 = [
+      { index: 0, name: 'General' },
+      { index: 1, name: 'Admin' },
+    ];
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} protocol="meshtastic" myNodeNum={3} channels={channelsAttempt2} />
+      </ToastProvider>,
+    );
+    await waitForComposer();
+
+    // A later, deliberate channel pick must still get persisted — proves
+    // saving isn't stuck suppressed forever.
+    const user = userEvent.setup();
+    const adminButton = screen
+      .getAllByRole('button')
+      .find((b) => /Admin/i.test(b.textContent ?? ''));
+    expect(adminButton).toBeTruthy();
+    if (adminButton) await user.click(adminButton);
+
+    await waitFor(() => {
+      expect(loadActiveChannelInitial('meshtastic', 3)).toBe(1); // Admin's index
+    });
+  });
+
+  it('lets a manual channel click win over a still-pending restore, instead of being silently overwritten once it resolves', async () => {
+    // Self-caught regression: if a restore is still pending (waiting for a
+    // saved value to show up in `channels`) when the user manually picks a
+    // *different* channel, the restore effect must not later fire and
+    // silently override that manual pick once the saved value's channel
+    // finally appears in the list.
+    localStorage.clear();
+    saveActiveChannel('meshtastic', 4, 2); // node 4 previously selected channel index 2
+
+    const staleChannels = [
+      { index: 0, name: 'General' },
+      { index: 1, name: 'Admin' },
+    ];
+    // Mount on a different node first, then switch to node 4 while `channels`
+    // still shows the stale list — the lazy initializer only runs at true
+    // first mount, so this is what actually exercises the pending-restore
+    // effect (mounting directly at myNodeNum=4 would resolve immediately via
+    // the initializer instead, never engaging "pending" at all).
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} protocol="meshtastic" myNodeNum={1} channels={staleChannels} />
+      </ToastProvider>,
+    );
+    await waitForComposer();
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} protocol="meshtastic" myNodeNum={4} channels={staleChannels} />
+      </ToastProvider>,
+    );
+    await waitForComposer();
+    // Still pending: saved value (2) isn't in the current list yet.
+    expect(loadActiveChannelInitial('meshtastic', 4)).toBe(2);
+
+    // User manually picks Admin (1) while restoration is still pending.
+    const user = userEvent.setup();
+    const adminButton = screen
+      .getAllByRole('button')
+      .find((b) => /Admin/i.test(b.textContent ?? ''));
+    expect(adminButton).toBeTruthy();
+    if (adminButton) await user.click(adminButton);
+    await waitFor(() => {
+      expect(loadActiveChannelInitial('meshtastic', 4)).toBe(1);
+    });
+
+    // The saved value's channel (2) now shows up in the list — must NOT
+    // silently override the user's manual pick.
+    const realChannels = [
+      { index: 0, name: 'General' },
+      { index: 1, name: 'Admin' },
+      { index: 2, name: 'Ops' },
+    ];
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} protocol="meshtastic" myNodeNum={4} channels={realChannels} />
+      </ToastProvider>,
+    );
+    await waitForComposer();
+
+    expect(loadActiveChannelInitial('meshtastic', 4)).toBe(1);
+  });
+
+  it('retries the restore once channels arrive, even when myNodeNum was already known at the very first mount', async () => {
+    // Self-caught regression: myNodeNum and channels come from separate
+    // packets, so channels can easily still be empty on the very first
+    // render even though the node is already known. The restore-state ref's
+    // initializer must not unconditionally mark that "resolved" — it has to
+    // mirror whatever the lazy `channel` initializer actually found, or a
+    // saved value that arrives moments later would never get retried.
+    localStorage.clear();
+    saveActiveChannel('meshtastic', 5, 3);
+    saveDraft('meshtastic', 'ch:3', 'ops draft');
+
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} protocol="meshtastic" myNodeNum={5} channels={[]} />
+      </ToastProvider>,
+    );
+    await waitForComposer();
+
+    const realChannels = [
+      { index: 0, name: 'General' },
+      { index: 3, name: 'Ops' },
+    ];
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} protocol="meshtastic" myNodeNum={5} channels={realChannels} />
+      </ToastProvider>,
+    );
+
+    const textarea = await waitForComposer();
+    await waitFor(() => {
+      expect(textarea).toHaveValue('ops draft');
+    });
+    expect(loadActiveChannelInitial('meshtastic', 5)).toBe(3);
+  });
+
+  it("does not leak a different node's leftover channel selection when giving up on a saved channel that no longer exists", async () => {
+    // Self-caught regression: giving up on a saved-but-never-found channel
+    // for a *different* scope must still reset away from the previous
+    // scope's leftover selection — even when that leftover index happens to
+    // also be "valid" in the new (now-stable) list, which is exactly what
+    // the pre-existing clamp effect can't catch on its own.
+    localStorage.clear();
+    saveActiveChannel('meshtastic', 1, 1); // node 1 (A): selected Admin (index 1)
+    saveActiveChannel('meshtastic', 2, 99); // node 2 (B): saved channel 99 — no longer exists
+
+    const channelsWithAdmin = [
+      { index: 0, name: 'General' },
+      { index: 1, name: 'Admin' },
+    ];
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshtastic"
+          myNodeNum={1}
+          channels={channelsWithAdmin}
+        />
+      </ToastProvider>,
+    );
+    await waitForComposer();
+
+    // Switch to node B; its real list happens to also contain index 1
+    // (Admin) — A's leftover selection — but never contains 99.
+    rerender(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshtastic"
+          myNodeNum={2}
+          channels={[
+            { index: 0, name: 'General' },
+            { index: 1, name: 'Admin' },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    await waitForComposer();
+    expect(loadActiveChannelInitial('meshtastic', 2)).toBe(99); // still pending, untouched
+
+    // List "stabilizes" (same content, new array reference) without ever
+    // containing 99 — give up.
+    rerender(
+      <ToastProvider>
+        <ChatPanel
+          {...baseProps}
+          protocol="meshtastic"
+          myNodeNum={2}
+          channels={[
+            { index: 0, name: 'General' },
+            { index: 1, name: 'Admin' },
+          ]}
+        />
+      </ToastProvider>,
+    );
+    await waitForComposer();
+
+    await waitFor(() => {
+      expect(loadActiveChannelInitial('meshtastic', 2)).not.toBe(1); // must not leak A's index
+    });
+    expect(loadActiveChannelInitial('meshtastic', 2)).toBe(0); // reset to default (General)
+    expect(loadActiveChannelInitial('meshtastic', 1)).toBe(1); // A's own saved value untouched
+  });
+});
+
+describe('ChatPanel — notification sound on new messages', () => {
+  const playMock = vi.mocked(chatNotifications.playMessageNotification);
+
+  beforeEach(() => {
+    playMock.mockClear();
+    localStorage.removeItem('mesh-client:notifMuted');
+  });
+
+  afterEach(() => {
+    localStorage.removeItem('mesh-client:notifMuted');
+  });
+
+  it('does not play sound for messages already present at mount (e.g. after protocol switch)', async () => {
+    // Message is in channel 1, but the default view starts on channel 0 — this is
+    // exactly the case that would trigger the erroneous sound before the fix.
+    const existingMsg = makeMsg({ sender_id: 2, channel: 1, isHistory: undefined });
+
+    render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[existingMsg]} isActive />
+      </ToastProvider>,
+    );
+
+    await waitForComposer();
+    expect(playMock).not.toHaveBeenCalled();
+  });
+
+  it('does not play sound when not on the chat panel (App owns that case)', async () => {
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[]} isActive={false} />
+      </ToastProvider>,
+    );
+
+    await waitForComposer();
+    playMock.mockClear();
+
+    const newMsg = makeMsg({ sender_id: 2, channel: 0, isHistory: undefined });
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[newMsg]} isActive={false} />
+      </ToastProvider>,
+    );
+
+    await waitForComposer();
+    expect(playMock).not.toHaveBeenCalled();
+  });
+
+  it('plays channel sound when active on a different channel view', async () => {
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[]} isActive />
+      </ToastProvider>,
+    );
+
+    await waitForComposer();
+    playMock.mockClear();
+
+    const newMsg = makeMsg({ sender_id: 2, channel: 1, isHistory: undefined });
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[newMsg]} isActive />
+      </ToastProvider>,
+    );
+
+    await waitForComposer();
+    expect(playMock).toHaveBeenCalledOnce();
+    expect(playMock).toHaveBeenCalledWith('channel');
+  });
+
+  it('plays dm sound for incoming direct messages on another view', async () => {
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[]} isActive />
+      </ToastProvider>,
+    );
+
+    await waitForComposer();
+    playMock.mockClear();
+
+    const newMsg = makeMsg({ sender_id: 2, to: 1, channel: 0, isHistory: undefined });
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[newMsg]} isActive />
+      </ToastProvider>,
+    );
+
+    await waitForComposer();
+    expect(playMock).toHaveBeenCalledOnce();
+    expect(playMock).toHaveBeenCalledWith('dm');
+  });
+
+  it('plays reply sound when a reply targets your message on another view', async () => {
+    const user = userEvent.setup();
+    const parent = makeMsg({ sender_id: 1, channel: 0, packetId: 100, timestamp: 500 });
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[parent]} isActive />
+      </ToastProvider>,
+    );
+
+    await waitForComposer();
+    const channelButtons = screen.getAllByRole('button', { name: /General|Admin|ch0|ch1/i });
+    const adminBtn = channelButtons.find((b) => /Admin|ch1|1/i.test(b.textContent ?? ''));
+    expect(adminBtn).toBeDefined();
+    await user.click(adminBtn!);
+    playMock.mockClear();
+
+    const reply = makeMsg({ sender_id: 2, channel: 0, replyId: 100, timestamp: 1000 });
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[parent, reply]} isActive />
+      </ToastProvider>,
+    );
+
+    await waitForComposer();
+    expect(playMock).toHaveBeenCalledOnce();
+    expect(playMock).toHaveBeenCalledWith('reply');
+  });
+
+  it('does not play sound when notifMuted=1 in localStorage (global setting from AppPanel)', async () => {
+    localStorage.setItem('mesh-client:notifMuted', '1');
+
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[]} isActive={false} />
+      </ToastProvider>,
+    );
+
+    await waitForComposer();
+    playMock.mockClear();
+
+    const newMsg = makeMsg({ sender_id: 2, channel: 0, isHistory: undefined });
+    rerender(
+      <ToastProvider>
+        <ChatPanel {...baseProps} messages={[newMsg]} isActive={false} />
+      </ToastProvider>,
+    );
+
+    await waitForComposer();
+    expect(playMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('ChatPanel reticulum dm-only chat', () => {
+  const reticulumProps = {
+    messages: [] as ChatMessage[],
+    channels: [{ index: 0, name: 'General' }],
+    myNodeNum: 1,
+    onSend: vi.fn().mockResolvedValue(undefined),
+    onReact: vi.fn().mockResolvedValue(undefined),
+    onResend: vi.fn(),
+    onNodeClick: vi.fn(),
+    isConnected: true,
+    nodes: new Map<number, MeshNode>(),
+    isActive: true,
+    protocol: 'reticulum' as const,
+    dmOnlyChat: true,
+  };
+
+  it('opens DM via initialDmTarget instead of listing all contacts', async () => {
+    const user = userEvent.setup();
+    const peerId = 0xabc123;
+    const onSend = vi.fn().mockResolvedValue(undefined);
+    const nodes = new Map<number, MeshNode>([
+      [
+        peerId,
+        {
+          node_id: peerId,
+          reticulum_destination_hash: 'deadbeef',
+          long_name: 'Peer One',
+          short_name: 'P1',
+          hw_model: 'Reticulum',
+          snr: 0,
+          battery: 0,
+          last_heard: Date.now(),
+          latitude: null,
+          longitude: null,
+          favorited: false,
+          source: 'rf',
+        },
+      ],
+    ]);
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} nodes={nodes} onSend={onSend} initialDmTarget={peerId} />
+      </ToastProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'Peer One' })).toBeInTheDocument();
+    const input = await waitForComposer();
+    await user.type(input, 'hello');
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(onSend).toHaveBeenCalledWith('hello', 0, peerId, undefined);
+    });
+  });
+
+  it('restores last-focused DM instead of the peer with the most history', async () => {
+    const lastFocusedId = 0x201;
+    const busierPeerId = 0x202;
+    localStorage.setItem(
+      'mesh-client:openDmTabs:reticulum',
+      JSON.stringify([lastFocusedId, busierPeerId]),
+    );
+    localStorage.setItem('mesh-client:activeDm:reticulum', String(lastFocusedId));
+    const nodes = new Map<number, MeshNode>([
+      [
+        lastFocusedId,
+        {
+          node_id: lastFocusedId,
+          reticulum_destination_hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          long_name: 'Last Focused',
+          short_name: 'LF',
+          hw_model: 'Reticulum',
+          snr: 0,
+          battery: 0,
+          last_heard: Date.now(),
+          latitude: null,
+          longitude: null,
+          favorited: false,
+          source: 'rf',
+        },
+      ],
+      [
+        busierPeerId,
+        {
+          node_id: busierPeerId,
+          reticulum_destination_hash: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          long_name: 'Busier Peer',
+          short_name: 'BP',
+          hw_model: 'Reticulum',
+          snr: 0,
+          battery: 0,
+          last_heard: Date.now(),
+          latitude: null,
+          longitude: null,
+          favorited: false,
+          source: 'rf',
+        },
+      ],
+    ]);
+    const messages: ChatMessage[] = [
+      {
+        sender_id: lastFocusedId,
+        sender_name: 'Last Focused',
+        payload: 'one message',
+        channel: 0,
+        to: 1,
+        reticulum_sender_hash: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        timestamp: Date.now() - 1000,
+        status: 'acked',
+      },
+      {
+        sender_id: busierPeerId,
+        sender_name: 'Busier Peer',
+        payload: 'many one',
+        channel: 0,
+        to: 1,
+        reticulum_sender_hash: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        timestamp: Date.now() - 500,
+        status: 'acked',
+      },
+      {
+        sender_id: busierPeerId,
+        sender_name: 'Busier Peer',
+        payload: 'many two',
+        channel: 0,
+        to: 1,
+        reticulum_sender_hash: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        timestamp: Date.now() - 400,
+        status: 'acked',
+      },
+      {
+        sender_id: busierPeerId,
+        sender_name: 'Busier Peer',
+        payload: 'many three',
+        channel: 0,
+        to: 1,
+        reticulum_sender_hash: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        timestamp: Date.now() - 300,
+        status: 'acked',
+      },
+    ];
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} messages={messages} nodes={nodes} ownNodeIds={[1]} />
+      </ToastProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByText('one message')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('many one')).not.toBeInTheDocument();
+    const lastFocusedBtn = screen.getAllByRole('button', { name: 'Last Focused' })[0];
+    expect(lastFocusedBtn.className).toMatch(/text-white/);
+    expect(localStorage.getItem('mesh-client:activeDm:reticulum')).toBe(String(lastFocusedId));
+  });
+
+  it('promotes DM pills into the channel grid column with flex-wrap (no separate DM row)', () => {
+    const peerIds = [0x101, 0x102, 0x103, 0x104, 0x105, 0x106];
+    localStorage.setItem('mesh-client:openDmTabs:reticulum', JSON.stringify(peerIds));
+    const nodes = new Map<number, MeshNode>(
+      peerIds.map((nodeId, index) => [
+        nodeId,
+        {
+          node_id: nodeId,
+          reticulum_destination_hash: `deadbeef${index.toString(16).padStart(2, '0')}`,
+          long_name: `Peer ${index}`,
+          short_name: `P${index}`,
+          hw_model: 'Reticulum',
+          snr: 0,
+          battery: 0,
+          last_heard: Date.now(),
+          latitude: null,
+          longitude: null,
+          favorited: false,
+          source: 'rf',
+        },
+      ]),
+    );
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} nodes={nodes} />
+      </ToastProvider>,
+    );
+
+    expect(screen.queryByText('Channels')).not.toBeInTheDocument();
+
+    const label = screen.getByText('DMs');
+    const dmsContainer = label.parentElement;
+    expect(dmsContainer?.className).toMatch(/flex-wrap/);
+    expect(dmsContainer?.className).not.toMatch(/whitespace-nowrap/);
+
+    const headerRow = dmsContainer?.parentElement;
+    expect(headerRow?.className).toMatch(/grid-cols-\[minmax\(0,1fr\)_auto\]/);
+
+    const exportBtn = screen.getByRole('button', { name: 'Export chat' });
+    const starredBtn = screen.getByRole('button', { name: 'Starred messages' });
+    expect(dmsContainer?.contains(exportBtn)).toBe(false);
+    expect(dmsContainer?.contains(starredBtn)).toBe(false);
+    expect(headerRow?.contains(exportBtn)).toBe(true);
+    expect(headerRow?.contains(starredBtn)).toBe(true);
+
+    expect(screen.getByRole('button', { name: 'Peer 0' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Peer 5' })).toBeInTheDocument();
+  });
+
+  it('does not list node-map contacts without message history', () => {
+    const peerId = 0xabc123;
+    const nodes = new Map<number, MeshNode>([
+      [
+        peerId,
+        {
+          node_id: peerId,
+          reticulum_destination_hash: 'deadbeef',
+          long_name: 'Peer One',
+          short_name: 'P1',
+          hw_model: 'Reticulum',
+          snr: 0,
+          battery: 0,
+          last_heard: Date.now(),
+          latitude: null,
+          longitude: null,
+          favorited: false,
+          source: 'rf',
+        },
+      ],
+    ]);
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} nodes={nodes} />
+      </ToastProvider>,
+    );
+    expect(screen.queryByRole('button', { name: 'Peer One' })).not.toBeInTheDocument();
+  });
+
+  it('shows DM tab from message history and auto-focuses conversation', async () => {
+    const peerId = parseInt('8fd7a9361aca', 16) >>> 0;
+    const messages: ChatMessage[] = [
+      {
+        sender_id: peerId,
+        sender_name: 'History Peer',
+        payload: 'prior hello',
+        channel: 0,
+        to: 0,
+        reticulum_sender_hash: '8fd7a9361aca00000000000000000000',
+        timestamp: Date.now(),
+        status: 'acked',
+      },
+    ];
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} messages={messages} ownNodeIds={[1]} />
+      </ToastProvider>,
+    );
+    expect(screen.getByText('prior hello')).toBeInTheDocument();
+    const input = await waitForComposer();
+    expect(input).not.toBeDisabled();
+  });
+
+  it('does not autofocus a self DM when inbound history has to=self', async () => {
+    const peerHash = '8fd7a9361aca00000000000000000000';
+    const peerId = parseInt(peerHash.slice(0, 12), 16) >>> 0;
+    const selfHash = '368f994c056de0d8882855eb0d627497';
+    const selfId = parseInt(selfHash.slice(0, 12), 16) >>> 0;
+    localStorage.setItem(`mesh-client:openDmTabs:reticulum`, JSON.stringify([selfId]));
+    const messages: ChatMessage[] = [
+      {
+        sender_id: peerId,
+        sender_name: 'Other Peer',
+        payload: 'hello from peer',
+        channel: 0,
+        to: selfId,
+        reticulum_sender_hash: peerHash,
+        timestamp: Date.now(),
+        status: 'acked',
+      },
+    ];
+    const selfNode: MeshNode = {
+      node_id: selfId,
+      reticulum_destination_hash: selfHash,
+      long_name: 'Myself',
+      short_name: 'ME',
+      hw_model: 'Reticulum',
+      snr: 0,
+      battery: 0,
+      last_heard: Date.now(),
+      latitude: null,
+      longitude: null,
+      favorited: false,
+      source: 'rf',
+    };
+    const peerNode: MeshNode = {
+      node_id: peerId,
+      reticulum_destination_hash: peerHash,
+      long_name: 'Other Peer',
+      short_name: 'OP',
+      hw_model: 'Reticulum',
+      snr: 0,
+      battery: 0,
+      last_heard: Date.now(),
+      latitude: null,
+      longitude: null,
+      favorited: false,
+      source: 'rf',
+    };
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...reticulumProps}
+          messages={messages}
+          ownNodeIds={[selfId]}
+          nodes={
+            new Map([
+              [selfId, selfNode],
+              [peerId, peerNode],
+            ])
+          }
+        />
+      </ToastProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByText('hello from peer')).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: 'Myself' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Other Peer' }).length).toBeGreaterThanOrEqual(1);
+    const openTabs = JSON.parse(
+      localStorage.getItem('mesh-client:openDmTabs:reticulum') ?? '[]',
+    ) as number[];
+    expect(openTabs).not.toContain(selfId);
+  });
+
+  it('does not flash an inferred self DM while own identity is still unknown', async () => {
+    const peerHash = '81bc0c0c5937ee0b750dbed29e744997';
+    const peerId = parseInt(peerHash.slice(0, 12), 16) >>> 0;
+    const selfHash = '8fd7a9361aca12360c7985bc934bdd20';
+    const selfId = parseInt(selfHash.slice(0, 12), 16) >>> 0;
+    const selfHexLabel = `!${(selfId >>> 0).toString(16).padStart(8, '0')}`;
+    const messages: ChatMessage[] = [
+      {
+        sender_id: selfId,
+        sender_name: 'NV0N',
+        payload: 'outbound to peer',
+        channel: 0,
+        to: peerId,
+        reticulum_sender_hash: selfHash,
+        timestamp: Date.now() - 1000,
+        status: 'acked',
+      },
+      {
+        sender_id: peerId,
+        sender_name: 'w0rmt',
+        payload: 'inbound from peer',
+        channel: 0,
+        to: selfId,
+        reticulum_sender_hash: peerHash,
+        timestamp: Date.now(),
+        status: 'acked',
+      },
+    ];
+    const peerNode: MeshNode = {
+      node_id: peerId,
+      reticulum_destination_hash: peerHash,
+      long_name: 'w0rmt',
+      short_name: 'w0rm',
+      hw_model: 'Reticulum',
+      snr: 0,
+      battery: 0,
+      last_heard: Date.now(),
+      latitude: null,
+      longitude: null,
+      favorited: false,
+      source: 'rf',
+    };
+    const { rerender } = render(
+      <ToastProvider>
+        <ChatPanel
+          {...reticulumProps}
+          myNodeNum={0}
+          ownNodeIds={[]}
+          messages={messages}
+          nodes={new Map([[peerId, peerNode]])}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.queryByRole('button', { name: selfHexLabel })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'w0rmt' })).not.toBeInTheDocument();
+    expect(screen.queryByText('outbound to peer')).not.toBeInTheDocument();
+    expect(screen.queryByText('inbound from peer')).not.toBeInTheDocument();
+
+    rerender(
+      <ToastProvider>
+        <ChatPanel
+          {...reticulumProps}
+          myNodeNum={selfId}
+          ownNodeIds={[selfId]}
+          messages={messages}
+          nodes={new Map([[peerId, peerNode]])}
+        />
+      </ToastProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByText('inbound from peer')).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: selfHexLabel })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'w0rmt' }).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('keeps explicitly opened DM tabs while own identity is still unknown', async () => {
+    const peerHash = '81bc0c0c5937ee0b750dbed29e744997';
+    const peerId = parseInt(peerHash.slice(0, 12), 16) >>> 0;
+    localStorage.setItem('mesh-client:openDmTabs:reticulum', JSON.stringify([peerId]));
+    const peerNode: MeshNode = {
+      node_id: peerId,
+      reticulum_destination_hash: peerHash,
+      long_name: 'w0rmt',
+      short_name: 'w0rm',
+      hw_model: 'Reticulum',
+      snr: 0,
+      battery: 0,
+      last_heard: Date.now(),
+      latitude: null,
+      longitude: null,
+      favorited: false,
+      source: 'rf',
+    };
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...reticulumProps}
+          myNodeNum={0}
+          ownNodeIds={[]}
+          nodes={new Map([[peerId, peerNode]])}
+        />
+      </ToastProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'w0rmt' })).toBeInTheDocument();
+    });
+  });
+
+  it('prompts to select a DM when no contacts are known', async () => {
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} />
+      </ToastProvider>,
+    );
+    expect(
+      screen.getByText(
+        'No conversations yet — enter an address or open a contact from the Nodes tab.',
+      ),
+    ).toBeInTheDocument();
+    const input = await waitForComposer();
+    expect(input).toBeDisabled();
+    expect(
+      screen.getByPlaceholderText('Select a contact above to start a DM…'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Reticulum chat is direct message only. Pick a contact above, enter an address, or open one from the Nodes tab.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('opens DM tab when a valid destination hash is entered', async () => {
+    const user = userEvent.setup();
+    const hash = '368f994c056de0d8882855eb0d627497';
+    const peerId = parseInt(hash.slice(0, 12), 16) >>> 0;
+    const onSend = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} onSend={onSend} />
+      </ToastProvider>,
+    );
+    const addressInput = screen.getByLabelText('Destination address');
+    await user.type(addressInput, hash);
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    const composer = await waitForComposer();
+    expect(composer).not.toBeDisabled();
+    await user.type(composer, 'hello');
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(onSend).toHaveBeenCalledWith('hello', 0, peerId, undefined);
+    });
+  });
+
+  it('shows validation error for invalid destination hash', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} />
+      </ToastProvider>,
+    );
+    const addressInput = screen.getByLabelText('Destination address');
+    await user.type(addressInput, 'not-a-valid-hash');
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    expect(
+      screen.getByText('Enter a valid 32-character destination hash or lxmf:// address.'),
+    ).toBeInTheDocument();
+    const composer = await waitForComposer();
+    expect(composer).toBeDisabled();
+  });
+
+  it('hides message history when no DM tab is selected', () => {
+    const peerId = parseInt('8fd7a9361aca', 16) >>> 0;
+    const messages: ChatMessage[] = [
+      {
+        sender_id: peerId,
+        sender_name: 'History Peer',
+        payload: 'prior hello',
+        channel: 0,
+        to: 0,
+        reticulum_sender_hash: '8fd7a9361aca00000000000000000000',
+        timestamp: Date.now(),
+        status: 'acked',
+      },
+    ];
+    localStorage.setItem(`mesh-client:dismissedDmTabs:reticulum`, JSON.stringify({ [peerId]: 1 }));
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} messages={messages} ownNodeIds={[1]} />
+      </ToastProvider>,
+    );
+    expect(screen.queryByText('prior hello')).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Reticulum chat is direct message only. Pick a contact above, enter an address, or open one from the Nodes tab.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps closed DM tabs dismissed after remount', () => {
+    const peerId = parseInt('8fd7a9361aca', 16) >>> 0;
+    const messages: ChatMessage[] = [
+      {
+        sender_id: peerId,
+        sender_name: 'History Peer',
+        payload: 'prior hello',
+        channel: 0,
+        to: 0,
+        reticulum_sender_hash: '8fd7a9361aca00000000000000000000',
+        timestamp: Date.now(),
+        status: 'acked',
+      },
+    ];
+    localStorage.setItem(`mesh-client:openDmTabs:reticulum`, JSON.stringify([]));
+    localStorage.setItem(`mesh-client:dismissedDmTabs:reticulum`, JSON.stringify({ [peerId]: 1 }));
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} messages={messages} ownNodeIds={[1]} />
+      </ToastProvider>,
+    );
+    expect(screen.queryByRole('button', { name: 'History Peer' })).not.toBeInTheDocument();
+    expect(screen.queryByText('prior hello')).not.toBeInTheDocument();
+  });
+
+  it('probes path reachability when opening a DM with stack live', async () => {
+    const hash = '368f994c056de0d8882855eb0d627497';
+    probeReticulumPeerMock.mockResolvedValue({ ok: true, hops: 2 });
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} reticulumStackLive />
+      </ToastProvider>,
+    );
+    const addressInput = screen.getByLabelText('Destination address');
+    await user.type(addressInput, hash);
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    await waitFor(() => {
+      expect(probeReticulumPeerMock).toHaveBeenCalledWith(hash);
+    });
+    await waitFor(() => {
+      expect(
+        screen.getByRole('status', { name: 'Destination path is reachable' }),
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Path reachable/)).toBeInTheDocument();
+  });
+
+  it('shows unreachable path indicator when probe fails', async () => {
+    const hash = '368f994c056de0d8882855eb0d627497';
+    probeReticulumPeerMock.mockResolvedValue({ ok: false, error: 'timeout' });
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} reticulumStackLive />
+      </ToastProvider>,
+    );
+    const addressInput = screen.getByLabelText('Destination address');
+    await user.type(addressInput, hash);
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole('status', { name: 'Destination path is not reachable' }),
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByText('No path')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Request Reticulum path to this destination' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: 'Probe Reticulum path reachability for this destination',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('requests path and re-probes from DM path actions', async () => {
+    const hash = '368f994c056de0d8882855eb0d627497';
+    probeReticulumPeerMock
+      .mockResolvedValueOnce({ ok: false, error: 'timeout' })
+      .mockResolvedValueOnce({ ok: true, hops: 2 });
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} reticulumStackLive />
+      </ToastProvider>,
+    );
+    const addressInput = screen.getByLabelText('Destination address');
+    await user.type(addressInput, hash);
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    await waitFor(() => {
+      expect(screen.getByText('No path')).toBeInTheDocument();
+    });
+    await user.click(
+      screen.getByRole('button', { name: 'Request Reticulum path to this destination' }),
+    );
+    await waitFor(() => {
+      expect(requestReticulumPeerPathMock).toHaveBeenCalledWith(hash);
+    });
+    await waitFor(() => {
+      expect(
+        screen.getByRole('status', { name: 'Destination path is reachable' }),
+      ).toBeInTheDocument();
+    });
+    expect(refreshReticulumPeersFromSidecarMock).toHaveBeenCalled();
+  });
+
+  it('probes and toasts from DM Probe action', async () => {
+    const hash = '368f994c056de0d8882855eb0d627497';
+    probeReticulumPeerMock
+      .mockResolvedValueOnce({ ok: false, error: 'timeout' })
+      .mockResolvedValueOnce({ ok: true, hops: 2 });
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} reticulumStackLive />
+      </ToastProvider>,
+    );
+    const addressInput = screen.getByLabelText('Destination address');
+    await user.type(addressInput, hash);
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    await waitFor(() => {
+      expect(screen.getByText('No path')).toBeInTheDocument();
+    });
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Probe Reticulum path reachability for this destination',
+      }),
+    );
+    await waitFor(() => {
+      expect(probeReticulumPeerMock).toHaveBeenCalledTimes(2);
+    });
+    expect(probeReticulumPeerMock).toHaveBeenLastCalledWith(hash);
+    await waitFor(() => {
+      expect(screen.getByText(/Probe OK/)).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(
+        screen.getByRole('status', { name: 'Destination path is reachable' }),
+      ).toBeInTheDocument();
+    });
+    expect(refreshReticulumPeersFromSidecarMock).toHaveBeenCalled();
+  });
+
+  it('manual Probe failure toasts and settles unreachable without refreshing peers', async () => {
+    const hash = '368f994c056de0d8882855eb0d627497';
+    probeReticulumPeerMock
+      .mockResolvedValueOnce({ ok: true, hops: 1 })
+      .mockResolvedValueOnce({ ok: false, error: 'timeout' });
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} reticulumStackLive />
+      </ToastProvider>,
+    );
+    const addressInput = screen.getByLabelText('Destination address');
+    await user.type(addressInput, hash);
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole('status', { name: 'Destination path is reachable' }),
+      ).toBeInTheDocument();
+    });
+    refreshReticulumPeersFromSidecarMock.mockClear();
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Probe Reticulum path reachability for this destination',
+      }),
+    );
+    await waitFor(() => {
+      expect(screen.getByText(/Probe failed/)).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByText('No path')).toBeInTheDocument();
+    });
+    expect(refreshReticulumPeersFromSidecarMock).not.toHaveBeenCalled();
+  });
+
+  it('manual Probe when sidecar is down shows start-stack toast and does not call /probe', async () => {
+    const hash = '368f994c056de0d8882855eb0d627497';
+    probeReticulumPeerMock.mockResolvedValueOnce({ ok: true, hops: 1 });
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} reticulumStackLive />
+      </ToastProvider>,
+    );
+    const addressInput = screen.getByLabelText('Destination address');
+    await user.type(addressInput, hash);
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', {
+          name: 'Probe Reticulum path reachability for this destination',
+        }),
+      ).toBeInTheDocument();
+    });
+    const probeCallsAfterAuto = probeReticulumPeerMock.mock.calls.length;
+    isReticulumSidecarRunningMock.mockResolvedValue(false);
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Probe Reticulum path reachability for this destination',
+      }),
+    );
+    await waitFor(() => {
+      expect(screen.getByText(/Start the stack/i)).toBeInTheDocument();
+    });
+    expect(probeReticulumPeerMock).toHaveBeenCalledTimes(probeCallsAfterAuto);
+  });
+
+  it('disables path/probe actions while a manual Probe is in flight', async () => {
+    const hash = '368f994c056de0d8882855eb0d627497';
+    let resolveManual!: (value: { ok: boolean; hops?: number }) => void;
+    const manual = new Promise<{ ok: boolean; hops?: number }>((resolve) => {
+      resolveManual = resolve;
+    });
+    probeReticulumPeerMock.mockResolvedValueOnce({ ok: true, hops: 1 }).mockReturnValueOnce(manual);
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} reticulumStackLive />
+      </ToastProvider>,
+    );
+    const addressInput = screen.getByLabelText('Destination address');
+    await user.type(addressInput, hash);
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    const probeBtnName = 'Probe Reticulum path reachability for this destination';
+    const pathBtnName = 'Request Reticulum path to this destination';
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: probeBtnName })).toBeEnabled();
+    });
+    await user.click(screen.getByRole('button', { name: probeBtnName }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: probeBtnName })).toBeDisabled();
+      expect(screen.getByRole('button', { name: pathBtnName })).toBeDisabled();
+    });
+    resolveManual({ ok: true, hops: 2 });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: probeBtnName })).toBeEnabled();
+    });
+  });
+
+  it('does not probe when reticulum stack is not live', async () => {
+    const hash = '368f994c056de0d8882855eb0d627497';
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} reticulumStackLive={false} />
+      </ToastProvider>,
+    );
+    const addressInput = screen.getByLabelText('Destination address');
+    await user.type(addressInput, hash);
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    await waitForComposer();
+    expect(probeReticulumPeerMock).not.toHaveBeenCalled();
+    expect(screen.queryByText('No path')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Path reachable/)).not.toBeInTheDocument();
+  });
+
+  it('opens peer detail via onPeerClick when sender name is clicked', async () => {
+    const user = userEvent.setup();
+    const peerHash = '8fd7a9361aca00000000000000000000';
+    const peerId = parseInt(peerHash.slice(0, 12), 16) >>> 0;
+    const onNodeClick = vi.fn();
+    const onPeerClick = vi.fn();
+    const messages: ChatMessage[] = [
+      {
+        sender_id: peerId,
+        sender_name: '98046ee20235',
+        payload: 'hello peer detail',
+        channel: 0,
+        to: 0,
+        reticulum_sender_hash: peerHash,
+        timestamp: Date.now(),
+        status: 'acked',
+      },
+    ];
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...reticulumProps}
+          messages={messages}
+          ownNodeIds={[1]}
+          onNodeClick={onNodeClick}
+          onPeerClick={onPeerClick}
+        />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByRole('button', { name: '98046ee20235' }));
+    expect(onPeerClick).toHaveBeenCalledExactlyOnceWith(peerHash);
+    expect(onNodeClick).not.toHaveBeenCalled();
+  });
+
+  it('shows LXMFace on DM tab and sender row when destination hash is known', () => {
+    const peerHash = 'a7b3c9d1e5f20681943ab2de77fc8e01';
+    const peerId = parseInt(peerHash.slice(0, 12), 16) >>> 0;
+    const nodes = new Map<number, MeshNode>([
+      [
+        peerId,
+        {
+          node_id: peerId,
+          reticulum_destination_hash: peerHash,
+          long_name: 'Face Peer',
+          short_name: 'FP',
+          hw_model: 'Reticulum',
+          snr: 0,
+          battery: 0,
+          last_heard: Date.now(),
+          latitude: null,
+          longitude: null,
+          favorited: false,
+          source: 'rf',
+        },
+      ],
+    ]);
+    const messages: ChatMessage[] = [
+      {
+        sender_id: peerId,
+        sender_name: 'Face Peer',
+        payload: 'with face',
+        channel: 0,
+        to: 1,
+        reticulum_sender_hash: peerHash,
+        timestamp: Date.now(),
+        status: 'acked',
+      },
+    ];
+    const { container } = render(
+      <ToastProvider>
+        <ChatPanel
+          {...reticulumProps}
+          nodes={nodes}
+          messages={messages}
+          ownNodeIds={[1]}
+          initialDmTarget={peerId}
+          onPeerClick={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    const faceImgs = container.querySelectorAll('img[src^="data:image/svg+xml"]');
+    expect(faceImgs.length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByRole('button', { name: 'Face Peer' }).length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getByRole('button', { name: /Open peer details for Face Peer/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('opens peer detail from DM header Peer details control', async () => {
+    const user = userEvent.setup();
+    const peerHash = 'a7b3c9d1e5f20681943ab2de77fc8e01';
+    const peerId = parseInt(peerHash.slice(0, 12), 16) >>> 0;
+    const onPeerClick = vi.fn();
+    const nodes = new Map<number, MeshNode>([
+      [
+        peerId,
+        {
+          node_id: peerId,
+          reticulum_destination_hash: peerHash,
+          long_name: 'Detail Peer',
+          short_name: 'DP',
+          hw_model: 'Reticulum',
+          snr: 0,
+          battery: 0,
+          last_heard: Date.now(),
+          latitude: null,
+          longitude: null,
+          favorited: false,
+          source: 'rf',
+        },
+      ],
+    ]);
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...reticulumProps}
+          nodes={nodes}
+          initialDmTarget={peerId}
+          onPeerClick={onPeerClick}
+        />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByRole('button', { name: /Open peer details for Detail Peer/i }));
+    expect(onPeerClick).toHaveBeenCalledExactlyOnceWith(peerHash);
+  });
+
+  it('orders DM header as status → last heard → peer details → Probe → Path → Call → Send file', async () => {
+    const hash = '368f994c056de0d8882855eb0d627497';
+    const peerId = parseInt(hash.slice(0, 12), 16) >>> 0;
+    probeReticulumPeerMock.mockResolvedValue({ ok: true, hops: 2 });
+    const onPeerClick = vi.fn();
+    const nodes = new Map<number, MeshNode>([
+      [
+        peerId,
+        {
+          node_id: peerId,
+          reticulum_destination_hash: hash,
+          long_name: 'Order Peer',
+          short_name: 'OP',
+          hw_model: 'Reticulum',
+          snr: 0,
+          battery: 0,
+          last_heard: Date.now(),
+          hops_away: 2,
+          latitude: null,
+          longitude: null,
+          favorited: false,
+          source: 'rf',
+        },
+      ],
+    ]);
+    const precedes = (a: Element, b: Element) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...reticulumProps}
+          nodes={nodes}
+          initialDmTarget={peerId}
+          reticulumStackLive
+          onPeerClick={onPeerClick}
+          hasLxstVoice
+          hasRncpTransfer
+        />
+      </ToastProvider>,
+    );
+
+    const pathStatus = await screen.findByRole('status', {
+      name: 'Destination path is reachable',
+    });
+    const peerInfo = screen.getByRole('status', { name: 'DM peer info' });
+    const peerDetails = screen.getByRole('button', {
+      name: /Open peer details for Order Peer/i,
+    });
+    const probe = screen.getByRole('button', {
+      name: 'Probe Reticulum path reachability for this destination',
+    });
+    const path = screen.getByRole('button', {
+      name: 'Request Reticulum path to this destination',
+    });
+    const call = screen.getByRole('button', { name: /start lxst voice call/i });
+    const sendFile = screen.getByRole('button', { name: /Send file to Order Peer via rncp/i });
+
+    expect(precedes(pathStatus, peerInfo)).toBe(true);
+    expect(precedes(peerInfo, peerDetails)).toBe(true);
+    expect(precedes(peerDetails, probe)).toBe(true);
+    expect(precedes(probe, path)).toBe(true);
+    expect(precedes(path, call)).toBe(true);
+    expect(precedes(call, sendFile)).toBe(true);
+
+    expect(peerDetails.className).toContain('border-cyan-500/35');
+    expect(peerDetails.className).toMatch(/text-cyan-/);
+    expect(peerDetails.className).not.toContain('bg-secondary-dark');
+    expect(peerDetails.className).not.toContain('rounded-full');
+    expect(call.className).toContain('border-cyan-500/35');
+    expect(call.className).toMatch(/text-cyan-/);
+    expect(call.className).not.toContain('ml-2');
+    expect(
+      screen.queryByText(/LXST voice needs a peer running LXST telephony/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it('prefers custom Lucide appearance over LXMFace on DM tab', () => {
+    const peerHash = 'ffffffffffffffffffffffffffffffff';
+    const peerId = parseInt(peerHash.slice(0, 12), 16) >>> 0;
+    useReticulumPeerStore.setState({
+      peerAppearanceByHash: new Map([[peerHash, { icon_name: 'star', icon_color: 'cyan' }]]),
+    });
+    const nodes = new Map<number, MeshNode>([
+      [
+        peerId,
+        {
+          node_id: peerId,
+          reticulum_destination_hash: peerHash,
+          long_name: 'Star Peer',
+          short_name: 'SP',
+          hw_model: 'Reticulum',
+          snr: 0,
+          battery: 0,
+          last_heard: Date.now(),
+          latitude: null,
+          longitude: null,
+          favorited: false,
+          source: 'rf',
+        },
+      ],
+    ]);
+    const { container } = render(
+      <ToastProvider>
+        <ChatPanel {...reticulumProps} nodes={nodes} initialDmTarget={peerId} />
+      </ToastProvider>,
+    );
+    const tabBtn = screen.getByRole('button', { name: 'Star Peer' });
+    expect(tabBtn.querySelector('img')).toBeNull();
+    expect(tabBtn.querySelector('svg')).toBeTruthy();
+    expect(container.querySelector('img[src^="data:image/svg+xml"]')).toBeNull();
+  });
+
+  it('does not call onNodeClick or onPeerClick when Reticulum sender hash cannot be resolved', async () => {
+    const user = userEvent.setup();
+    const peerId = 0xabcdef01;
+    const onNodeClick = vi.fn();
+    const onPeerClick = vi.fn();
+    const messages: ChatMessage[] = [
+      {
+        sender_id: peerId,
+        sender_name: 'Unknown Peer',
+        payload: 'no hash here',
+        channel: 0,
+        to: peerId,
+        timestamp: Date.now(),
+        status: 'acked',
+      },
+    ];
+    render(
+      <ToastProvider>
+        <ChatPanel
+          {...reticulumProps}
+          messages={messages}
+          ownNodeIds={[1]}
+          initialDmTarget={peerId}
+          onNodeClick={onNodeClick}
+          onPeerClick={onPeerClick}
+        />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Unknown Peer' }));
+    expect(onPeerClick).not.toHaveBeenCalled();
+    expect(onNodeClick).not.toHaveBeenCalled();
+  });
+});

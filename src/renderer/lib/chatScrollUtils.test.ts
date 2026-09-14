@@ -1,0 +1,411 @@
+import type { RefObject } from 'react';
+import { describe, expect, it, vi } from 'vitest';
+
+import {
+  CHAT_LINK_PREVIEW_ESTIMATE_PX,
+  CHAT_UNREAD_DIVIDER_ESTIMATE_EXTRA_PX,
+  createChatScrollAdjustPredicate,
+  createStableChatMeasureElement,
+  estimateChatRowHeight,
+  findFirstMessageIndexByDayKey,
+  findIndexByRowKey,
+  findMessageIndexByKey,
+  findMessageIndexByReticulumHash,
+  getChatDayKey,
+  getChatMessageVirtualizerKey,
+  roomPostRowKey,
+  roomPostVirtualizerKey,
+  scrollElementWithinContainer,
+} from './chatScrollUtils';
+import type { ChatMessage } from './types';
+
+function makeMsg(overrides: Partial<ChatMessage> & Pick<ChatMessage, 'timestamp'>): ChatMessage {
+  return {
+    sender_id: 1,
+    sender_name: 'Alice',
+    payload: 'hello',
+    channel: 0,
+    status: 'acked',
+    ...overrides,
+  };
+}
+
+function mockMeasureInstance(
+  overrides: Partial<{
+    scrollDirection: 'forward' | 'backward' | null;
+    cachedSize: number;
+    index: number;
+    key: string;
+  }> = {},
+) {
+  const index = overrides.index ?? 0;
+  const key = overrides.key ?? 'k0';
+  return {
+    indexFromElement: () => index,
+    scrollDirection: overrides.scrollDirection ?? null,
+    measurementsCache: [{ size: overrides.cachedSize ?? 80 }],
+    itemSizeCache: new Map<string, number>([[key, overrides.cachedSize ?? 80]]),
+    options: {
+      getItemKey: () => key,
+      horizontal: false,
+      estimateSize: () => 96,
+    },
+  };
+}
+
+describe('createChatScrollAdjustPredicate', () => {
+  const item = { index: 2, key: 'k2', start: 192, size: 96, end: 288, lane: 0 };
+
+  function makePredicate(
+    overrides: {
+      unreadStartIndex?: number;
+      isPinned?: boolean;
+    } = {},
+  ) {
+    const unreadStartIndexRef = {
+      current: overrides.unreadStartIndex ?? -1,
+    } as RefObject<number>;
+    const isPinnedToBottomRef = {
+      current: overrides.isPinned ?? true,
+    } as RefObject<boolean>;
+    return createChatScrollAdjustPredicate({ unreadStartIndexRef, isPinnedToBottomRef });
+  }
+
+  function mockInstance(scrollDirection: 'forward' | 'backward' | null, atEnd: boolean) {
+    return { scrollDirection, isAtEnd: () => atEnd };
+  }
+
+  it('returns false when scrolling backward', () => {
+    const adjust = makePredicate();
+    expect(adjust(item, 0, mockInstance('backward', true) as never)).toBe(false);
+  });
+
+  it('returns false when virtualizer is no longer at end (stale pin ref)', () => {
+    const adjust = makePredicate({ isPinned: true });
+    expect(adjust(item, 0, mockInstance('forward', false) as never)).toBe(false);
+    expect(adjust(item, 0, mockInstance(null, false) as never)).toBe(false);
+  });
+
+  it('returns false at unread divider index', () => {
+    const adjust = makePredicate({ unreadStartIndex: 2 });
+    expect(adjust(item, 0, mockInstance('forward', true) as never)).toBe(false);
+  });
+
+  it('returns false when not pinned to bottom', () => {
+    const adjust = makePredicate({ isPinned: false });
+    expect(adjust(item, 0, mockInstance('forward', true) as never)).toBe(false);
+  });
+
+  it('returns true when pinned, at end, and not on unread divider', () => {
+    const adjust = makePredicate();
+    expect(adjust(item, 0, mockInstance('forward', true) as never)).toBe(true);
+    expect(adjust(item, 0, mockInstance(null, true) as never)).toBe(true);
+  });
+});
+
+describe('getChatDayKey', () => {
+  it('uses 1-based calendar month (June is 6, not zero-based 5)', () => {
+    const ts = new Date(2026, 5, 15, 23, 59).getTime();
+    expect(getChatDayKey(ts)).toBe('2026-6-15');
+  });
+});
+
+describe('findMessageIndexByKey', () => {
+  it('finds by packetId first', () => {
+    const messages = [
+      makeMsg({ timestamp: 100, packetId: 42 }),
+      makeMsg({ timestamp: 200, packetId: 99 }),
+    ];
+    expect(findMessageIndexByKey(messages, 99)).toBe(1);
+  });
+
+  it('falls back to timestamp', () => {
+    const messages = [makeMsg({ timestamp: 12345 })];
+    expect(findMessageIndexByKey(messages, 12345)).toBe(0);
+  });
+
+  it('finds row when reply key is firmware seconds and stored timestamp is ms', () => {
+    const messages: ChatMessage[] = [
+      {
+        sender_id: 1,
+        sender_name: 'A',
+        payload: 'x',
+        channel: 0,
+        timestamp: 1_780_240_708_000,
+        status: 'acked',
+      },
+    ];
+    expect(findMessageIndexByKey(messages, 1_780_240_708)).toBe(0);
+  });
+});
+
+describe('findMessageIndexByReticulumHash', () => {
+  it('finds by reticulum_message_hash', () => {
+    const parentHash = 'ab'.repeat(32);
+    const messages = [
+      makeMsg({ timestamp: 100, reticulum_message_hash: 'cd'.repeat(32) }),
+      makeMsg({ timestamp: 200, reticulum_message_hash: parentHash }),
+    ];
+    expect(findMessageIndexByReticulumHash(messages, parentHash)).toBe(1);
+    expect(findMessageIndexByReticulumHash(messages, parentHash.toUpperCase())).toBe(1);
+    expect(findMessageIndexByReticulumHash(messages, 'ff'.repeat(32))).toBe(-1);
+  });
+});
+
+describe('findFirstMessageIndexByDayKey', () => {
+  it('returns first matching day', () => {
+    const day = getChatDayKey(new Date(2026, 0, 10, 12).getTime());
+    const messages = [
+      makeMsg({ timestamp: new Date(2026, 0, 9).getTime() }),
+      makeMsg({ timestamp: new Date(2026, 0, 10, 8).getTime() }),
+      makeMsg({ timestamp: new Date(2026, 0, 10, 20).getTime() }),
+    ];
+    expect(findFirstMessageIndexByDayKey(messages, day)).toBe(1);
+  });
+});
+
+describe('findIndexByRowKey', () => {
+  it('finds item by custom row key', () => {
+    const items = [{ id: 'a' }, { id: 'b' }];
+    expect(findIndexByRowKey(items, 'b', (x) => x.id)).toBe(1);
+  });
+});
+
+describe('getChatMessageVirtualizerKey', () => {
+  it('keeps keys unique when timestamp and packetId match at different indices', () => {
+    const msg = makeMsg({ timestamp: 1000, packetId: 42 });
+    expect(getChatMessageVirtualizerKey(msg, 0)).not.toBe(getChatMessageVirtualizerKey(msg, 1));
+  });
+
+  it('uses db id prefix when message has SQLite id', () => {
+    const msg = makeMsg({ id: 7, timestamp: 1000, packetId: 42 });
+    expect(getChatMessageVirtualizerKey(msg, 3)).toBe('db-7-3');
+  });
+});
+
+describe('roomPostVirtualizerKey', () => {
+  it('content row key collides for same-second posts from same sender', () => {
+    const ts = 1_710_000_000_500;
+    const a = makeMsg({ timestamp: ts, sender_id: 99, payload: 'hi', roomServerId: 1 });
+    const b = makeMsg({ timestamp: ts + 100, sender_id: 99, payload: 'again', roomServerId: 1 });
+    expect(roomPostRowKey(a)).toBe(roomPostRowKey(b));
+  });
+
+  it('virtualizer keys stay unique for colliding content keys', () => {
+    const ts = 1_710_000_000_500;
+    const posts = [
+      makeMsg({ timestamp: ts, sender_id: 99, payload: 'hi', roomServerId: 1 }),
+      makeMsg({ timestamp: ts + 100, sender_id: 99, payload: 'again', roomServerId: 1 }),
+    ];
+    expect(roomPostVirtualizerKey(posts[0], 0)).not.toBe(roomPostVirtualizerKey(posts[1], 1));
+  });
+});
+
+describe('createStableChatMeasureElement', () => {
+  it('locks cached size when scrolling backward and DOM would shrink', () => {
+    const measure = createStableChatMeasureElement(() => 96);
+    const el = document.createElement('div');
+    Object.defineProperty(el, 'offsetHeight', { value: 170, configurable: true });
+    const size = measure(
+      el,
+      undefined,
+      mockMeasureInstance({ scrollDirection: 'backward', cachedSize: 180 }) as never,
+    );
+    expect(size).toBe(180);
+  });
+
+  it('allows growth when scrolling backward and DOM is taller than cache', () => {
+    const measure = createStableChatMeasureElement(() => 96);
+    const el = document.createElement('div');
+    Object.defineProperty(el, 'offsetHeight', { value: 220, configurable: true });
+    const size = measure(
+      el,
+      undefined,
+      mockMeasureInstance({ scrollDirection: 'backward', cachedSize: 180 }) as never,
+    );
+    expect(size).toBe(220);
+  });
+
+  it('measures DOM when backward cache is still an estimate', () => {
+    const measure = createStableChatMeasureElement(() => 96);
+    const el = document.createElement('div');
+    Object.defineProperty(el, 'offsetHeight', { value: 200, configurable: true });
+    const size = measure(
+      el,
+      undefined,
+      mockMeasureInstance({ scrollDirection: 'backward', cachedSize: 96 }) as never,
+    );
+    expect(size).toBe(200);
+  });
+
+  it('measures DOM instead of estimate cache when not scrolling backward', () => {
+    const measure = createStableChatMeasureElement(() => 96);
+    const el = document.createElement('div');
+    Object.defineProperty(el, 'offsetHeight', { value: 200, configurable: true });
+    const size = measure(
+      el,
+      undefined,
+      mockMeasureInstance({ scrollDirection: null, cachedSize: 96 }) as never,
+    );
+    expect(size).toBe(200);
+  });
+
+  it('remeasures when scrolling forward with ResizeObserver entry', () => {
+    const measure = createStableChatMeasureElement(() => 96);
+    const el = document.createElement('div');
+    Object.defineProperty(el, 'offsetHeight', { value: 200, configurable: true });
+    const entry = {
+      borderBoxSize: [{ blockSize: 180, inlineSize: 300 }],
+    } as unknown as ResizeObserverEntry;
+    const size = measure(
+      el,
+      entry,
+      mockMeasureInstance({ scrollDirection: 'forward', cachedSize: 72 }) as never,
+    );
+    expect(size).toBe(180);
+  });
+
+  it('uses ResizeObserver borderBoxSize when present', () => {
+    const measure = createStableChatMeasureElement(() => 96);
+    const el = document.createElement('div');
+    const entry = {
+      borderBoxSize: [{ blockSize: 110, inlineSize: 300 }],
+    } as unknown as ResizeObserverEntry;
+    const size = measure(el, entry, mockMeasureInstance({ scrollDirection: 'forward' }) as never);
+    expect(size).toBe(110);
+  });
+
+  it('honors ResizeObserver growth when scrolling backward', () => {
+    const measure = createStableChatMeasureElement(() => 96);
+    const el = document.createElement('div');
+    Object.defineProperty(el, 'offsetHeight', { value: 96, configurable: true });
+    const entry = {
+      borderBoxSize: [{ blockSize: 240, inlineSize: 300 }],
+    } as unknown as ResizeObserverEntry;
+    const size = measure(
+      el,
+      entry,
+      mockMeasureInstance({ scrollDirection: 'backward', cachedSize: 180 }) as never,
+    );
+    expect(size).toBe(240);
+  });
+
+  it('locks ResizeObserver shrink when scrolling backward', () => {
+    const measure = createStableChatMeasureElement(() => 96);
+    const el = document.createElement('div');
+    const entry = {
+      borderBoxSize: [{ blockSize: 160, inlineSize: 300 }],
+    } as unknown as ResizeObserverEntry;
+    const size = measure(
+      el,
+      entry,
+      mockMeasureInstance({ scrollDirection: 'backward', cachedSize: 180 }) as never,
+    );
+    expect(size).toBe(180);
+  });
+
+  it('ignores a 0px offsetHeight (ancestor display:none) and keeps the cached size', () => {
+    const measure = createStableChatMeasureElement(() => 96);
+    const el = document.createElement('div');
+    Object.defineProperty(el, 'offsetHeight', { value: 0, configurable: true });
+    const size = measure(
+      el,
+      undefined,
+      mockMeasureInstance({ scrollDirection: 'forward', cachedSize: 180 }) as never,
+    );
+    expect(size).toBe(180);
+  });
+
+  it('ignores a 0px ResizeObserver entry (ancestor display:none) and keeps the cached size', () => {
+    const measure = createStableChatMeasureElement(() => 96);
+    const el = document.createElement('div');
+    const entry = {
+      borderBoxSize: [{ blockSize: 0, inlineSize: 0 }],
+    } as unknown as ResizeObserverEntry;
+    const size = measure(
+      el,
+      entry,
+      mockMeasureInstance({ scrollDirection: 'forward', cachedSize: 180 }) as never,
+    );
+    expect(size).toBe(180);
+  });
+});
+
+describe('estimateChatRowHeight', () => {
+  it('adds reply and long-payload budgets', () => {
+    expect(estimateChatRowHeight(makeMsg({ timestamp: 1 }))).toBe(96);
+    expect(
+      estimateChatRowHeight(makeMsg({ timestamp: 1, replyId: 42, replyPreviewText: 'parent' })),
+    ).toBe(168);
+    expect(estimateChatRowHeight(makeMsg({ timestamp: 1, payload: 'x'.repeat(121) }))).toBe(144);
+  });
+
+  it('adds per-URL link preview budget', () => {
+    const oneUrl = estimateChatRowHeight(
+      makeMsg({ timestamp: 1, payload: 'see https://example.com now' }),
+    );
+    expect(oneUrl).toBe(96 + CHAT_LINK_PREVIEW_ESTIMATE_PX);
+    const twoUrls = estimateChatRowHeight(
+      makeMsg({
+        timestamp: 1,
+        payload: 'https://a.com and https://b.com',
+      }),
+    );
+    expect(twoUrls).toBe(96 + CHAT_LINK_PREVIEW_ESTIMATE_PX * 2);
+  });
+
+  it('applies compact mode and unread divider extra', () => {
+    expect(estimateChatRowHeight(makeMsg({ timestamp: 1 }), { compactMode: true })).toBe(56);
+    expect(
+      estimateChatRowHeight(makeMsg({ timestamp: 1 }), {
+        unreadDividerExtra: CHAT_UNREAD_DIVIDER_ESTIMATE_EXTRA_PX,
+      }),
+    ).toBe(96 + CHAT_UNREAD_DIVIDER_ESTIMATE_EXTRA_PX);
+  });
+});
+
+describe('scrollElementWithinContainer', () => {
+  it('scrolls container to element start offset', () => {
+    const container = document.createElement('div');
+    const child = document.createElement('div');
+    container.appendChild(child);
+    document.body.appendChild(container);
+
+    Object.defineProperty(container, 'clientHeight', { value: 400, configurable: true });
+    container.scrollTo = vi.fn();
+
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+      top: 100,
+      bottom: 500,
+      left: 0,
+      right: 300,
+      width: 300,
+      height: 400,
+      x: 0,
+      y: 100,
+      toJSON: () => ({}),
+    });
+    vi.spyOn(child, 'getBoundingClientRect').mockReturnValue({
+      top: 250,
+      bottom: 300,
+      left: 0,
+      right: 300,
+      width: 300,
+      height: 50,
+      x: 0,
+      y: 250,
+      toJSON: () => ({}),
+    });
+
+    Object.defineProperty(container, 'scrollTop', {
+      value: 50,
+      writable: true,
+      configurable: true,
+    });
+
+    scrollElementWithinContainer(container, child, 'start', 'auto');
+    expect(container.scrollTo).toHaveBeenCalledWith({ top: 200, behavior: 'auto' });
+
+    document.body.removeChild(container);
+  });
+});

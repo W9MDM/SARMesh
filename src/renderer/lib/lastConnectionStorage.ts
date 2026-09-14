@@ -1,0 +1,185 @@
+import { parseStoredJson } from './parseStoredJson';
+import { LAST_SERIAL_PORT_KEY } from './serialPortSignature';
+import type { ConnectionType, MeshProtocol } from './types';
+
+export const BLE_SELECTION_CLEARED_EVENT = 'mesh-client:ble-selection-cleared';
+
+export interface LastConnection {
+  type: ConnectionType;
+  httpAddress?: string;
+  bleDeviceId?: string;
+  bleDeviceName?: string;
+  /** Formatted BLE MAC when known (macOS UUID deviceId + CoreBluetoothCache address). */
+  bleMac?: string;
+  serialPortId?: string;
+}
+
+function lastConnectionKey(protocol: MeshProtocol): string {
+  return `mesh-client:lastConnection:${protocol}`;
+}
+
+function lastBleDeviceKey(protocol: MeshProtocol): string {
+  return `mesh-client:lastBleDevice:${protocol}`;
+}
+
+export function loadLastConnection(protocol: MeshProtocol): LastConnection | null {
+  return parseStoredJson<LastConnection>(
+    localStorage.getItem(lastConnectionKey(protocol)),
+    'lastConnectionStorage loadLastConnection',
+  );
+}
+
+export function saveLastConnection(protocol: MeshProtocol, connection: LastConnection): void {
+  try {
+    localStorage.setItem(lastConnectionKey(protocol), JSON.stringify(connection));
+  } catch (error) {
+    console.warn('[lastConnectionStorage] saveLastConnection failed', error);
+  }
+}
+
+export function clearLastConnection(protocol: MeshProtocol): void {
+  try {
+    localStorage.removeItem(lastConnectionKey(protocol));
+  } catch {
+    // catch-no-log-ok localStorage unavailable in tests or private mode
+  }
+}
+
+export function loadLastBleDeviceId(protocol: MeshProtocol): string | null {
+  try {
+    return localStorage.getItem(lastBleDeviceKey(protocol));
+  } catch {
+    // catch-no-log-ok localStorage unavailable in tests or private mode
+    return null;
+  }
+}
+
+export function clearLastBleDeviceId(protocol: MeshProtocol): void {
+  try {
+    localStorage.removeItem(lastBleDeviceKey(protocol));
+  } catch {
+    // catch-no-log-ok localStorage unavailable in tests or private mode
+  }
+}
+
+export function clearStoredBleSelection(protocol: MeshProtocol): void {
+  clearLastConnection(protocol);
+  clearLastBleDeviceId(protocol);
+}
+
+export function notifyBleSelectionCleared(protocol: MeshProtocol): void {
+  if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;
+  window.dispatchEvent(
+    new CustomEvent<{ protocol: MeshProtocol }>(BLE_SELECTION_CLEARED_EVENT, {
+      detail: { protocol },
+    }),
+  );
+}
+
+export function resolveLastBlePeripheralId(protocol: MeshProtocol): string | undefined {
+  const last = loadLastConnection(protocol);
+  return last?.bleDeviceId ?? loadLastBleDeviceId(protocol) ?? undefined;
+}
+
+/** Meshtastic HTTP/TCP or MeshCore TCP host (stored as `http`/`tcp` connection type). */
+export function resolveLastHttpAddress(protocol: MeshProtocol): string | undefined {
+  const last = loadLastConnection(protocol);
+  if (last?.type !== 'http' && last?.type !== 'tcp') return undefined;
+  const addr = last.httpAddress?.trim();
+  return addr || undefined;
+}
+
+export function resolveLastSerialPortId(protocol: MeshProtocol): string | null {
+  const last = loadLastConnection(protocol);
+  if (last?.serialPortId) return last.serialPortId;
+  try {
+    return localStorage.getItem(LAST_SERIAL_PORT_KEY);
+  } catch {
+    // catch-no-log-ok localStorage unavailable in tests or private mode
+    return null;
+  }
+}
+
+/** MeshCore RF reconnect params derived from persisted last connection. */
+export interface MeshcoreRfConnectionParams {
+  rfType: 'ble' | 'serial' | 'tcp';
+  httpAddress?: string;
+  blePeripheralId?: string;
+  serialPortId?: string | null;
+  serialPort?: null;
+}
+
+/** Meshtastic RF reconnect params derived from persisted last connection. */
+export interface MeshtasticRfConnectionParams {
+  type: ConnectionType;
+  httpAddress?: string;
+  blePeripheralId?: string;
+  lastSerialPortId?: string | null;
+  serialPort?: null;
+}
+
+export function buildMeshcoreConnectionParamsFromLastConnection(
+  last: LastConnection,
+): MeshcoreRfConnectionParams | null {
+  if (last.type === 'ble') {
+    const blePeripheralId = last.bleDeviceId ?? loadLastBleDeviceId('meshcore');
+    if (!blePeripheralId) return null;
+    return { rfType: 'ble', blePeripheralId, serialPort: null };
+  }
+  if (last.type === 'serial') {
+    return {
+      rfType: 'serial',
+      serialPortId: last.serialPortId ?? resolveLastSerialPortId('meshcore'),
+      serialPort: null,
+    };
+  }
+  if (last.type === 'http') {
+    const httpAddress = last.httpAddress?.trim();
+    if (!httpAddress) return null;
+    return { rfType: 'tcp', httpAddress, serialPort: null };
+  }
+  // `last.type === 'tcp'` can only be persisted by the Meshtastic tab; MeshCore has no
+  // such connection type (it reuses `'http'` for its own TCP mode), so fall through to null.
+  return null;
+}
+
+export function rehydrateMeshcoreConnectionParamsFromStorage(): MeshcoreRfConnectionParams | null {
+  const last = loadLastConnection('meshcore');
+  if (!last) return null;
+  return buildMeshcoreConnectionParamsFromLastConnection(last);
+}
+
+export function buildMeshtasticConnectionParamsFromLastConnection(
+  last: LastConnection,
+): MeshtasticRfConnectionParams | null {
+  if (last.type === 'ble') {
+    const blePeripheralId = last.bleDeviceId ?? loadLastBleDeviceId('meshtastic');
+    if (!blePeripheralId) return null;
+    return { type: 'ble', blePeripheralId, serialPort: null };
+  }
+  if (last.type === 'serial') {
+    return {
+      type: 'serial',
+      lastSerialPortId: last.serialPortId ?? resolveLastSerialPortId('meshtastic'),
+      serialPort: null,
+    };
+  }
+  if (last.type === 'http') {
+    const httpAddress = last.httpAddress?.trim();
+    if (!httpAddress) return null;
+    return { type: 'http', httpAddress, serialPort: null };
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime guard protects external or callback-mutated state.
+  if (last.type === 'tcp') {
+    const httpAddress = last.httpAddress?.trim();
+    if (!httpAddress) return null;
+    return { type: 'tcp', httpAddress, serialPort: null };
+  }
+  return null;
+}
+
+export function rehydrateMeshtasticConnectionParamsFromStorage(): MeshtasticRfConnectionParams | null {
+  const last = loadLastConnection('meshtastic');
+  if (!last) return null;
+  return buildMeshtasticConnectionParamsFromLastConnection(last);
+}

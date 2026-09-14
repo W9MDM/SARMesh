@@ -1,0 +1,374 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { RETICULUM_CAPABILITIES } from '../lib/radio/BaseRadioProvider';
+import type { MeshNode } from '../lib/types';
+import {
+  computeCuStats24h,
+  resetDiagnosticsDebounceStateForTests,
+  useDiagnosticsStore,
+} from './diagnosticsStore';
+
+const SNAPSHOT_KEY = 'mesh-client:diagnosticRowsSnapshot';
+
+describe('diagnosticsStore clearing behavior', () => {
+  beforeEach(() => {
+    localStorage.removeItem(SNAPSHOT_KEY);
+    useDiagnosticsStore.getState().clearDiagnostics();
+  });
+
+  afterEach(() => {
+    resetDiagnosticsDebounceStateForTests();
+    localStorage.removeItem(SNAPSHOT_KEY);
+    useDiagnosticsStore.getState().clearDiagnostics();
+  });
+
+  it('clearDiagnostics clears in-memory rows and persisted snapshot', () => {
+    useDiagnosticsStore.setState({
+      diagnosticRows: [
+        {
+          kind: 'routing',
+          id: 'routing:1',
+          nodeId: 1,
+          type: 'bad_route',
+          severity: 'warning',
+          description: 'stale routing row',
+          detectedAt: Date.now(),
+        },
+      ],
+      diagnosticRowsRestoredAt: Date.now(),
+    });
+    localStorage.setItem(
+      SNAPSHOT_KEY,
+      JSON.stringify({
+        v: 1,
+        savedAt: Date.now(),
+        rows: useDiagnosticsStore.getState().diagnosticRows,
+      }),
+    );
+
+    useDiagnosticsStore.getState().clearDiagnostics();
+
+    const state = useDiagnosticsStore.getState();
+    expect(state.diagnosticRows).toEqual([]);
+    expect(state.diagnosticRowsRestoredAt).toBeNull();
+    expect(localStorage.getItem(SNAPSHOT_KEY)).toBeNull();
+  });
+
+  it('clearDiagnostics with preserveForeignLora keeps foreign LoRa detections', () => {
+    useDiagnosticsStore
+      .getState()
+      .recordForeignLora(42, 'meshcore', -55, 9, 0xabc, undefined, 'meshtastic-rf');
+    expect(useDiagnosticsStore.getState().foreignLoraDetections.get(42)?.size).toBe(1);
+
+    useDiagnosticsStore.getState().clearDiagnostics({ preserveForeignLora: true });
+
+    const state = useDiagnosticsStore.getState();
+    expect(state.diagnosticRows).toEqual([]);
+    expect(state.foreignLoraDetections.get(42)?.size).toBe(1);
+  });
+
+  it('clearDiagnosticRowsSnapshot cancels pending snapshot persistence timer', () => {
+    vi.useFakeTimers();
+
+    useDiagnosticsStore
+      .getState()
+      .recordForeignLora(1, 'meshcore', -70, 12, undefined, undefined, 'meshtastic-rf');
+    useDiagnosticsStore.getState().clearDiagnosticRowsSnapshot();
+
+    vi.advanceTimersByTime(3_000);
+
+    expect(localStorage.getItem(SNAPSHOT_KEY)).toBeNull();
+  });
+});
+
+describe('diagnosticsStore analysis timers', () => {
+  function sampleNode(nodeId: number): MeshNode {
+    return {
+      node_id: nodeId,
+      long_name: `Node ${nodeId}`,
+      short_name: `N${nodeId}`,
+      hw_model: 'TBEAM',
+      snr: 5,
+      battery: 100,
+      last_heard: Date.now(),
+      latitude: null,
+      longitude: null,
+      hops_away: 2,
+    };
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    localStorage.removeItem(SNAPSHOT_KEY);
+    useDiagnosticsStore.getState().clearDiagnostics();
+  });
+
+  afterEach(() => {
+    resetDiagnosticsDebounceStateForTests();
+    localStorage.removeItem(SNAPSHOT_KEY);
+    useDiagnosticsStore.getState().clearDiagnostics();
+  });
+
+  it('runReanalysis does not cancel incremental analysis timer', () => {
+    const store = useDiagnosticsStore.getState();
+    const node = sampleNode(42);
+    store.processNodeUpdate(node, null);
+    expect(vi.getTimerCount()).toBe(1);
+    store.runReanalysis(() => new Map([[42, node]]), 1);
+    expect(vi.getTimerCount()).toBe(2);
+  });
+
+  it('runReanalysis clears pending incremental buffer at schedule time', () => {
+    const store = useDiagnosticsStore.getState();
+    store.processNodeUpdate(sampleNode(99), null);
+    store.runReanalysis(() => new Map(), 1);
+    vi.advanceTimersByTime(2000);
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
+  it('runReanalysis clears LoRa diagnostic rows for Reticulum but keeps native reticulum rows', () => {
+    vi.useFakeTimers();
+    const store = useDiagnosticsStore.getState();
+    const reticulumRow = {
+      kind: 'rf' as const,
+      id: 'rf:0:reticulum/rns-not-ready',
+      nodeId: 0,
+      condition: 'reticulum/rns-not-ready',
+      cause: 'RNS stack is not ready',
+      severity: 'warning' as const,
+      detectedAt: Date.now(),
+    };
+    useDiagnosticsStore.setState({
+      diagnosticRows: [
+        {
+          kind: 'routing',
+          id: 'routing:1',
+          nodeId: 1,
+          type: 'bad_route',
+          severity: 'warning',
+          description: 'stale routing row',
+          detectedAt: Date.now(),
+        },
+        reticulumRow,
+      ],
+      diagnosticRowsRestoredAt: Date.now(),
+    });
+    store.runReanalysis(() => new Map(), 0, RETICULUM_CAPABILITIES);
+    vi.advanceTimersByTime(2000);
+    expect(useDiagnosticsStore.getState().diagnosticRows).toEqual([reticulumRow]);
+    expect(useDiagnosticsStore.getState().diagnosticRowsRestoredAt).toBeNull();
+  });
+
+  it('runReanalysis preserves restored rows when node map is not hydrated yet', () => {
+    const store = useDiagnosticsStore.getState();
+    const restoredAt = Date.now() - 3 * 60 * 1000;
+    useDiagnosticsStore.setState({
+      diagnosticRows: [
+        {
+          kind: 'routing',
+          id: 'routing:5',
+          nodeId: 5,
+          type: 'hop_goblin',
+          severity: 'error',
+          description: 'restored hop goblin',
+          detectedAt: restoredAt,
+        },
+        {
+          kind: 'rf',
+          id: 'rf:0x1234:mesh_congestion',
+          nodeId: 0x1234,
+          condition: 'Mesh Congestion',
+          cause: 'dupes',
+          severity: 'warning',
+          detectedAt: restoredAt,
+        },
+      ],
+      diagnosticRowsRestoredAt: restoredAt,
+    });
+    store.runReanalysis(() => new Map(), 0x1234);
+    vi.advanceTimersByTime(2000);
+    const state = useDiagnosticsStore.getState();
+    expect(state.diagnosticRows).toHaveLength(2);
+    expect(state.diagnosticRowsRestoredAt).toBe(restoredAt);
+  });
+
+  it('runReanalysis preserves restored RF rows when nodes hydrate before live telemetry', () => {
+    const store = useDiagnosticsStore.getState();
+    const restoredAt = Date.now() - 3 * 60 * 1000;
+    const remote = sampleNode(5);
+    useDiagnosticsStore.setState({
+      diagnosticRows: [
+        {
+          kind: 'rf',
+          id: 'rf:5:channel_utilization_spike',
+          nodeId: 5,
+          condition: 'Channel Utilization Spike',
+          cause: 'restored spike',
+          severity: 'warning',
+          detectedAt: restoredAt,
+        },
+      ],
+      diagnosticRowsRestoredAt: restoredAt,
+    });
+    store.runReanalysis(() => new Map([[5, remote]]), 1);
+    vi.advanceTimersByTime(2000);
+    const state = useDiagnosticsStore.getState();
+    expect(
+      state.diagnosticRows.some(
+        (r) => r.kind === 'rf' && r.condition === 'Channel Utilization Spike',
+      ),
+    ).toBe(true);
+    expect(state.diagnosticRowsRestoredAt).toBeNull();
+  });
+
+  it('runReanalysis clears pending large-mesh timer when superseded', () => {
+    const store = useDiagnosticsStore.getState();
+    const largeMap = new Map<number, MeshNode>();
+    largeMap.set(1, sampleNode(1));
+    for (let i = 2; i <= 2002; i++) {
+      largeMap.set(i, sampleNode(i));
+    }
+    store.runReanalysis(() => largeMap, 1);
+    expect(vi.getTimerCount()).toBe(1);
+    store.runReanalysis(() => new Map([[2, sampleNode(2)]]), 1);
+    expect(vi.getTimerCount()).toBe(1);
+    vi.advanceTimersByTime(10_000);
+    vi.runAllTimers();
+  });
+
+  it('superseded runReanalysis generation does not mutate diagnostic rows', () => {
+    const store = useDiagnosticsStore.getState();
+    useDiagnosticsStore.setState({
+      diagnosticRows: [
+        {
+          kind: 'routing',
+          id: 'routing:stale-marker',
+          nodeId: 99,
+          type: 'bad_route',
+          severity: 'warning',
+          description: 'stale marker row',
+          detectedAt: Date.now(),
+        },
+      ],
+      diagnosticRowsRestoredAt: null,
+    });
+
+    const largeMap = new Map<number, MeshNode>();
+    for (let i = 1; i <= 2001; i++) {
+      largeMap.set(i, sampleNode(i));
+    }
+    store.runReanalysis(() => largeMap, 1);
+    store.runReanalysis(() => new Map([[2, sampleNode(2)]]), 1);
+
+    vi.advanceTimersByTime(2_001);
+    vi.runOnlyPendingTimers();
+    const rowsAfterLatest = useDiagnosticsStore.getState().diagnosticRows;
+    const markerAfterLatest = rowsAfterLatest.some((r) => r.id === 'routing:stale-marker');
+
+    vi.advanceTimersByTime(10_000);
+    vi.runOnlyPendingTimers();
+    const rowsAfterStaleWindow = useDiagnosticsStore.getState().diagnosticRows;
+
+    expect(markerAfterLatest).toBe(
+      rowsAfterStaleWindow.some((r) => r.id === 'routing:stale-marker'),
+    );
+    expect(rowsAfterStaleWindow).toEqual(rowsAfterLatest);
+  });
+
+  it('clearDiagnostics cancels both pending analysis timers', () => {
+    const store = useDiagnosticsStore.getState();
+    store.processNodeUpdate(sampleNode(1), null);
+    store.runReanalysis(() => new Map(), 1);
+    expect(vi.getTimerCount()).toBe(2);
+    store.clearDiagnostics();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('processNodeUpdate records channel_utilization in cuHistory', () => {
+    const store = useDiagnosticsStore.getState();
+    const node: MeshNode = {
+      ...sampleNode(7),
+      channel_utilization: 18.5,
+    };
+    store.processNodeUpdate(node, null);
+    const samples = useDiagnosticsStore.getState().cuHistory.get(7);
+    expect(samples).toBeDefined();
+    expect(samples!.length).toBe(1);
+    expect(samples![0].cu).toBe(18.5);
+  });
+});
+
+describe('diagnosticsStore distanceOffsetKm', () => {
+  afterEach(() => {
+    useDiagnosticsStore.getState().setDistanceOffsetKm(0);
+  });
+
+  it('setDistanceOffsetKm clamps to 0–50', () => {
+    useDiagnosticsStore.getState().setDistanceOffsetKm(-5);
+    expect(useDiagnosticsStore.getState().distanceOffsetKm).toBe(0);
+    useDiagnosticsStore.getState().setDistanceOffsetKm(50.5);
+    expect(useDiagnosticsStore.getState().distanceOffsetKm).toBe(50);
+    useDiagnosticsStore.getState().setDistanceOffsetKm(12.5);
+    expect(useDiagnosticsStore.getState().distanceOffsetKm).toBe(12.5);
+  });
+
+  it('setDistanceOffsetKm ignores non-finite values', () => {
+    useDiagnosticsStore.getState().setDistanceOffsetKm(3);
+    useDiagnosticsStore.getState().setDistanceOffsetKm(Number.NaN);
+    expect(useDiagnosticsStore.getState().distanceOffsetKm).toBe(3);
+  });
+
+  it('analyzeNode call sites pass store distanceOffsetKm not a hardcoded 0', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const src = readFileSync(resolve(__dirname, 'diagnosticsStore.ts'), 'utf8');
+    expect(src).toMatch(/analyzeNode\([\s\S]*?s\.distanceOffsetKm/);
+    expect(src).toMatch(/analyzeNode\([\s\S]*?state\.distanceOffsetKm/);
+    expect(src).not.toMatch(/analyzeNode\([\s\S]*?distanceMultiplier,\s*0,/);
+  });
+});
+
+describe('computeCuStats24h', () => {
+  it('returns null for empty samples', () => {
+    expect(computeCuStats24h([])).toBeNull();
+  });
+
+  it('returns null when all samples are older than 24h', () => {
+    const old = Date.now() - 25 * 60 * 60 * 1000;
+    expect(computeCuStats24h([{ t: old, cu: 10 }])).toBeNull();
+  });
+
+  it('computes average and span for fresh samples', () => {
+    const now = Date.now();
+    const samples = [
+      { t: now - 60_000, cu: 10 },
+      { t: now - 120_000, cu: 20 },
+      { t: now - 180_000, cu: 30 },
+    ];
+    const result = computeCuStats24h(samples);
+    expect(result).not.toBeNull();
+    expect(result!.sampleCount).toBe(3);
+    expect(result!.average).toBeCloseTo(20);
+    expect(result!.spanMs).toBeGreaterThan(0);
+  });
+
+  it('prunes samples older than 24h before computing', () => {
+    const now = Date.now();
+    const samples = [
+      { t: now - 25 * 60 * 60 * 1000, cu: 100 },
+      { t: now - 1000, cu: 10 },
+    ];
+    const result = computeCuStats24h(samples);
+    expect(result).not.toBeNull();
+    expect(result!.sampleCount).toBe(1);
+    expect(result!.average).toBe(10);
+  });
+
+  it('returns spanMs of 0 for a single sample', () => {
+    const now = Date.now();
+    const result = computeCuStats24h([{ t: now - 1000, cu: 15 }]);
+    expect(result).not.toBeNull();
+    expect(result!.spanMs).toBe(0);
+    expect(result!.sampleCount).toBe(1);
+  });
+});

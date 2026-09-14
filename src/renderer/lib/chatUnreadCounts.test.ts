@@ -1,0 +1,681 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import { useReticulumIdentityActivityStore } from '@/renderer/stores/reticulumIdentityActivityStore';
+
+import {
+  buildProtocolSwitcherUnreadByProtocol,
+  chatViewKeyForMessage,
+  computeChannelUnreadCounts,
+  computeDmUnreadCounts,
+  computeReticulumChatUnread,
+  hasAudibleBackgroundMessages,
+  pickAudibleNotificationType,
+  resolveChatDmPeer,
+  resolveChatNotificationType,
+  totalUnreadCount,
+} from './chatUnreadCounts';
+import {
+  clearReticulumHashRegistry,
+  registerReticulumDestinationHash,
+  reticulumHashToNodeId,
+} from './reticulum/destHash';
+import { LXMF_DELIVERY_ASPECT } from './reticulum/resolveReticulumChatLxmfDest';
+import { LXST_TELEPHONY_ASPECT } from './reticulumVoiceCapability';
+import type { ChatMessage } from './types';
+
+const ownNodes = new Set([1]);
+
+function msg(overrides: Partial<ChatMessage> & Pick<ChatMessage, 'channel'>): ChatMessage {
+  return {
+    sender_id: 2,
+    sender_name: 'Alice',
+    payload: 'hi',
+    timestamp: 1000,
+    status: 'acked',
+    ...overrides,
+  };
+}
+
+describe('chatUnreadCounts', () => {
+  it('counts unread channel messages newer than last-read watermark', () => {
+    const counts = computeChannelUnreadCounts(
+      [msg({ channel: 0, timestamp: 2000 }), msg({ channel: 1, timestamp: 3000 })],
+      { 'ch:0': 1500 },
+      ownNodes,
+      'meshtastic',
+    );
+    expect(counts.get(0)).toBe(1);
+    expect(counts.get(1)).toBe(1);
+  });
+
+  it('skips history rehydration rows and own messages', () => {
+    const counts = computeChannelUnreadCounts(
+      [
+        msg({ channel: 0, isHistory: true }),
+        msg({ channel: 0, sender_id: 1 }),
+        msg({ channel: 0, to: 1 }),
+      ],
+      {},
+      ownNodes,
+      'meshtastic',
+    );
+    expect(counts.size).toBe(0);
+  });
+
+  it('ignores broadcast unread on channels not configured on the connected radio', () => {
+    const counts = computeChannelUnreadCounts(
+      [msg({ channel: 0, timestamp: 2000 }), msg({ channel: 1, timestamp: 3000 })],
+      {},
+      ownNodes,
+      'meshtastic',
+      Date.now(),
+      { configuredChannelIndices: new Set([0]) },
+    );
+    expect(counts.get(0)).toBe(1);
+    expect(counts.get(1)).toBeUndefined();
+    const total = totalUnreadCount(
+      [msg({ channel: 0, timestamp: 2000 }), msg({ channel: 1, timestamp: 3000 })],
+      {},
+      ownNodes,
+      'meshtastic',
+      undefined,
+      { configuredChannelIndices: new Set([0]) },
+    );
+    expect(total).toBe(1);
+  });
+
+  it('ignores MeshCore broadcast unread on unconfigured channel slots', () => {
+    const total = totalUnreadCount(
+      [msg({ channel: 0, timestamp: 2000 }), msg({ channel: 1, timestamp: 3000 })],
+      {},
+      ownNodes,
+      'meshcore',
+      undefined,
+      { configuredChannelIndices: new Set([0]) },
+    );
+    expect(total).toBe(1);
+  });
+
+  it('does not filter channels when configuredChannelIndices is empty', () => {
+    const counts = computeChannelUnreadCounts(
+      [msg({ channel: 0, timestamp: 2000 }), msg({ channel: 1, timestamp: 3000 })],
+      {},
+      ownNodes,
+      'meshtastic',
+      Date.now(),
+      { configuredChannelIndices: new Set() },
+    );
+    expect(counts.get(0)).toBe(1);
+    expect(counts.get(1)).toBe(1);
+  });
+
+  it('counts DM unread separately from channels', () => {
+    const dmCounts = computeDmUnreadCounts(
+      [msg({ channel: 0, to: 1, timestamp: 2000 })],
+      {},
+      ownNodes,
+      'meshtastic',
+    );
+    expect(dmCounts.get(2)).toBe(1);
+  });
+
+  it('excludes MeshCore room-server peers from DM unread when requested', () => {
+    const dmCounts = computeDmUnreadCounts(
+      [msg({ channel: 0, to: 1, timestamp: 2000 })],
+      {},
+      ownNodes,
+      'meshcore',
+      { excludeDmPeer: (peer) => peer === 2 },
+    );
+    expect(dmCounts.size).toBe(0);
+  });
+
+  it('excludes Reticulum tapbacks (hash parent, no numeric replyId) from DM unread', () => {
+    const dmCounts = computeDmUnreadCounts(
+      [
+        msg({
+          channel: 0,
+          to: 1,
+          timestamp: 2000,
+          emoji: 0x1f44d,
+          payload: '\u{1F44D}',
+          reticulum_reply_to_hash: 'aabbccddeeff00112233445566778899',
+        }),
+      ],
+      {},
+      ownNodes,
+      'reticulum',
+    );
+    expect(dmCounts.size).toBe(0);
+  });
+
+  it('clears Reticulum DM unread once the watermark reaches the newest regular message', () => {
+    const messages = [
+      msg({ channel: 0, to: 1, timestamp: 2000 }),
+      msg({
+        channel: 0,
+        to: 1,
+        timestamp: 3000,
+        emoji: 0x2764,
+        payload: '\u2764',
+        reticulum_reply_to_hash: 'aabbccddeeff00112233445566778899',
+      }),
+    ];
+    // The read watermark can only advance to the newest *visible* message (2000).
+    const dmCounts = computeDmUnreadCounts(messages, { 'dm:2': 2000 }, ownNodes, 'reticulum');
+    expect(dmCounts.size).toBe(0);
+    expect(totalUnreadCount(messages, { 'dm:2': 2000 }, ownNodes, 'reticulum')).toBe(0);
+  });
+
+  it('still excludes Meshtastic and MeshCore tapbacks keyed by numeric replyId', () => {
+    for (const protocol of ['meshtastic', 'meshcore'] as const) {
+      const dmCounts = computeDmUnreadCounts(
+        [msg({ channel: 0, to: 1, timestamp: 2000, emoji: 0x1f44d, replyId: 42 })],
+        {},
+        ownNodes,
+        protocol,
+      );
+      expect(dmCounts.size).toBe(0);
+    }
+  });
+
+  it('counts a plain Reticulum emoji message that is not a tapback', () => {
+    const dmCounts = computeDmUnreadCounts(
+      [msg({ channel: 0, to: 1, timestamp: 2000, emoji: 0x1f44d, payload: '\u{1F44D}' })],
+      {},
+      ownNodes,
+      'reticulum',
+    );
+    expect(dmCounts.get(2)).toBe(1);
+  });
+
+  it('totalUnreadCount sums channel and DM unreads', () => {
+    const total = totalUnreadCount(
+      [msg({ channel: 0, timestamp: 2000 }), msg({ channel: 1, to: 1, timestamp: 2000 })],
+      {},
+      ownNodes,
+      'meshcore',
+    );
+    expect(total).toBe(2);
+  });
+
+  it('totalUnreadCount for reticulum ignores channel-indexed rows (DM-only chat)', () => {
+    const channelOnly = totalUnreadCount(
+      [msg({ channel: 0, timestamp: 2000 }), msg({ channel: 0, timestamp: 3000 })],
+      {},
+      ownNodes,
+      'reticulum',
+    );
+    const meshtasticSame = totalUnreadCount(
+      [msg({ channel: 0, timestamp: 2000 }), msg({ channel: 0, timestamp: 3000 })],
+      {},
+      ownNodes,
+      'meshtastic',
+    );
+    expect(channelOnly).toBe(0);
+    expect(meshtasticSame).toBe(2);
+  });
+
+  it('does not count future poison rows toward channel unread (RTC skew)', () => {
+    vi.useFakeTimers();
+    const nowMs = 1_700_000_000_000;
+    vi.setSystemTime(nowMs);
+    const futurePoison = nowMs + 8 * 365 * 24 * 3600 * 1000;
+    const legitBot = nowMs - 60_000;
+    const counts = computeChannelUnreadCounts(
+      [
+        msg({ channel: 4, timestamp: futurePoison, sender_id: 99 }),
+        msg({ channel: 4, timestamp: legitBot, sender_id: 99 }),
+      ],
+      { 'ch:4': 0 },
+      ownNodes,
+      'meshcore',
+      nowMs,
+    );
+    expect(counts.get(4)).toBe(1);
+    vi.useRealTimers();
+  });
+
+  it('counts device-timestamp message unread when lastRead used client clock from poison mark-read', () => {
+    const nowMs = 1_700_000_000_000;
+    const deviceTs = nowMs - 60_000;
+    const counts = computeChannelUnreadCounts(
+      [msg({ channel: 0, timestamp: deviceTs })],
+      { 'ch:0': nowMs },
+      ownNodes,
+      'meshcore',
+      nowMs,
+    );
+    expect(counts.get(0)).toBeUndefined();
+  });
+
+  it('counts inbound after lastRead when watermark matches newest legitimate message only', () => {
+    const nowMs = 1_700_000_000_000;
+    const olderBot = nowMs - 120_000;
+    const newerBot = nowMs - 30_000;
+    const counts = computeChannelUnreadCounts(
+      [
+        msg({ channel: 4, timestamp: olderBot, sender_id: 99 }),
+        msg({ channel: 4, timestamp: newerBot, sender_id: 99 }),
+      ],
+      { 'ch:4': olderBot },
+      ownNodes,
+      'meshcore',
+      nowMs,
+    );
+    expect(counts.get(4)).toBe(1);
+  });
+
+  it('excludes MeshCore room BBS posts from channel unread', () => {
+    const total = totalUnreadCount(
+      [
+        msg({ channel: -2, roomServerId: 0xabc, timestamp: 2000 }),
+        msg({ channel: 0, timestamp: 2000 }),
+      ],
+      {},
+      ownNodes,
+      'meshcore',
+    );
+    expect(total).toBe(1);
+  });
+
+  it('counts DB-hydrated MeshCore messages as unread when lastRead is behind', () => {
+    const counts = computeChannelUnreadCounts(
+      [msg({ channel: 1, timestamp: 5000 })],
+      { 'ch:1': 1000 },
+      ownNodes,
+      'meshcore',
+    );
+    expect(counts.get(1)).toBe(1);
+  });
+
+  it('counts DB-hydrated Meshtastic messages as unread when lastRead is behind (parity guard)', () => {
+    const counts = computeChannelUnreadCounts(
+      [msg({ channel: 1, timestamp: 5000 })],
+      { 'ch:1': 1000 },
+      ownNodes,
+      'meshtastic',
+    );
+    expect(counts.get(1)).toBe(1);
+  });
+
+  it('does not count DB-hydrated MeshCore messages marked isHistory (MsgWaiting backlog)', () => {
+    const counts = computeChannelUnreadCounts(
+      [msg({ channel: 1, timestamp: 5000, isHistory: true })],
+      { 'ch:1': 1000 },
+      ownNodes,
+      'meshcore',
+    );
+    expect(counts.size).toBe(0);
+  });
+
+  it('does not count MeshCore DM with to:0 as channel unread on ch:-1', () => {
+    const counts = computeChannelUnreadCounts(
+      [msg({ channel: -1, to: 0, timestamp: 2000 })],
+      {},
+      ownNodes,
+      'meshcore',
+    );
+    expect(counts.size).toBe(0);
+  });
+
+  it('counts MeshCore DM with to:0 in DM unread using sender as peer', () => {
+    const dmCounts = computeDmUnreadCounts(
+      [msg({ channel: -1, to: 0, timestamp: 2000 })],
+      {},
+      ownNodes,
+      'meshcore',
+    );
+    expect(dmCounts.get(2)).toBe(1);
+  });
+
+  it('MeshCore DM with to:0 does not inflate totalUnread via phantom ch:-1', () => {
+    const total = totalUnreadCount(
+      [msg({ channel: -1, to: 0, timestamp: 2000 })],
+      {},
+      ownNodes,
+      'meshcore',
+    );
+    expect(total).toBe(1);
+  });
+
+  it('Reticulum inbound with to:0 infers peer from reticulum_sender_hash', () => {
+    const peerId = parseInt('8fd7a9361aca', 16) >>> 0;
+    const peer = resolveChatDmPeer(
+      msg({
+        channel: 0,
+        to: 0,
+        sender_id: peerId,
+        reticulum_sender_hash: '8fd7a9361aca00000000000000000000',
+      }),
+      ownNodes,
+      'reticulum',
+    );
+    expect(peer).toBe(peerId);
+  });
+
+  it('Reticulum inbound with to:0 infers peer from sender_id when hash absent', () => {
+    const peerId = 2838895306;
+    const peer = resolveChatDmPeer(
+      msg({ channel: 0, to: 0, sender_id: peerId }),
+      ownNodes,
+      'reticulum',
+    );
+    expect(peer).toBe(peerId);
+  });
+
+  it('Reticulum outbound self→peer resolves peer when ownNodeIds populated', () => {
+    const selfId = 1;
+    const peerId = 2838895306;
+    const own = new Set([selfId]);
+    const peer = resolveChatDmPeer(
+      msg({ channel: 0, sender_id: selfId, to: peerId }),
+      own,
+      'reticulum',
+    );
+    expect(peer).toBe(peerId);
+  });
+
+  it('Reticulum resolveChatDmPeer collapses telephony-attributed peers onto LXMF fold', () => {
+    const identity = '0f79468863d76b3ba574baa92606ffcb';
+    const lxmf = 'e3359f1314aff4fb6261400a8202149b';
+    const telephony = 'ab1d53d6923d6983dfb4451e3869b878';
+    const telephonyId = reticulumHashToNodeId(telephony) >>> 0;
+    const lxmfId = reticulumHashToNodeId(lxmf) >>> 0;
+    clearReticulumHashRegistry();
+    registerReticulumDestinationHash(telephonyId, telephony);
+    registerReticulumDestinationHash(lxmfId, lxmf);
+    useReticulumIdentityActivityStore.setState({
+      byDestination: new Map([
+        [
+          telephony,
+          [
+            {
+              destination_hash: telephony,
+              aspect: LXST_TELEPHONY_ASPECT,
+              identity_hash: identity,
+              last_seen: 200,
+            },
+          ],
+        ],
+        [
+          lxmf,
+          [
+            {
+              destination_hash: lxmf,
+              aspect: LXMF_DELIVERY_ASPECT,
+              identity_hash: identity,
+              last_seen: 150,
+            },
+          ],
+        ],
+      ]),
+    });
+    const own = new Set([1]);
+    expect(
+      resolveChatDmPeer(msg({ channel: 0, sender_id: 1, to: telephonyId }), own, 'reticulum'),
+    ).toBe(lxmfId);
+    expect(
+      chatViewKeyForMessage(msg({ channel: 0, sender_id: telephonyId, to: 0 }), 'reticulum', own),
+    ).toBe(`dm:${String(lxmfId)}`);
+    const dmCounts = computeDmUnreadCounts(
+      [
+        msg({ channel: 0, sender_id: telephonyId, to: 0, timestamp: 2000 }),
+        msg({ channel: 0, sender_id: lxmfId, to: 0, timestamp: 2100 }),
+      ],
+      {},
+      own,
+      'reticulum',
+    );
+    expect(dmCounts.get(lxmfId)).toBe(2);
+    expect(dmCounts.get(telephonyId)).toBeUndefined();
+    clearReticulumHashRegistry();
+    useReticulumIdentityActivityStore.setState({ byDestination: new Map() });
+  });
+
+  it('Reticulum inbound with to_hash infers peer when own identity is unknown', () => {
+    const peerId = 2838895306;
+    const peer = resolveChatDmPeer(
+      msg({ channel: 0, sender_id: peerId, to: 4172361550 }),
+      new Set(),
+      'reticulum',
+    );
+    expect(peer).toBe(peerId);
+  });
+
+  it('Reticulum outbound with unknown own prefers hash-backed sender until identity is known', () => {
+    const selfHash = 'f9aa38ba0c5a00000000000000000000';
+    const selfId = parseInt(selfHash.slice(0, 12), 16) >>> 0;
+    const peerId = 2838895306;
+    const peer = resolveChatDmPeer(
+      msg({
+        channel: 0,
+        sender_id: selfId,
+        to: peerId,
+        reticulum_sender_hash: selfHash,
+      }),
+      new Set(),
+      'reticulum',
+    );
+    // Ambiguous without own IDs — prefer sender (same rule that fixes inbound self-DM on launch).
+    // Chat filters self tabs once App passes identity-backed ownNodeIds.
+    expect(peer).toBe(selfId);
+  });
+
+  it('Reticulum inbound to=self + hash resolves peer when ownNodeIds populated', () => {
+    const peerHash = '8fd7a9361aca00000000000000000000';
+    const peerId = parseInt(peerHash.slice(0, 12), 16) >>> 0;
+    const selfId = 4172361550;
+    const peer = resolveChatDmPeer(
+      msg({
+        channel: 0,
+        sender_id: peerId,
+        to: selfId,
+        reticulum_sender_hash: peerHash,
+      }),
+      new Set([selfId]),
+      'reticulum',
+    );
+    expect(peer).toBe(peerId);
+  });
+
+  it('Reticulum inbound to=self + hash prefers sender peer when own empty', () => {
+    const peerHash = '8fd7a9361aca00000000000000000000';
+    const peerId = parseInt(peerHash.slice(0, 12), 16) >>> 0;
+    const selfId = 4172361550;
+    const peer = resolveChatDmPeer(
+      msg({
+        channel: 0,
+        sender_id: peerId,
+        to: selfId,
+        reticulum_sender_hash: peerHash,
+      }),
+      new Set(),
+      'reticulum',
+    );
+    expect(peer).toBe(peerId);
+  });
+
+  it('computeReticulumChatUnread clears after dm:peer last-read when own populated', () => {
+    const peerHash = '8fd7a9361aca00000000000000000000';
+    const peerId = parseInt(peerHash.slice(0, 12), 16) >>> 0;
+    const selfId = 4172361550;
+    const own = new Set([selfId]);
+    const inbound = msg({
+      channel: 0,
+      sender_id: peerId,
+      to: selfId,
+      reticulum_sender_hash: peerHash,
+      timestamp: 2000,
+    });
+    expect(computeReticulumChatUnread([inbound], 'configured', {}, own)).toBe(1);
+    expect(
+      computeReticulumChatUnread([inbound], 'configured', { [`dm:${peerId}`]: 2000 }, own),
+    ).toBe(0);
+    // Empty own still attributes inbound hash-backed DMs to the sender peer.
+    expect(
+      computeReticulumChatUnread([inbound], 'configured', { [`dm:${peerId}`]: 2000 }, new Set()),
+    ).toBe(0);
+  });
+});
+
+describe('chatViewKeyForMessage', () => {
+  it('maps MeshCore channel traffic to ch:N', () => {
+    expect(chatViewKeyForMessage(msg({ channel: 0 }), 'meshcore', ownNodes)).toBe('ch:0');
+  });
+
+  it('maps MeshCore DM with to:0 to dm:sender (not ch:-1)', () => {
+    expect(
+      chatViewKeyForMessage(msg({ channel: -1, to: 0, sender_id: 2 }), 'meshcore', ownNodes),
+    ).toBe('dm:2');
+  });
+});
+
+describe('hasAudibleBackgroundMessages', () => {
+  it('returns false when all messages are on muted views', () => {
+    const messages = [msg({ channel: 0, timestamp: 2000 })];
+    expect(hasAudibleBackgroundMessages(messages, 'meshcore', new Set(['ch:0']), ownNodes)).toBe(
+      false,
+    );
+  });
+
+  it('returns true when at least one message is on an unmuted view', () => {
+    const messages = [msg({ channel: 1, timestamp: 2000 })];
+    expect(hasAudibleBackgroundMessages(messages, 'meshcore', new Set(['ch:0']), ownNodes)).toBe(
+      true,
+    );
+  });
+
+  it('returns false when every new message matches a muted DM key', () => {
+    const messages = [msg({ channel: -1, to: 0, sender_id: 2, timestamp: 2000 })];
+    expect(hasAudibleBackgroundMessages(messages, 'meshcore', new Set(['dm:2']), ownNodes)).toBe(
+      false,
+    );
+  });
+
+  it('returns true when DM mute key does not match chatViewKeyForMessage peer', () => {
+    const messages = [msg({ channel: -1, to: 0, sender_id: 2, timestamp: 2000 })];
+    expect(hasAudibleBackgroundMessages(messages, 'meshcore', new Set(['ch:-1']), ownNodes)).toBe(
+      true,
+    );
+  });
+});
+
+describe('resolveChatNotificationType', () => {
+  it('classifies channel messages', () => {
+    const messages = [msg({ channel: 0 })];
+    expect(resolveChatNotificationType(messages[0], messages, ownNodes, 'meshtastic')).toBe(
+      'channel',
+    );
+  });
+
+  it('classifies DMs', () => {
+    const messages = [msg({ channel: 0, to: 1, sender_id: 2 })];
+    expect(resolveChatNotificationType(messages[0], messages, ownNodes, 'meshtastic')).toBe('dm');
+  });
+
+  it('classifies replies to own messages', () => {
+    const parent = msg({ channel: 0, sender_id: 1, packetId: 100, timestamp: 500 });
+    const reply = msg({ channel: 0, sender_id: 2, replyId: 100, timestamp: 1000 });
+    const messages = [parent, reply];
+    expect(resolveChatNotificationType(reply, messages, ownNodes, 'meshtastic')).toBe('reply');
+  });
+
+  it('returns null for tapbacks', () => {
+    const reaction = msg({ channel: 0, emoji: 0x1f44d, replyId: 42 });
+    expect(resolveChatNotificationType(reaction, [reaction], ownNodes, 'meshtastic')).toBeNull();
+  });
+
+  it('classifies DM replies to own messages as reply', () => {
+    const parent = msg({ channel: 0, sender_id: 1, packetId: 100, timestamp: 500, to: 1 });
+    const reply = msg({ channel: 0, sender_id: 2, replyId: 100, timestamp: 1000, to: 1 });
+    const messages = [parent, reply];
+    expect(resolveChatNotificationType(reply, messages, ownNodes, 'meshtastic')).toBe('reply');
+  });
+});
+
+describe('pickAudibleNotificationType', () => {
+  it('returns null when all messages are muted', () => {
+    const messages = [msg({ channel: 0, timestamp: 2000 })];
+    expect(pickAudibleNotificationType(messages, 'meshtastic', new Set(['ch:0']), ownNodes)).toBe(
+      null,
+    );
+  });
+
+  it('returns channel for unmuted channel traffic', () => {
+    const messages = [msg({ channel: 1, timestamp: 2000 })];
+    expect(pickAudibleNotificationType(messages, 'meshtastic', new Set(['ch:0']), ownNodes)).toBe(
+      'channel',
+    );
+  });
+
+  it('picks dm over channel in a batch', () => {
+    const messages = [
+      msg({ channel: 0, timestamp: 2000 }),
+      msg({ channel: 0, to: 1, sender_id: 2, timestamp: 3000 }),
+    ];
+    expect(pickAudibleNotificationType(messages, 'meshtastic', new Set(), ownNodes)).toBe('dm');
+  });
+
+  it('picks reply over channel in a batch', () => {
+    const parent = msg({ channel: 0, sender_id: 1, packetId: 100, timestamp: 500 });
+    const channelMsg = msg({ channel: 0, timestamp: 2000 });
+    const reply = msg({ channel: 0, sender_id: 2, replyId: 100, timestamp: 3000 });
+    const messages = [parent, channelMsg, reply];
+    expect(pickAudibleNotificationType(messages, 'meshtastic', new Set(), ownNodes)).toBe('reply');
+  });
+
+  it('skips history and own messages', () => {
+    const messages = [
+      msg({ channel: 0, isHistory: true }),
+      msg({ channel: 0, sender_id: 1 }),
+      msg({ channel: 0, emoji: 0x1f44d, replyId: 99 }),
+    ];
+    expect(pickAudibleNotificationType(messages, 'meshtastic', new Set(), ownNodes)).toBe(null);
+  });
+
+  it('resolves reply parents from allMessages when batch only contains the reply', () => {
+    const parent = msg({ channel: 0, sender_id: 1, packetId: 100, timestamp: 500 });
+    const reply = msg({ channel: 0, sender_id: 2, replyId: 100, timestamp: 1000 });
+    expect(
+      pickAudibleNotificationType([reply], 'meshtastic', new Set(), ownNodes, undefined, [
+        parent,
+        reply,
+      ]),
+    ).toBe('reply');
+  });
+});
+
+describe('buildProtocolSwitcherUnreadByProtocol', () => {
+  it('keeps meshtastic and meshcore chat-only and sums reticulum chat with rrc', () => {
+    expect(buildProtocolSwitcherUnreadByProtocol(2, 5, 3, 4)).toEqual({
+      meshtastic: 2,
+      meshcore: 5,
+      reticulum: 7,
+    });
+  });
+
+  it('leaves zeros zero when chat and rrc are empty', () => {
+    expect(buildProtocolSwitcherUnreadByProtocol(0, 0, 0, 0)).toEqual({
+      meshtastic: 0,
+      meshcore: 0,
+      reticulum: 0,
+    });
+  });
+
+  it('badges reticulum from rrc alone when lxmf chat is zero', () => {
+    expect(buildProtocolSwitcherUnreadByProtocol(0, 1, 0, 6)).toEqual({
+      meshtastic: 0,
+      meshcore: 1,
+      reticulum: 6,
+    });
+  });
+
+  it('includes games unread in the reticulum protocol-switcher total', () => {
+    expect(buildProtocolSwitcherUnreadByProtocol(0, 3, 1, 2, 4)).toEqual({
+      meshtastic: 0,
+      meshcore: 3,
+      reticulum: 7,
+    });
+  });
+});

@@ -1,0 +1,51 @@
+# Build outputs
+dist
+build
+out
+coverage
+.vitest-reports
+
+# Dependencies
+node_modules
+
+# Repo-local Ratspeak overlay workspace (cloned upstream repos; gitignored)
+.rsstack
+
+# Logs & temp
+*.log
+tmp/
+
+# Files unsupported by prettier parser
+.npmrc
+.yamllint
+.editorconfig
+.gitattributes
+patches/
+*.plist
+*.txt
+*.desktop
+*.metainfo.xml
+resources/win/*.xml
+*.nsh
+src/main/fixtures/reticulum-ble-rnode-config/
+
+# CodeQL MaD — Prettier line-wrap breaks yamllint indentation for barrier tuples
+.github/codeql/extensions/**/*.yml
+
+# Rust sidecar (no Prettier TOML parser)
+reticulum-sidecar/
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp
+
+# Fonts (binary; no Prettier parser)
+*.woff
+*.woff2
+*.ttf
+*.otf
+*.eot

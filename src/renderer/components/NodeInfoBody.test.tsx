@@ -1,0 +1,166 @@
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { axe } from 'vitest-axe';
+
+import { hydrateAxeThemeColors } from '../lib/a11yTestHelpers';
+import type { MeshNode } from '../lib/types';
+import NodeInfoBody from './NodeInfoBody';
+
+function makeNode(partial: Partial<MeshNode> & Pick<MeshNode, 'node_id'>): MeshNode {
+  return {
+    long_name: 'N',
+    short_name: '',
+    hw_model: '',
+    snr: 0,
+    battery: 0,
+    last_heard: Date.now(),
+    latitude: null,
+    longitude: null,
+    ...partial,
+  };
+}
+
+const diagnosticsStoreState = {
+  diagnosticRows: [],
+  packetStats: new Map(),
+  hopHistory: new Map(),
+  nodeRedundancy: new Map(),
+  meshcoreHopHistory: new Map(),
+  meshcoreTraceHistory: new Map(),
+  loadMeshcorePathHistory: vi.fn(),
+  getCuStats24h: vi.fn().mockReturnValue(null),
+  packetCache: new Map(),
+  getForeignLoraDetectionsList: vi.fn().mockReturnValue([]),
+};
+
+const positionHistoryStoreState = {
+  history: new Map<number, { t: number; lat: number; lon: number }[]>(),
+};
+
+vi.mock('../stores/coordFormatStore', () => ({
+  useCoordFormatStore: (selector: (s: { coordinateFormat: 'decimal' | 'mgrs' }) => unknown) =>
+    selector({ coordinateFormat: 'decimal' }),
+}));
+
+vi.mock('../stores/diagnosticsStore', () => ({
+  useDiagnosticsStore: (selector: (s: typeof diagnosticsStoreState) => unknown) =>
+    selector(diagnosticsStoreState),
+}));
+
+vi.mock('../stores/positionHistoryStore', () => ({
+  usePositionHistoryStore: (selector: (s: typeof positionHistoryStoreState) => unknown) =>
+    selector(positionHistoryStoreState),
+}));
+
+describe('NodeInfoBody', () => {
+  it('has no axe violations for a basic node card', async () => {
+    const { container } = render(
+      <NodeInfoBody node={makeNode({ node_id: 7, long_name: 'Alpha' })} protocol="meshcore" />,
+    );
+    hydrateAxeThemeColors(container);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('has no axe violations when RF diagnostics include an error finding', async () => {
+    const self = makeNode({
+      node_id: 7,
+      long_name: 'Alpha',
+      channel_utilization: 0.1,
+      meshcore_local_stats: {
+        batteryMilliVolts: 0,
+        uptimeSecs: 0,
+        queueLen: 251,
+        noiseFloor: -110,
+        lastRssi: 0,
+        lastSnr: 0,
+        txAirSecs: 0,
+        rxAirSecs: 0,
+        recv: 0,
+        sent: 0,
+        nSentFlood: 0,
+        nSentDirect: 0,
+        nRecvFlood: 0,
+        nRecvDirect: 0,
+      },
+    });
+    const { container } = render(<NodeInfoBody node={self} homeNode={self} protocol="meshcore" />);
+    hydrateAxeThemeColors(container);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('shows last tracked position when live position is missing', () => {
+    positionHistoryStoreState.history = new Map([
+      [
+        42,
+        [
+          { t: 1_000, lat: 40.12345, lon: -105.12345 },
+          { t: 2_000, lat: 40.54321, lon: -105.54321 },
+        ],
+      ],
+    ]);
+
+    const node: MeshNode = {
+      node_id: 42,
+      long_name: 'Tracked Node',
+      short_name: 'TRKD',
+      hw_model: 'T-Echo',
+      snr: 0,
+      battery: 0,
+      last_heard: Math.floor(Date.now() / 1000),
+      latitude: null,
+      longitude: null,
+    };
+
+    render(<NodeInfoBody node={node} protocol="meshtastic" />);
+
+    expect(screen.getByText('Last Tracked Position')).toBeInTheDocument();
+    expect(screen.getByText('40.54321, -105.54321')).toBeInTheDocument();
+  });
+
+  it('shows show-on-map for tracked-only position', () => {
+    positionHistoryStoreState.history = new Map([[42, [{ t: 1_000, lat: 40.1, lon: -105.1 }]]]);
+    const onShowOnMap = vi.fn();
+    const node: MeshNode = {
+      node_id: 42,
+      long_name: 'Tracked',
+      short_name: 'TRK',
+      hw_model: 'T-Echo',
+      snr: 0,
+      battery: 0,
+      last_heard: Math.floor(Date.now() / 1000),
+      latitude: null,
+      longitude: null,
+    };
+    render(<NodeInfoBody node={node} protocol="meshtastic" onShowOnMap={onShowOnMap} />);
+    screen.getByRole('button', { name: 'Show on map' }).click();
+    expect(onShowOnMap).toHaveBeenCalledWith(42, 40.1, -105.1);
+  });
+
+  it('shows hybrid source badge for self node when RF and MQTT are connected', () => {
+    const selfNode = makeNode({ node_id: 1, long_name: 'Me' });
+    render(
+      <NodeInfoBody
+        node={selfNode}
+        homeNode={selfNode}
+        protocol="meshtastic"
+        mqttConnected
+        radioConnected
+      />,
+    );
+    expect(screen.getByText('Source')).toBeInTheDocument();
+    expect(screen.getByLabelText('Connected via RF and MQTT')).toBeInTheDocument();
+  });
+
+  it('shows SNR for meshcore multi-hop contacts', () => {
+    const node = makeNode({
+      node_id: 0xabcd,
+      long_name: 'Remote Peer',
+      hw_model: 'Chat',
+      snr: 4.2,
+      hops_away: 2,
+    });
+    render(<NodeInfoBody node={node} protocol="meshcore" />);
+    expect(screen.getByText('SNR')).toBeInTheDocument();
+    expect(screen.getByText('4.2 dB')).toBeInTheDocument();
+  });
+});

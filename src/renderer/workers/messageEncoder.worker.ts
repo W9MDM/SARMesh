@@ -1,0 +1,79 @@
+/// <reference lib="webworker" />
+
+import { create, type DescMessage, toBinary } from '@bufbuild/protobuf';
+import { Mesh, Portnums } from '@meshtastic/protobufs';
+
+import { errLikeToLogString } from '../lib/errLikeToLogString';
+import type { WorkerCommand, WorkerEvent } from '../lib/transport/types';
+
+/** Meshtastic app port for plaintext channel messages (`PortNum.TEXT_MESSAGE_APP`). */
+const meshtasticMesh = Mesh as unknown as { readonly ToRadioSchema: DescMessage };
+const meshtasticPortnums = Portnums as unknown as {
+  readonly PortNum: { readonly TEXT_MESSAGE_APP: number };
+};
+const TEXT_MESSAGE_APP = meshtasticPortnums.PortNum.TEXT_MESSAGE_APP;
+
+// Only accept messages from our renderer (Electron: file/null in prod, localhost in Vite).
+// Prefer Array.includes over Set.has — CodeQL js/missing-origin-check recognizes
+// InclusionTest (.includes) and EqualityTest (===), not Set.prototype.has (alert #110).
+const ALLOWED_ORIGINS = [
+  'null',
+  'file://',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5173',
+];
+
+self.onmessage = (event: MessageEvent<WorkerCommand>) => {
+  if (!ALLOWED_ORIGINS.includes(event.origin)) {
+    return;
+  }
+  const data: unknown = event.data;
+  if (typeof data !== 'object' || data === null || !('type' in data)) {
+    return;
+  }
+  if (data.type !== 'ENCODE_MESSAGE') {
+    return;
+  }
+
+  const cmd = data as WorkerCommand;
+
+  try {
+    const decodedPayload: {
+      portnum: typeof TEXT_MESSAGE_APP;
+      payload: Uint8Array;
+      replyId?: number;
+    } = {
+      portnum: TEXT_MESSAGE_APP,
+      payload: new TextEncoder().encode(cmd.text),
+    };
+
+    if (cmd.replyId != null) {
+      decodedPayload.replyId = cmd.replyId;
+    }
+
+    const toRadio = create(meshtasticMesh.ToRadioSchema, {
+      payloadVariant: {
+        case: 'packet',
+        value: {
+          to: cmd.dest,
+          from: cmd.from,
+          channel: cmd.channel,
+          payloadVariant: {
+            case: 'decoded',
+            value: decodedPayload,
+          },
+        },
+      },
+    });
+
+    const buffer = toBinary(meshtasticMesh.ToRadioSchema, toRadio).buffer;
+
+    const reply: WorkerEvent = { type: 'ENCODED', id: cmd.id, buffer };
+    self.postMessage(reply, [buffer]);
+  } catch (err) {
+    console.warn('[messageEncoder.worker] encode failed ' + errLikeToLogString(err));
+    const reply: WorkerEvent = { type: 'ERROR', id: cmd.id, error: String(err) };
+    self.postMessage(reply);
+  }
+};

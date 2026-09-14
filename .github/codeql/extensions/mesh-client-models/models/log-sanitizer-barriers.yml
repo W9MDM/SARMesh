@@ -1,0 +1,34 @@
+extensions:
+  - addsTo:
+      pack: codeql/javascript-all
+      extensible: barrierModel
+    data:
+      # NPM package name from package.json (primary).
+      - ['mesh-client', 'Member[sanitizeForLogSink].ReturnValue', 'log-injection']
+      - ['mesh-client', 'Member[sanitizeLogMessage].ReturnValue', 'log-injection']
+      - ['mesh-client', 'Member[sanitizeForConsoleEcho].ReturnValue', 'log-injection']
+      # MaD barrier kinds must be valid sink kinds (see CodeQL ModelValidation ValidSinkKind).
+      # File-body writes use `file-content-store` (replaces outdated `write-file`).
+      - ['mesh-client', 'Member[sanitizeLogPayloadForDisk].ReturnValue', 'file-content-store']
+      # Alternate API-graph roots seen on some scans.
+      - - mesh-client/src/main/sanitize-log-message
+        - Member[sanitizeLogPayloadForDisk].ReturnValue
+        - file-content-store
+      # Fallback module labels for relative imports.
+      - ['src/main/sanitize-log-message', 'Member[sanitizeForLogSink].ReturnValue', 'log-injection']
+      - ['src/main/sanitize-log-message', 'Member[sanitizeLogMessage].ReturnValue', 'log-injection']
+      - ['src/main/sanitize-log-message', 'Member[sanitizeForConsoleEcho].ReturnValue', 'log-injection']
+      - ['src/main/sanitize-log-message', 'Member[sanitizeLogPayloadForDisk].ReturnValue', 'file-content-store']
+      # i18n auto-translate: translation API output is written under src/renderer/locales only.
+      - ['mesh-client', 'Member[sanitizeLocaleTranslationJsonFileBodyForDisk].ReturnValue', 'file-content-store']
+      - - mesh-client/scripts/i18n-auto-translate-lib.mjs
+        - Member[sanitizeLocaleTranslationJsonFileBodyForDisk].ReturnValue
+        - file-content-store
+      - - scripts/i18n-auto-translate-lib.mjs
+        - Member[sanitizeLocaleTranslationJsonFileBodyForDisk].ReturnValue
+        - file-content-store
+      # Flatpak Electron sync: validated manifest YAML before writeFileSync.
+      - ['mesh-client', 'Member[sanitizeFlatpakElectronManifestYamlForDisk].ReturnValue', 'file-content-store']
+      - - scripts/sync-flatpak-electron.mjs
+        - Member[sanitizeFlatpakElectronManifestYamlForDisk].ReturnValue
+        - file-content-store

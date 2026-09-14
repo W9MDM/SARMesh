@@ -1,0 +1,837 @@
+import { touch } from '@/shared/touch';
+
+import { isValidLatLon } from '../../shared/geoCoords';
+import {
+  meshcorePackPathLenByte,
+  meshcorePubkeyPathPrefix,
+  meshcoreTraceDataHashLayout,
+  meshcoreUnpackPathLenByte,
+} from '../../shared/meshcorePathHash';
+import { isPlaceholderLongName } from '../../shared/nodeNameUtils';
+import { errLikeToLogString } from './errLikeToLogString';
+import { filterOutMeshcoreLocallyDeletedContacts } from './meshcoreLocallyDeletedContacts';
+import { mergeMeshcoreLastHeardFromAdvert } from './nodeStatus';
+import type { ConnectionType, MeshNode } from './types';
+
+/** MeshCore companion scaled coordinates: integer × degrees (same as firmware advert fields). */
+export const MESHCORE_COORD_SCALE = 1e6;
+
+/** Reserved range for channel / unknown-sender chat stubs (name-only, no pubkey). */
+export const MESHCORE_CHAT_STUB_ID_MIN = 0xa0000000 >>> 0;
+export const MESHCORE_CHAT_STUB_ID_MAX = 0xafffffff >>> 0;
+
+/** Max contacts supported by MeshCore radio firmware. */
+export const MESHCORE_MAX_CONTACTS = 350;
+/** Warning threshold when radio contact count approaches max. */
+export const MESHCORE_CONTACTS_WARNING_THRESHOLD = 320;
+/** Critical threshold when radio contact count is near capacity (must exceed {@link MESHCORE_CONTACTS_WARNING_THRESHOLD}). */
+export const MESHCORE_CONTACTS_CRITICAL_THRESHOLD = 340;
+
+/**
+ * Fallback TX ceiling when companion `getSelfInfo` omits `maxTxPower` (common on current firmware).
+ * SX1262-class radios are typically limited to ~22 dBm.
+ */
+export const MESHCORE_TX_POWER_FALLBACK_MAX = 22;
+
+export function meshcoreResolvedTxPowerMax(selfInfo?: { maxTxPower?: number } | null): {
+  max: number;
+  fromFirmware: boolean;
+} {
+  const max = selfInfo?.maxTxPower;
+  if (typeof max === 'number' && Number.isFinite(max) && max > 0) {
+    return { max, fromFirmware: true };
+  }
+  return { max: MESHCORE_TX_POWER_FALLBACK_MAX, fromFirmware: false };
+}
+
+const SYNTH_PLACEHOLDER_PUBKEY_MARKER_HEX = '4d434854'; // "MCHT"
+
+/**
+ * Stable pseudo node id for MeshCore channel traffic where only a display name is known.
+ * Collisions with real pubkey-derived ids are unlikely but possible.
+ */
+export function meshcoreChatStubNodeIdFromDisplayName(name: string): number {
+  const trimmed = (name || '').trim() || 'Unknown';
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < trimmed.length; i++) {
+    h ^= trimmed.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return (MESHCORE_CHAT_STUB_ID_MIN | (h & 0x0fffffff)) >>> 0;
+}
+
+/** Stable id used historically when all unidentified channel speakers were lumped under one stub. */
+export const MESHCORE_UNKNOWN_SENDER_STUB_ID = meshcoreChatStubNodeIdFromDisplayName('Unknown');
+
+export function meshcoreIsChatStubNodeId(nodeId: number): boolean {
+  const u = nodeId >>> 0;
+  return u >= MESHCORE_CHAT_STUB_ID_MIN && u <= MESHCORE_CHAT_STUB_ID_MAX;
+}
+
+/** True when `long_name` is empty or only the default hex-derived label (`Node-ABCD1234` / `!abcd1234`). */
+export function meshcoreIsPlaceholderNodeLongName(
+  longName: string | undefined,
+  nodeId: number,
+): boolean {
+  const t = (longName ?? '').trim();
+  if (!t) return true;
+  const hex = nodeId.toString(16).toUpperCase();
+  if (t.toUpperCase() === `NODE-${hex}`) return true;
+  return isPlaceholderLongName(t, nodeId);
+}
+
+/** Apply a channel display name when the node still has a hex placeholder label. */
+export function meshcoreMergeChannelDisplayNameOntoNode(
+  node: MeshNode,
+  displayName: string,
+): MeshNode {
+  const trimmed = displayName.trim();
+  if (!trimmed || trimmed === 'Unknown') return node;
+  if (!meshcoreIsPlaceholderNodeLongName(node.long_name, node.node_id)) return node;
+  return { ...node, long_name: trimmed, short_name: '' };
+}
+
+/**
+ * Companion ContactMsgRecv / ChannelMsgRecv `pathLen` → chat RF hop count.
+ * `0xFF` = direct (0 hops). Flood values use the same packed path_length byte as
+ * on-air RF (low 6 bits = hop count, high 2 bits = hash-size code) — including
+ * multibyte path-hash modes where the packed byte is ≥ 64.
+ * Rejects non-finite / out-of-byte-range inputs (no wrap).
+ */
+export function meshcoreCompanionRxPathLenToHopCount(pathLen: unknown): number | undefined {
+  if (typeof pathLen !== 'number' || !Number.isFinite(pathLen)) return undefined;
+  const n = Math.trunc(pathLen);
+  if (n < 0 || n > 255) return undefined;
+  if (n === 0xff) return 0;
+  return meshcoreUnpackPathLenByte(n).hopCount;
+}
+
+/**
+ * `tracePath` reports `pathLen` as segment count along the route (a direct RF link is often 1).
+ * UI hop count (repeaters between us and the peer) is one less; clamp at 0.
+ */
+export function meshcoreTracePathLenToHops(pathLen: number): number {
+  if (!Number.isFinite(pathLen)) return 0;
+  return Math.max(0, Math.trunc(pathLen) - 1);
+}
+
+/** Build companion `outPath` bytes from a successful `tracePath` / TraceData response. */
+export function meshcoreTraceResultToOutPathBytes(
+  pathLenByte: number,
+  pathHashes: number[],
+  destPubKey: Uint8Array,
+  traceFlags = 0,
+): Uint8Array {
+  const layout = meshcoreTraceDataHashLayout(pathLenByte, traceFlags);
+  if (layout.hashByteLength <= 0 || pathHashes.length === 0) {
+    return meshcorePubkeyPathPrefix(destPubKey, 1);
+  }
+  const take = Math.min(layout.hashByteLength, pathHashes.length);
+  const bytes = Uint8Array.from(pathHashes.slice(0, take).map((h) => h & 0xff));
+  if (bytes.length > 0) return bytes;
+  return meshcorePubkeyPathPrefix(destPubKey, 1);
+}
+
+/** Packed contact `out_path_len` byte from TraceData pathLen + flags. */
+export function meshcoreTraceResultPackedPathLen(pathLenByte: number, traceFlags: number): number {
+  const layout = meshcoreTraceDataHashLayout(pathLenByte, traceFlags);
+  if (layout.hopCount <= 0) return 0;
+  return meshcorePackPathLenByte(layout.hopCount, layout.hashSizeBytes);
+}
+
+/** MeshCore companion lines that are transport metadata, not user channel chat (splitting on `:` would mispick `SNR:`). */
+export function isMeshcoreTransportStatusChatLine(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (/^\s*ack\s+@/iu.test(t)) return true;
+  if (/^\s*nack\s+@/iu.test(t)) return true;
+  if (/^\s*\[[0-9a-f]{4}\]\s+@\[/iu.test(t)) return true;
+  if (/\|\s*\d+\s*hop/i.test(t) && /\bSNR\b/i.test(t)) return true;
+  return false;
+}
+
+const MESHCORE_CHAT_WIRE_REPLACEMENT_CHAR = 0xfffd;
+
+function isMeshcoreChatWireTailGarbageChar(code: number): boolean {
+  if (code === MESHCORE_CHAT_WIRE_REPLACEMENT_CHAR || code === 0x7f) return true;
+  if (code < 0x20 && code !== 0x09 && code !== 0x0a && code !== 0x0d) return true;
+  return false;
+}
+
+/**
+ * Strip firmware padding from MeshCore channel/DM wire text.
+ * Failure point: meshcore.js readString() decodes the full frame remainder including bytes after NUL.
+ * Fallback: truncate at first NUL (official GRP_TXT decoder behavior), then drop trailing FFFD/C0 controls.
+ */
+export function sanitizeMeshcoreChatWireText(raw: string): string {
+  if (!raw) return raw;
+  const nullIdx = raw.indexOf('\u0000');
+  const text = nullIdx >= 0 ? raw.slice(0, nullIdx) : raw;
+  let end = text.length;
+  while (end > 0 && isMeshcoreChatWireTailGarbageChar(text.charCodeAt(end - 1))) {
+    end--;
+  }
+  return end === text.length ? text : text.slice(0, end);
+}
+
+/**
+ * Max payload length for reconciling Unknown-stub rows onto a named sender with the same
+ * channel+payload. Longer shared phrases (e.g. "good morning!") are usually different people.
+ */
+export const MESHCORE_SENDER_RECONCILE_MAX_PAYLOAD_LEN = 8;
+
+/**
+ * After `buildNodesFromContacts` replaces the node map, re-attach name-only RF/MQTT channel
+ * stubs so they are not dropped. Skips stub ids that now exist on the device (real contact wins).
+ */
+export function mergeMeshcoreChatStubNodes(
+  prev: Map<number, MeshNode>,
+  deviceNodes: Map<number, MeshNode>,
+): Map<number, MeshNode> {
+  const next = new Map(deviceNodes);
+  for (const [id, node] of prev) {
+    if (meshcoreIsChatStubNodeId(id)) {
+      const deviceNode = deviceNodes.get(id);
+      if (deviceNode && deviceNode.hw_model !== 'Chat') {
+        const merged = meshcoreMergeChannelDisplayNameOntoNode(deviceNode, node.long_name);
+        if (merged !== deviceNode) {
+          next.set(id, merged);
+        }
+        continue;
+      }
+    }
+    if (!deviceNodes.has(id)) {
+      next.set(id, node);
+    }
+  }
+  return filterOutMeshcoreLocallyDeletedContacts(next);
+}
+
+/** Placeholder pubkey stored until a real contact (0x8A) replaces the row. */
+export function meshcoreSyntheticPlaceholderPubKeyHex(nodeId: number): string {
+  const b = new Uint8Array(32);
+  b[0] = 0x4d;
+  b[1] = 0x43;
+  b[2] = 0x48;
+  b[3] = 0x54;
+  new DataView(b.buffer).setUint32(4, nodeId >>> 0, false);
+  for (let i = 8; i < 32; i++) {
+    b[i] = (((nodeId >>> 0) + i) * 17) & 0xff;
+  }
+  return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+}
+
+export function meshcoreIsSyntheticPlaceholderPubKeyHex(hex: string): boolean {
+  const h = hex.replace(/\s/g, '').toLowerCase();
+  return h.length === 64 && h.startsWith(SYNTH_PLACEHOLDER_PUBKEY_MARKER_HEX);
+}
+
+export function minimalMeshcoreChatNode(
+  nodeId: number,
+  displayName: string,
+  lastHeardSec: number,
+  via: 'rf' | 'mqtt',
+): MeshNode {
+  const name = displayName.trim() || `Node-${nodeId.toString(16).toUpperCase()}`;
+  return {
+    node_id: nodeId,
+    long_name: name,
+    short_name: '',
+    hw_model: 'Chat',
+    snr: 0,
+    battery: 0,
+    last_heard: lastHeardSec,
+    latitude: null,
+    longitude: null,
+    source: via,
+    heard_via_mqtt_only: via === 'mqtt',
+  };
+}
+
+/** First 6 bytes of a MeshCore pubkey (or prefix field) as lowercase hex. */
+export function pubKeyPrefixHex(publicKey: Uint8Array): string {
+  return Array.from(publicKey.slice(0, 6))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/** `!` + first 8 hex chars (4 bytes) of a MeshCore public key hex, for UI identity. */
+export function meshcorePubkeyShortId(publicKeyHex: string | undefined | null): string | null {
+  const h = (publicKeyHex ?? '').replace(/\s/g, '').toLowerCase();
+  if (h.length < 8) return null;
+  return `!${h.slice(0, 8)}`;
+}
+
+/**
+ * XOR-fold pubkey bytes into a stable unsigned 32-bit node ID.
+ * Expects a 32-byte MeshCore public key; returns 0 for any other length.
+ */
+export function pubkeyToNodeId(key: Uint8Array): number {
+  if (key.length !== 32) return 0;
+  let result = 0;
+  for (let i = 0; i < key.length; i += 4) {
+    const word = key[i] | (key[i + 1] << 8) | (key[i + 2] << 16) | (key[i + 3] << 24);
+    result = (result ^ word) >>> 0;
+  }
+  return result >>> 0;
+}
+
+export const CONTACT_TYPE_LABELS: Record<number, string> = {
+  0: 'None',
+  1: 'Chat',
+  2: 'Repeater',
+  3: 'Room',
+  4: 'Sensor',
+};
+
+const DEVICE_QUERY_MODEL_KEYS = [
+  'manufacturerModel',
+  'manufacturer_model',
+  'model',
+  'deviceModel',
+  'device_model',
+  'board',
+  'boardName',
+  'board_name',
+] as const;
+
+function meshcoreStringFromDeviceQueryField(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    // meshcore.js readString() decodes the entire DeviceInfo frame remainder, including
+    // null padding and extra null-terminated segments — truncate at first NUL (C-string).
+    const nullIdx = value.indexOf('\u0000');
+    const head = nullIdx >= 0 ? value.slice(0, nullIdx) : value;
+    let printable = '';
+    for (let i = 0; i < head.length; i++) {
+      const c = head.charCodeAt(i);
+      if (c >= 32 && c !== 127) printable += head[i];
+    }
+    const cleaned = printable.trim();
+    return cleaned.length > 0 ? cleaned : undefined;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return undefined;
+}
+
+/**
+ * Reads manufacturer/board model from meshcore.js `deviceQuery()` payloads.
+ * Different firmware or transport layers may use different property names or nest
+ * fields under `data` / `payload`.
+ */
+export function meshcoreManufacturerModelFromDeviceQuery(
+  info: unknown,
+  depth = 0,
+): string | undefined {
+  if (info === null || info === undefined || typeof info !== 'object') return undefined;
+  if (depth > 2) return undefined;
+  const r = info as Record<string, unknown>;
+  for (const k of DEVICE_QUERY_MODEL_KEYS) {
+    const s = meshcoreStringFromDeviceQueryField(r[k]);
+    if (s) return s;
+  }
+  for (const nest of ['data', 'payload', 'result'] as const) {
+    const inner = r[nest];
+    const found = meshcoreManufacturerModelFromDeviceQuery(inner, depth + 1);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/** Reverse of {@link CONTACT_TYPE_LABELS} for persisting merged UI `hw_model` to DB `contact_type`. */
+export function meshcoreContactTypeFromHwModel(hwModel: string): number | undefined {
+  for (const [typeNum, label] of Object.entries(CONTACT_TYPE_LABELS)) {
+    if (label === hwModel) return Number(typeNum);
+  }
+  return undefined;
+}
+
+export { meshcoreHwModelIsContactTypeLabel } from '../../shared/meshcoreContactHwLabels';
+
+/**
+ * Map measured cell voltage to an approximate 0–100% for UI (e.g. node list bar).
+ * Uses a simple 1S LiPo-style linear range (3.5 V empty → 4.2 V full); not accurate for all chemistries or loads.
+ */
+export function meshcoreMilliVoltsToApproximateBatteryPercent(
+  milliVolts: number,
+): number | undefined {
+  if (!Number.isFinite(milliVolts) || milliVolts <= 0) return undefined;
+  const v = milliVolts / 1000;
+  const emptyV = 3.5;
+  const fullV = 4.2;
+  const pct = ((v - emptyV) / (fullV - emptyV)) * 100;
+  return Math.round(Math.min(100, Math.max(0, pct)));
+}
+
+/**
+ * MeshCore / meshcore.js expose only `batteryMilliVolts`—no charging or USB-powered flag (contrast: Meshtastic uses batteryLevel > 100).
+ * For UI we treat USB serial as likely VBUS/charging. BLE or TCP cannot indicate wall-charging without firmware support.
+ */
+export function meshcoreConnectionImpliesUsbPower(connectionType: ConnectionType | null): boolean {
+  return connectionType === 'serial';
+}
+
+/** MeshCore roles excluded from user contact-group membership (infrastructure / rooms). */
+export const MESHCORE_HW_MODELS_EXCLUDED_FROM_CONTACT_GROUPS: ReadonlySet<string> = new Set([
+  CONTACT_TYPE_LABELS[2],
+  CONTACT_TYPE_LABELS[3],
+]);
+
+export function isMeshcoreContactEligibleForUserGroup(node: Pick<MeshNode, 'hw_model'>): boolean {
+  const hw = node.hw_model;
+  return !MESHCORE_HW_MODELS_EXCLUDED_FROM_CONTACT_GROUPS.has(hw);
+}
+
+/** MeshCore roles that must not appear as Chat DM peers (Repeater + Room; Sensor stays eligible). */
+export function isMeshcoreDmExcludedHwModel(hwModel: string | undefined): boolean {
+  return hwModel != null && MESHCORE_HW_MODELS_EXCLUDED_FROM_CONTACT_GROUPS.has(hwModel);
+}
+
+interface MeshCoreContact {
+  publicKey: Uint8Array;
+  type: number;
+  advName: string;
+  lastAdvert: number;
+  advLat: number;
+  advLon: number;
+  flags?: number;
+  outPathLen?: number;
+  outPath?: Uint8Array;
+}
+
+/**
+ * Maps MeshCore `advLat` / `advLon` integers (degrees × {@link MESHCORE_COORD_SCALE}) to decimal degrees.
+ * Non-finite values or zero on an axis yield null for that axis (same rules as {@link meshcoreContactToMeshNode}).
+ */
+export function meshcoreScaledAdvLatLonToDeg(
+  advLat: number,
+  advLon: number,
+): { lat: number | null; lon: number | null } {
+  const latDeg =
+    typeof advLat === 'number' && Number.isFinite(advLat) && advLat !== 0
+      ? advLat / MESHCORE_COORD_SCALE
+      : null;
+  const lonDeg =
+    typeof advLon === 'number' && Number.isFinite(advLon) && advLon !== 0
+      ? advLon / MESHCORE_COORD_SCALE
+      : null;
+  if (!isValidLatLon(latDeg, lonDeg)) {
+    return { lat: null, lon: null };
+  }
+  return { lat: latDeg, lon: lonDeg };
+}
+
+/**
+ * Formats MeshCore advert lat/lon for Radio Panel display.
+ * Returns null when both axes are missing / invalid (nothing to show).
+ */
+export function formatMeshcoreAdvertisedPositionDegrees(
+  advLat: number | undefined | null,
+  advLon: number | undefined | null,
+  fractionDigits = 5,
+): { lat: string; lon: string } | null {
+  const { lat, lon } = meshcoreScaledAdvLatLonToDeg(
+    typeof advLat === 'number' ? advLat : 0,
+    typeof advLon === 'number' ? advLon : 0,
+  );
+  if (lat == null && lon == null) return null;
+  return {
+    lat: lat != null ? lat.toFixed(fractionDigits) : '—',
+    lon: lon != null ? lon.toFixed(fractionDigits) : '—',
+  };
+}
+
+/**
+ * Cayenne LPP GPS payloads may include `altitude` in meters for {@link MeshNode.altitude}.
+ * Returns `undefined` when missing or non-finite so callers do not overwrite a prior good value.
+ */
+export function meshcoreTelemetryGpsAltitudeMeters(
+  gps: { altitude?: number; latitude?: number; longitude?: number } | undefined | null,
+): number | undefined {
+  if (gps == null || typeof gps !== 'object') return undefined;
+  const a = gps.altitude;
+  if (typeof a !== 'number' || !Number.isFinite(a)) return undefined;
+  return a;
+}
+
+export function meshcoreContactToMeshNode(contact: MeshCoreContact): MeshNode {
+  const nodeId = pubkeyToNodeId(contact.publicKey);
+  const { lat, lon } = meshcoreScaledAdvLatLonToDeg(contact.advLat, contact.advLon);
+  return {
+    node_id: nodeId,
+    long_name: contact.advName || `Node-${nodeId.toString(16).toUpperCase()}`,
+    short_name: '',
+    hw_model: CONTACT_TYPE_LABELS[contact.type] ?? 'Unknown',
+    snr: 0,
+    battery: 0,
+    last_heard: contact.lastAdvert,
+    latitude: lat,
+    longitude: lon,
+    hops_away: meshcoreInferHopsFromOutPath(contact),
+  };
+}
+
+/** Max hop index in MeshCore outbound path (inclusive of destination). */
+export const MESHCORE_OUT_PATH_LEN_MAX = 61;
+
+/** Trim fixed-size companion `outPath` buffers: meaningful bytes then zero padding. */
+function meshcoreTrimTrailingZerosOutPath(outPath: Uint8Array): Uint8Array {
+  let end = outPath.length;
+  while (end > 0 && outPath[end - 1] === 0) end--;
+  return end > 0 ? outPath.slice(0, end) : new Uint8Array(0);
+}
+
+/**
+ * Build outbound path bytes for `tracePath` from a contact.
+ * Valid lengths 0..{@link MESHCORE_OUT_PATH_LEN_MAX} use the firmware-reported length (`outPathLen` 0 → first byte only).
+ * For **hop count** UI when the buffer may still hold a full route but firmware reports `outPathLen === 0`, use
+ * {@link meshcoreInferHopsFromOutPath} instead of inferring from this slice alone.
+ * Negative `outPathLen` (e.g. -1), **null**, or **undefined** mean “length unset” while `outPath`
+ * still holds a fixed-size buffer — trim trailing zeros. Oversized reported lengths use the same trim.
+ */
+export function meshcoreSliceContactOutPathForTrace(
+  outPath: Uint8Array | undefined,
+  outPathLen: number | null | undefined,
+): Uint8Array {
+  if (!outPath || outPath.length === 0) return new Uint8Array(0);
+  if (outPathLen === null || outPathLen === undefined) {
+    return meshcoreTrimTrailingZerosOutPath(outPath);
+  }
+  if (
+    typeof outPathLen === 'number' &&
+    Number.isFinite(outPathLen) &&
+    outPathLen >= 0 &&
+    outPathLen <= MESHCORE_OUT_PATH_LEN_MAX
+  ) {
+    return outPath.slice(0, outPathLen + 1);
+  }
+  if (typeof outPathLen === 'number' && Number.isFinite(outPathLen) && outPathLen < 0) {
+    return meshcoreTrimTrailingZerosOutPath(outPath);
+  }
+  if (
+    typeof outPathLen === 'number' &&
+    Number.isFinite(outPathLen) &&
+    outPathLen > MESHCORE_OUT_PATH_LEN_MAX
+  ) {
+    const { hopCount, hashSizeBytes } = meshcoreUnpackPathLenByte(outPathLen);
+    const byteLen = hopCount * hashSizeBytes;
+    if (byteLen > 0) return outPath.slice(0, byteLen);
+    return meshcoreTrimTrailingZerosOutPath(outPath);
+  }
+  if (
+    typeof outPathLen === 'number' &&
+    Number.isFinite(outPathLen) &&
+    outPathLen >= 0 &&
+    ((outPathLen >> 6) & 0x03) > 0
+  ) {
+    const { hopCount, hashSizeBytes } = meshcoreUnpackPathLenByte(outPathLen);
+    const byteLen = hopCount * hashSizeBytes;
+    if (byteLen > 0) return outPath.slice(0, byteLen);
+    return meshcoreTrimTrailingZerosOutPath(outPath);
+  }
+  const n =
+    typeof outPathLen === 'number' && Number.isFinite(outPathLen) ? Math.trunc(outPathLen) : 0;
+  const safe = n >= 0 && n <= MESHCORE_OUT_PATH_LEN_MAX ? n : 0;
+  return outPath.slice(0, safe + 1);
+}
+
+/**
+ * Infer UI hop count from contact path length and/or outbound path bytes.
+ * Valid numeric `outPathLen` uses the same semantics as {@link meshcoreTracePathLenToHops}.
+ * When length is unset/invalid but `outPath` holds bytes, derives hops from the sliced path.
+ */
+export function meshcoreInferHopsFromOutPath(contact: {
+  outPathLen?: number;
+  outPath?: Uint8Array;
+}): number | undefined {
+  const len = contact.outPathLen;
+  const sliced = meshcoreSliceContactOutPathForTrace(contact.outPath, contact.outPathLen);
+  if (len != null && Number.isFinite(len) && len >= 0 && len <= MESHCORE_OUT_PATH_LEN_MAX) {
+    // outPathLen 0 uses slice(0,1) in the trace helper — too short when the buffer still holds a
+    // full route; re-slice with "length unset" semantics (trim) for hop inference only.
+    if (len === 0) {
+      const trimmed = meshcoreSliceContactOutPathForTrace(contact.outPath, undefined);
+      if (trimmed.length > 1) {
+        return Math.max(0, trimmed.length - 1);
+      }
+    }
+    // Contact outPathLen is the last byte index (slice length − 1), not TraceData pathLen.
+    return Math.max(0, Math.trunc(len));
+  }
+  if (sliced.length > 1) {
+    return Math.max(0, sliced.length - 1);
+  }
+  return undefined;
+}
+
+/**
+ * Hop count for room login path/timeout decisions.
+ * Prefer route bytes when UI reports 0 but `outPath` still holds multi-hop path.
+ * Do not trust sticky UI `hops_away > 0` alone with an empty path — that blocks 0-hop
+ * SendLogin (noRoute) for rooms that are actually direct (contact merge keeps old hops).
+ */
+export function resolveMeshcoreRoomLoginHopsAway(
+  node: Pick<MeshNode, 'hops_away'> | undefined,
+  outPathBytes?: Uint8Array,
+): number {
+  const hops = node?.hops_away;
+  const inferred =
+    outPathBytes && outPathBytes.length > 0
+      ? meshcoreInferHopsFromOutPath({ outPath: outPathBytes, outPathLen: -1 })
+      : undefined;
+  const hasMultiHopPath = inferred != null && inferred > 0;
+  if (typeof hops === 'number' && Number.isFinite(hops) && hops > 0 && hasMultiHopPath) {
+    return Math.trunc(hops);
+  }
+  if (inferred != null && inferred > 0) {
+    return inferred;
+  }
+  // Sticky multi-hop with no (trimmed) route bytes → treat as direct for login.
+  if (typeof hops === 'number' && Number.isFinite(hops) && hops >= 0 && !hasMultiHopPath) {
+    return 0;
+  }
+  if (typeof hops === 'number' && Number.isFinite(hops) && hops >= 0) {
+    return Math.trunc(hops);
+  }
+  return 0;
+}
+
+/**
+ * When rebuilding the node map from `getContacts`, merge hop counts so a transient radio state
+ * (e.g. flood advert / trace priming reporting outPathLen 0 for everyone) does not clear the UI.
+ */
+export function meshcoreMergeContactHopsAwayFromPrevious(
+  inferred: number | undefined,
+  prev: number | undefined,
+  slicedPathByteLength: number,
+): number | undefined {
+  touch(slicedPathByteLength);
+  if (prev !== undefined && prev >= 1) {
+    // Never replace a known multi-hop route with 0/unknown from a transient contact or RF parse:
+    // firmware sometimes reports outPathLen/direct while bytes still imply hops, or packets carry hop 0.
+    if (inferred === undefined || inferred === 0) {
+      return prev;
+    }
+    return Math.min(inferred, prev);
+  }
+  if (inferred === undefined && prev !== undefined) {
+    return prev;
+  }
+  return inferred;
+}
+
+export interface MeshcoreMergeContactAdvNameOpts {
+  prevLastHeard?: number;
+  radioLastAdvert?: number;
+}
+
+/**
+ * Advert name to merge against a `getContacts` dump. UI `long_name` is often the nickname overlay,
+ * so prefer a real previous advert name and fall back to the stored SQLite/live advert name.
+ */
+export function meshcorePreviousAdvertNameForRebuild(
+  prevLongName: string | undefined,
+  nickname: string | undefined,
+  storedAdvertName: string | undefined,
+  nodeId: number,
+): string | undefined {
+  const prev = (prevLongName ?? '').trim();
+  const nick = (nickname ?? '').trim();
+  const stored = (storedAdvertName ?? '').trim();
+  const prevIsNick = nick.length > 0 && prev === nick;
+  if (prev && !prevIsNick && !meshcoreIsPlaceholderNodeLongName(prev, nodeId)) {
+    return prev;
+  }
+  if (stored && !meshcoreIsPlaceholderNodeLongName(stored, nodeId)) {
+    return stored;
+  }
+  return undefined;
+}
+
+/**
+ * When rebuilding from `getContacts`, companion firmware often keeps the name from when the
+ * contact was first stored and may bump `lastAdvert` without renaming. Prefer a live advert
+ * name already in the UI whenever both names are real and differ; on-air adverts / local
+ * setAdvertName are the authoritative rename paths (`opts` kept for call-site compat).
+ */
+export function meshcoreMergeContactAdvNameFromPrevious(
+  radioAdvName: string | undefined,
+  prevLongName: string | undefined,
+  nodeId: number,
+  _opts?: MeshcoreMergeContactAdvNameOpts,
+): string {
+  touch(_opts);
+  const radioTrim = (radioAdvName ?? '').trim();
+  const prevTrim = (prevLongName ?? '').trim();
+  const radioReal = radioTrim.length > 0 && !meshcoreIsPlaceholderNodeLongName(radioTrim, nodeId);
+  const prevReal = prevTrim.length > 0 && !meshcoreIsPlaceholderNodeLongName(prevTrim, nodeId);
+  const hexFallback = `Node-${nodeId.toString(16).toUpperCase()}`;
+
+  if (!radioReal && prevReal) return prevTrim;
+  if (!prevReal) return radioTrim || prevTrim || hexFallback;
+  if (radioTrim === prevTrim) return radioTrim;
+  // Companion dump disagrees with a real live/previous name — keep the live name. lastAdvert
+  // is not a reliable name version (path hears often bump time without updating advName).
+  return prevTrim;
+}
+
+/** Result of mapping a heard RF advert (push 0x80) into UI + DB when the node is not yet a contact. */
+export interface MeshcoreMinimalAdvertNodeResult {
+  node: MeshNode;
+  lastHeardSec: number;
+  persistAdvLatDeg: number | null;
+  persistAdvLonDeg: number | null;
+  contactType: number;
+}
+
+/**
+ * Build a minimal {@link MeshNode} from an advert public key and optional companion fields.
+ * Returns null if the key is not a valid 32-byte MeshCore pubkey or folds to node id 0.
+ */
+export function meshcoreMinimalNodeFromAdvertEvent(
+  publicKey: Uint8Array,
+  opts: {
+    nowSec: number;
+    advLat?: number;
+    advLon?: number;
+    lastAdvert?: number;
+    contactType?: number;
+    advName?: string;
+  },
+): MeshcoreMinimalAdvertNodeResult | null {
+  if (publicKey.length !== 32) return null;
+  const nodeId = pubkeyToNodeId(publicKey);
+  if (nodeId === 0) return null;
+  const contactType =
+    typeof opts.contactType === 'number' && Number.isFinite(opts.contactType)
+      ? Math.max(0, Math.floor(opts.contactType))
+      : 0;
+  const lastHeardSec =
+    mergeMeshcoreLastHeardFromAdvert(opts.lastAdvert, undefined, opts.nowSec) || opts.nowSec;
+  const advLat = typeof opts.advLat === 'number' ? opts.advLat : 0;
+  const advLon = typeof opts.advLon === 'number' ? opts.advLon : 0;
+  const { lat: latDeg, lon: lonDeg } = meshcoreScaledAdvLatLonToDeg(advLat, advLon);
+  const advNameTrim =
+    typeof opts.advName === 'string' && opts.advName.trim() ? opts.advName.trim() : '';
+  const node: MeshNode = {
+    node_id: nodeId,
+    long_name: advNameTrim || `Node-${nodeId.toString(16).toUpperCase()}`,
+    short_name: '',
+    hw_model: CONTACT_TYPE_LABELS[contactType] ?? 'Unknown',
+    snr: 0,
+    battery: 0,
+    last_heard: lastHeardSec,
+    latitude: latDeg,
+    longitude: lonDeg,
+  };
+  return {
+    node,
+    lastHeardSec,
+    persistAdvLatDeg: latDeg,
+    persistAdvLonDeg: lonDeg,
+    contactType,
+  };
+}
+
+/** MeshCore supports channel indices 0..39 (40 channels). */
+export const MESHCORE_CHANNEL_INDEX_MAX = 39;
+
+/** MeshCore channel name max length (firmware stores char[32], null-terminated). */
+export const MESHCORE_CHANNEL_NAME_MAX_LEN = 31;
+
+/**
+ * 128-bit AES key as 32 hex chars: first 16 bytes of SHA-256("#name") per MeshCore #channel convention.
+ * The name is normalized with a leading `#` (e.g. `general` → hash `#general`).
+ */
+export async function meshcoreDeriveChannelKeyHexFromName(channelName: string): Promise<string> {
+  const t = channelName.trim();
+  const input = t.startsWith('#') ? t : `#${t}`;
+  const data = new TextEncoder().encode(input);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  const first16 = new Uint8Array(buf).slice(0, 16);
+  return Array.from(first16, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Normalize `getSelfInfo().radioFreq` to Hz for UI (`RadioPanel` MHz field).
+ * Firmware may report Hz (≥1e8), kHz (ISM band as integer, e.g. 910525), or MHz (float, e.g. 915.5).
+ */
+export function meshcoreSelfInfoFreqToDisplayHz(freq: number): number {
+  if (!Number.isFinite(freq) || freq <= 0) return 915_000_000;
+  if (freq >= 1e8) return Math.round(freq);
+  if (freq >= 100_000 && freq < 1e8) return Math.round(freq * 1000);
+  return Math.round(freq * 1e6);
+}
+
+/**
+ * Normalize `getSelfInfo().radioBw` to kHz for `ConfigSelect` bandwidth state.
+ * Firmware may report Hz (≥1000, e.g. 250000) or kHz (125, 250, 500).
+ */
+export function meshcoreSelfInfoBwToDisplayKhz(bw: number): number {
+  if (!Number.isFinite(bw) || bw <= 0) return 250;
+  if (bw >= 1000) return bw / 1000;
+  return bw;
+}
+
+export {
+  MESHCORE_REPEATER_AUTH_HINT_KEY,
+  meshcoreAppendRepeaterAuthHint,
+} from './meshcore/meshcoreMessageI18n';
+
+/**
+ * Raw SNR quarter-dB to dB scale factor.
+ *
+ * Multiply raw quarter-dB integers from contact payloads (e.g. `contact.pathSnrs[i]` from `getContacts` / refresh)
+ * to get dB. **Do not** apply to `tracePath.lastSnr` or GetNeighbours parser output — both already convert
+ * (`readInt8() / 4` / `parseMeshcoreGetNeighboursResponse`).
+ */
+export const MESHCORE_RPC_SNR_RAW_TO_DB = 0.25;
+
+/**
+ * Merge hw_model when updating a node from a device contact push (event 138 or contacts refresh).
+ * Preserves an existing meaningful hw_model (e.g. 'Repeater', 'Sensor') over an incoming
+ * generic/unclassified type. Device may push type 0 ('None') or 1 ('Chat') for a contact
+ * that was already classified by a prior full contacts fetch.
+ */
+export function mergeHwModelOnContactUpdate(
+  existingHwModel: string | undefined,
+  incomingHwModel: string,
+): string {
+  if (
+    existingHwModel &&
+    existingHwModel !== 'None' &&
+    existingHwModel !== 'Unknown' &&
+    existingHwModel !== 'Chat'
+  ) {
+    return existingHwModel;
+  }
+  return incomingHwModel;
+}
+
+/**
+ * Normalizes the value resolved by meshcore.js `exportPrivateKey()` — typically
+ * `{ privateKey: Uint8Array }` from `onPrivateKeyResponse`. Call sites must not assume a bare `Uint8Array`.
+ */
+export function coerceMeshcoreExportPrivateKeyResult(result: unknown): Uint8Array | null {
+  if (result instanceof Uint8Array) {
+    return result.byteLength > 0 ? result : null;
+  }
+  if (
+    result &&
+    typeof result === 'object' &&
+    'privateKey' in result &&
+    result.privateKey instanceof Uint8Array
+  ) {
+    const pk = result.privateKey;
+    return pk.byteLength > 0 ? pk : null;
+  }
+  return null;
+}
+
+/** Map meshcore.js bare `reject()` from removeContact to a user-visible message. */
+export function meshcoreRemoveContactErrorMessage(e: unknown): string {
+  const msg = errLikeToLogString(e);
+  if (!msg || msg === 'undefined') {
+    return 'radio rejected removeContact (no detail from radio)';
+  }
+  return msg;
+}

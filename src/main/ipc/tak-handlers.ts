@@ -1,0 +1,106 @@
+import { ipcMain } from 'electron';
+
+import type { TAKServerStatus, TAKSettings } from '../../shared/tak-types';
+import { sanitizeLogMessage } from '../log-service';
+import type { TakServerManager } from '../tak-server-manager';
+import { assertIpcSender } from '../validate-ipc-sender';
+
+export interface TakIpcDeps {
+  idleTakStatus: TAKServerStatus;
+  ensureTakServerManager: () => Promise<TakServerManager>;
+  getTakServerManager: () => TakServerManager | null;
+  validateTakSettings: (settings: unknown) => asserts settings is TAKSettings;
+}
+
+/** Register TAK server IPC handlers (`tak:*`). */
+export function registerTakIpcHandlers(deps: TakIpcDeps): void {
+  const { idleTakStatus, ensureTakServerManager, getTakServerManager } = deps;
+  const validateTakSettings: (settings: unknown) => asserts settings is TAKSettings =
+    deps.validateTakSettings;
+
+  ipcMain.handle('tak:start', async (event, settings: unknown) => {
+    assertIpcSender(event, 'tak:start');
+    try {
+      console.debug('[IPC] tak:start');
+      validateTakSettings(settings);
+      const m = await ensureTakServerManager();
+      await m.start(settings);
+    } catch (err) {
+      console.error(
+        '[IPC] tak:start failed:',
+        sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+      );
+      throw err;
+    }
+  });
+
+  ipcMain.handle('tak:stop', (event) => {
+    assertIpcSender(event, 'tak:stop');
+    console.debug('[IPC] tak:stop');
+    getTakServerManager()?.stop();
+  });
+
+  ipcMain.handle('tak:getStatus', (event) => {
+    assertIpcSender(event, 'tak:getStatus');
+    return getTakServerManager()?.getStatus() ?? idleTakStatus;
+  });
+
+  ipcMain.handle('tak:getConnectedClients', (event) => {
+    assertIpcSender(event, 'tak:getConnectedClients');
+    return getTakServerManager()?.getConnectedClients() ?? [];
+  });
+
+  ipcMain.handle('tak:generateDataPackage', async (event) => {
+    assertIpcSender(event, 'tak:generateDataPackage');
+    try {
+      console.debug('[IPC] tak:generateDataPackage');
+      const m = await ensureTakServerManager();
+      await m.generateDataPackage();
+    } catch (err) {
+      console.error(
+        '[IPC] tak:generateDataPackage failed:',
+        sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+      );
+      throw err;
+    }
+  });
+
+  ipcMain.handle('tak:regenerateCertificates', async (event) => {
+    assertIpcSender(event, 'tak:regenerateCertificates');
+    try {
+      console.debug('[IPC] tak:regenerateCertificates');
+      const m = await ensureTakServerManager();
+      await m.regenerateCertificates();
+    } catch (err) {
+      console.error(
+        '[IPC] tak:regenerateCertificates failed:',
+        sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+      );
+      throw err;
+    }
+  });
+
+  ipcMain.handle('tak:pushNodeUpdate', async (event, node: unknown) => {
+    assertIpcSender(event, 'tak:pushNodeUpdate');
+    try {
+      if (!node || typeof node !== 'object')
+        throw new Error('tak:pushNodeUpdate: node must be object');
+      const n = node as Record<string, unknown>;
+      const nodeId = Number(n.node_id);
+      if (!Number.isFinite(nodeId) || nodeId <= 0)
+        throw new Error('tak:pushNodeUpdate: invalid node_id');
+      const m = await ensureTakServerManager();
+      if (!m.getStatus().running) {
+        console.debug('[IPC] tak:pushNodeUpdate: TAK server not running, skipping');
+        return;
+      }
+      m.onNodeUpdate(n as Parameters<TakServerManager['onNodeUpdate']>[0]);
+    } catch (err) {
+      console.error(
+        '[IPC] tak:pushNodeUpdate failed:',
+        sanitizeLogMessage(err instanceof Error ? err.message : String(err)),
+      );
+      throw err;
+    }
+  });
+}

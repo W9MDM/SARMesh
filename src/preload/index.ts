@@ -1,0 +1,1470 @@
+import { contextBridge, ipcRenderer } from 'electron';
+
+import type {
+  BlePeripheralOwner,
+  BleScanOwner,
+  ElectronAPI,
+  LongSessionRestartPayload,
+  MeshNode,
+  MeshProtocol,
+  MQTTSettings,
+  MQTTStatus,
+  NobleBleConnectResult,
+  NobleBleDevice,
+  NobleBleLinkRssiPayload,
+  NobleBleSessionId,
+  OutboxEntry,
+  OutboxEntryInput,
+  OutboxStatus,
+  ReadReticulumAttachmentAsDataUrlOpts,
+  ReadReticulumAttachmentAsDataUrlResult,
+  ReadReticulumAttachmentBytesResult,
+  ReticulumIdentityBackupImportDialogResult,
+  ReticulumIdentityExportSaveResult,
+  ReticulumIdentityImportDialogResult,
+  SerialPort,
+  SpellcheckReplacePayload,
+  UpdateCheckingPayload,
+} from '../shared/electron-api.types';
+import type {
+  ReticulumSidecarEvent,
+  ReticulumSidecarStartOptions,
+  ReticulumSidecarStatus,
+} from '../shared/reticulum-types';
+import { throwIfReticulumProxyIpcError } from '../shared/reticulumProxyIpcError';
+import type { TAKClientInfo, TAKServerStatus, TAKSettings } from '../shared/tak-types';
+
+export type { NobleBleDevice, NobleBleSessionId, SerialPort };
+
+/** Unwrap reticulum proxy soft-failure envelopes so renderer catch paths stay the same. */
+async function unwrapReticulumProxy<T = unknown>(result: Promise<unknown>): Promise<T> {
+  return throwIfReticulumProxyIpcError(await result) as T;
+}
+
+contextBridge.exposeInMainWorld('electronAPI', {
+  // ─── Database operations ────────────────────────────────────────
+  db: {
+    saveMessage: (message: {
+      sender_id: number;
+      sender_name: string;
+      payload: string;
+      channel: number;
+      timestamp: number;
+      to?: number;
+    }) => ipcRenderer.invoke('db:saveMessage', message),
+
+    getMessages: (channel?: number, limit?: number) =>
+      ipcRenderer.invoke('db:getMessages', channel, limit),
+    listMeshtasticDmPeers: (ownNodeId: number, limit?: number) =>
+      ipcRenderer.invoke('db:listMeshtasticDmPeers', ownNodeId, limit),
+
+    saveNode: (node: MeshNode) => ipcRenderer.invoke('db:saveNode', node),
+
+    saveNodePath: (nodeId: number, lastHeard: number, buffer: Buffer) =>
+      ipcRenderer.invoke('db:saveNodePath', nodeId, lastHeard, buffer),
+
+    getNodes: () => ipcRenderer.invoke('db:getNodes'),
+
+    clearMessages: () => ipcRenderer.invoke('db:clearMessages'),
+    clearNodes: () => ipcRenderer.invoke('db:clearNodes'),
+    deleteNode: (nodeId: number) => ipcRenderer.invoke('db:deleteNode', nodeId),
+    updateMessageStatus: (packetId: number, status: string, error?: string, mqttStatus?: string) =>
+      ipcRenderer.invoke('db:updateMessageStatus', packetId, status, error, mqttStatus),
+    updateMessagePacketId: (oldPacketId: number, newPacketId: number, senderId?: number) =>
+      ipcRenderer.invoke('db:updateMessagePacketId', oldPacketId, newPacketId, senderId),
+    exportDb: () => ipcRenderer.invoke('db:export'),
+    importDb: () => ipcRenderer.invoke('db:import'),
+    deleteNodesByAge: (days: number) => ipcRenderer.invoke('db:deleteNodesByAge', days),
+    deleteNodesNeverHeard: () => ipcRenderer.invoke('db:deleteNodesNeverHeard'),
+    pruneNodesByCount: (maxCount: number) => ipcRenderer.invoke('db:pruneNodesByCount', maxCount),
+    pruneMessagesByCount: (maxCount: number) =>
+      ipcRenderer.invoke('db:pruneMessagesByCount', maxCount),
+    pruneMeshcoreMessagesByCount: (maxCount: number) =>
+      ipcRenderer.invoke('db:pruneMeshcoreMessagesByCount', maxCount),
+    pruneReticulumMessagesByCount: (maxCount: number) =>
+      ipcRenderer.invoke('db:pruneReticulumMessagesByCount', maxCount),
+    listRrcMessages: (hubHash: string, room: string, limit?: number) =>
+      ipcRenderer.invoke('db:listRrcMessages', hubHash, room, limit),
+    insertRrcMessage: (message: {
+      message_id: string;
+      hub_hash: string;
+      room: string;
+      sender_hash?: string | null;
+      nickname?: string | null;
+      kind: string;
+      body: string;
+      timestamp: number;
+    }) => ipcRenderer.invoke('db:insertRrcMessage', message),
+    listRrcNicks: (hubHash: string, limit?: number) =>
+      ipcRenderer.invoke('db:listRrcNicks', hubHash, limit),
+    upsertRrcNick: (nick: {
+      hub_hash: string;
+      identity_hash: string;
+      nickname: string;
+      last_seen: number;
+    }) => ipcRenderer.invoke('db:upsertRrcNick', nick),
+    deleteRrcMessagesByRoom: (hubHash: string, room: string) =>
+      ipcRenderer.invoke('db:deleteRrcMessagesByRoom', hubHash, room),
+    pruneRrcMessagesByCount: (maxCount: number) =>
+      ipcRenderer.invoke('db:pruneRrcMessagesByCount', maxCount),
+    pruneRrcMessagesByAge: (maxAgeDays: number) =>
+      ipcRenderer.invoke('db:pruneRrcMessagesByAge', maxAgeDays),
+    pruneReticulumDestinationsByCount: (maxCount: number) =>
+      ipcRenderer.invoke('db:pruneReticulumDestinationsByCount', maxCount),
+    deleteReticulumDestinationsByAge: (days: number) =>
+      ipcRenderer.invoke('db:deleteReticulumDestinationsByAge', days),
+    pruneReticulumIdentityActivityByAge: (days: number) =>
+      ipcRenderer.invoke('db:pruneReticulumIdentityActivityByAge', days),
+    deleteNodesBatch: (nodeIds: number[]) => ipcRenderer.invoke('db:deleteNodesBatch', nodeIds),
+    clearMessagesByChannel: (channel: number) =>
+      ipcRenderer.invoke('db:clearMessagesByChannel', channel),
+    getMessageChannels: () => ipcRenderer.invoke('db:getMessageChannels'),
+    setNodeFavorited: (nodeId: number, favorited: boolean) =>
+      ipcRenderer.invoke('db:setNodeFavorited', nodeId, favorited),
+    getNodeNote: (nodeId: number) => ipcRenderer.invoke('db:getNodeNote', nodeId),
+    setNodeNote: (nodeId: number, note: string) =>
+      ipcRenderer.invoke('db:setNodeNote', nodeId, note),
+    deleteNodesBySource: (source: string) => ipcRenderer.invoke('db:deleteNodesBySource', source),
+    migrateRfStubNodes: () => ipcRenderer.invoke('db:migrateRfStubNodes'),
+    deleteNodesWithoutLongname: () => ipcRenderer.invoke('db:deleteNodesWithoutLongname'),
+    prunePositionHistory: (days: number) => ipcRenderer.invoke('db:prunePositionHistory', days),
+    prunePositionHistoryPerNode: (maxPerNode: number) =>
+      ipcRenderer.invoke('db:prunePositionHistoryPerNode', maxPerNode),
+    clearNodePositions: () => ipcRenderer.invoke('db:clearNodePositions'),
+    updateMessageReceivedVia: (packetId: number, rxHops?: number | null) =>
+      ipcRenderer.invoke('db:updateMessageReceivedVia', packetId, rxHops),
+
+    getMeshcoreMessages: (channelIdx?: number, limit?: number) =>
+      ipcRenderer.invoke('db:getMeshcoreMessages', channelIdx, limit),
+    listMeshcoreDmPeers: (ownNodeId: number, limit?: number) =>
+      ipcRenderer.invoke('db:listMeshcoreDmPeers', ownNodeId, limit),
+    searchMessages: (query: string, limit?: number) =>
+      ipcRenderer.invoke('db:searchMessages', query, limit),
+    searchMeshcoreMessages: (query: string, limit?: number) =>
+      ipcRenderer.invoke('db:searchMeshcoreMessages', query, limit),
+    getMeshcoreContacts: () => ipcRenderer.invoke('db:getMeshcoreContacts'),
+    updateMeshcoreMessageSender: (messageId: number, senderId: number, senderName: string) =>
+      ipcRenderer.invoke('db:updateMeshcoreMessageSender', messageId, senderId, senderName),
+    saveMeshcoreMessage: (message: {
+      sender_id?: number | null;
+      sender_name?: string | null;
+      payload: string;
+      channel_idx?: number;
+      timestamp: number;
+      status?: string;
+      packet_id?: number | null;
+      emoji?: number | null;
+      reply_id?: number | null;
+      to_node?: number | null;
+      received_via?: string | null;
+      rx_packet_fingerprint?: string | null;
+      reply_preview_text?: string | null;
+      reply_preview_sender?: string | null;
+      rx_hops?: number | null;
+      room_server_id?: number | null;
+    }) => ipcRenderer.invoke('db:saveMeshcoreMessage', message),
+    getReticulumMessages: (identityId: string, limit?: number) =>
+      ipcRenderer.invoke('db:getReticulumMessages', identityId, limit),
+    searchReticulumMessages: (identityId: string, query: string, limit?: number) =>
+      ipcRenderer.invoke('db:searchReticulumMessages', identityId, query, limit),
+    deleteReticulumMessage: (identityId: string, messageHash: string) =>
+      ipcRenderer.invoke('db:deleteReticulumMessage', identityId, messageHash),
+    clearReticulumMessages: (identityId: string) =>
+      ipcRenderer.invoke('db:clearReticulumMessages', identityId),
+    clearReticulumContactDestinations: () =>
+      ipcRenderer.invoke('db:clearReticulumContactDestinations'),
+    saveReticulumMessage: (message: {
+      identity_id: string;
+      sender_id: string;
+      sender_name?: string | null;
+      payload: string;
+      timestamp: number;
+      to_hash?: string | null;
+      reply_to_hash?: string | null;
+      message_hash?: string | null;
+      replaces_message_hash?: string | null;
+      received_via?: string | null;
+      delivery_status?: string | null;
+      delivery_method?: string | null;
+      delivery_attempts?: number | null;
+      next_delivery_attempt_at?: number | null;
+      attachment_path?: string | null;
+      audio_mode?: number | null;
+      audio_duration_sec?: number | null;
+    }) => ipcRenderer.invoke('db:saveReticulumMessage', message),
+    markStaleReticulumOutbound: (identityId: string, staleAfterMs?: number) =>
+      ipcRenderer.invoke('db:markStaleReticulumOutbound', identityId, staleAfterMs),
+    vacuumReticulumTables: () => ipcRenderer.invoke('db:vacuumReticulumTables'),
+    getReticulumDestinations: () => ipcRenderer.invoke('db:getReticulumDestinations'),
+    deleteReticulumDestination: (destinationHash: string) =>
+      ipcRenderer.invoke('db:deleteReticulumDestination', destinationHash),
+    upsertReticulumDestination: (row: {
+      destination_hash: string;
+      display_name?: string | null;
+      last_heard?: number | null;
+      favorited?: boolean | number | null;
+      icon_name?: string | null;
+      icon_color?: string | null;
+    }) => ipcRenderer.invoke('db:upsertReticulumDestination', row),
+    setReticulumDestinationVerified: (opts: {
+      destination_hash: string;
+      verified: boolean;
+      identity_hash?: string;
+    }) =>
+      ipcRenderer.invoke('db:setReticulumDestinationVerified', opts) as Promise<{
+        changes: number;
+      }>,
+    getBlockedContacts: (protocol: string, identityId: string) =>
+      ipcRenderer.invoke('db:getBlockedContacts', protocol, identityId),
+    blockContact: (protocol: string, identityId: string, blockedHash: string) =>
+      ipcRenderer.invoke('db:blockContact', protocol, identityId, blockedHash),
+    unblockContact: (protocol: string, identityId: string, blockedHash: string) =>
+      ipcRenderer.invoke('db:unblockContact', protocol, identityId, blockedHash),
+    exportBlockedContacts: (protocol: string, identityId: string) =>
+      ipcRenderer.invoke('db:exportBlockedContacts', protocol, identityId),
+    importBlockedContacts: (protocol: string, identityId: string, hashes: string[]) =>
+      ipcRenderer.invoke('db:importBlockedContacts', protocol, identityId, hashes),
+    getReticulumIdentityActivity: (destinationHash: string) =>
+      ipcRenderer.invoke('db:getReticulumIdentityActivity', destinationHash),
+    getReticulumIdentityActivityByIdentity: (identityHash: string) =>
+      ipcRenderer.invoke('db:getReticulumIdentityActivityByIdentity', identityHash),
+    upsertReticulumIdentityActivity: (row: {
+      destination_hash: string;
+      aspect: string;
+      identity_hash?: string | null;
+      last_seen: number;
+      hops?: number | null;
+    }) => ipcRenderer.invoke('db:upsertReticulumIdentityActivity', row),
+    upsertReticulumIdentityActivityBatch: (
+      rows: {
+        destination_hash: string;
+        aspect: string;
+        identity_hash?: string | null;
+        last_seen: number;
+        hops?: number | null;
+      }[],
+    ) => ipcRenderer.invoke('db:upsertReticulumIdentityActivityBatch', rows),
+    listReticulumRemoteAddresses: () => ipcRenderer.invoke('db:listReticulumRemoteAddresses'),
+    upsertReticulumRemoteAddress: (row: {
+      id?: string;
+      label: string;
+      service: 'rnsh' | 'rncp';
+      destination_hash: string;
+      identity_hash?: string | null;
+      lxmf_peer_hash?: string | null;
+      last_used_at?: number | null;
+    }) => ipcRenderer.invoke('db:upsertReticulumRemoteAddress', row),
+    deleteReticulumRemoteAddress: (id: string) =>
+      ipcRenderer.invoke('db:deleteReticulumRemoteAddress', id),
+    listReticulumInboundPolicy: () => ipcRenderer.invoke('db:listReticulumInboundPolicy'),
+    upsertReticulumInboundPolicy: (row: {
+      identity_hash: string;
+      decision: 'allow' | 'block';
+      label?: string | null;
+      auto_save_dir?: string | null;
+    }) => ipcRenderer.invoke('db:upsertReticulumInboundPolicy', row),
+    deleteReticulumInboundPolicy: (identityHash: string) =>
+      ipcRenderer.invoke('db:deleteReticulumInboundPolicy', identityHash),
+    saveMeshcoreContact: (contact: {
+      node_id: number;
+      public_key: string;
+      adv_name?: string | null;
+      contact_type?: number;
+      last_advert?: number | null;
+      adv_lat?: number | null;
+      adv_lon?: number | null;
+      last_snr?: number | null;
+      last_rssi?: number | null;
+      nickname?: string | null;
+      contact_flags?: number | null;
+      hops_away?: number | null;
+      on_radio?: number | null;
+      last_synced_from_radio?: string | null;
+    }) => ipcRenderer.invoke('db:saveMeshcoreContact', contact),
+    saveMeshcoreContactsBatch: (
+      contacts: {
+        node_id: number;
+        public_key: string;
+        adv_name?: string | null;
+        contact_type?: number;
+        last_advert?: number | null;
+        adv_lat?: number | null;
+        adv_lon?: number | null;
+        last_snr?: number | null;
+        last_rssi?: number | null;
+        nickname?: string | null;
+        contact_flags?: number | null;
+        hops_away?: number | null;
+        on_radio?: number | null;
+        last_synced_from_radio?: string | null;
+      }[],
+    ) => ipcRenderer.invoke('db:saveMeshcoreContactsBatch', contacts),
+    updateMeshcoreContactRfTransport: (
+      nodeId: number,
+      transportScope: number | null,
+      transportReturn: number | null,
+    ) =>
+      ipcRenderer.invoke(
+        'db:updateMeshcoreContactRfTransport',
+        nodeId,
+        transportScope,
+        transportReturn,
+      ),
+    updateMeshcoreContactAdvert: (
+      nodeId: number,
+      lastAdvert: number | null,
+      advLat: number | null,
+      advLon: number | null,
+      advName?: string | null,
+    ) =>
+      ipcRenderer.invoke(
+        'db:updateMeshcoreContactAdvert',
+        nodeId,
+        lastAdvert,
+        advLat,
+        advLon,
+        advName,
+      ),
+    updateMeshcoreContactType: (nodeId: number, contactType: number) =>
+      ipcRenderer.invoke('db:updateMeshcoreContactType', nodeId, contactType),
+    updateMeshcoreContactLastRf: (
+      nodeId: number,
+      lastSnr: number,
+      lastRssi: number,
+      hops?: number | null,
+      timestamp?: number | null,
+    ) =>
+      ipcRenderer.invoke(
+        'db:updateMeshcoreContactLastRf',
+        nodeId,
+        lastSnr,
+        lastRssi,
+        hops,
+        timestamp,
+      ),
+    updateMeshcoreMessageStatus: (packetId: number, status: string) =>
+      ipcRenderer.invoke('db:updateMeshcoreMessageStatus', packetId, status),
+    updateMeshcoreMessageStatusByKey: (
+      senderId: number,
+      timestamp: number,
+      channelIdx: number,
+      payload: string,
+      status: string,
+    ) =>
+      ipcRenderer.invoke(
+        'db:updateMeshcoreMessageStatusByKey',
+        senderId,
+        timestamp,
+        channelIdx,
+        payload,
+        status,
+      ),
+    deleteMeshcoreContact: (nodeId: number) =>
+      ipcRenderer.invoke('db:deleteMeshcoreContact', nodeId),
+    clearMeshcoreMessages: () => ipcRenderer.invoke('db:clearMeshcoreMessages'),
+    getMeshcoreMessageChannels: () => ipcRenderer.invoke('db:getMeshcoreMessageChannels'),
+    clearMeshcoreMessagesByChannel: (channelIdx: number) =>
+      ipcRenderer.invoke('db:clearMeshcoreMessagesByChannel', channelIdx),
+    clearMeshcoreContacts: () => ipcRenderer.invoke('db:clearMeshcoreContacts'),
+    deleteMeshcoreContactsNeverAdvertised: () =>
+      ipcRenderer.invoke('db:deleteMeshcoreContactsNeverAdvertised'),
+    deleteMeshcoreContactsByAge: (days: number) =>
+      ipcRenderer.invoke('db:deleteMeshcoreContactsByAge', days),
+    pruneMeshcoreContactsByCount: (maxCount: number) =>
+      ipcRenderer.invoke('db:pruneMeshcoreContactsByCount', maxCount),
+    clearMeshcoreRepeaters: () => ipcRenderer.invoke('db:clearMeshcoreRepeaters'),
+    markAllMeshcoreContactsOffRadio: () => ipcRenderer.invoke('db:markAllMeshcoreContactsOffRadio'),
+    getMeshcoreContactCount: () => ipcRenderer.invoke('db:getMeshcoreContactCount'),
+    deleteMeshcoreContactsWithoutPubkey: () =>
+      ipcRenderer.invoke('db:deleteMeshcoreContactsWithoutPubkey'),
+    offloadAllMeshcoreContacts: () => ipcRenderer.invoke('db:offloadAllMeshcoreContacts'),
+    markMeshcoreContactOffRadio: (publicKeyHex: string) =>
+      ipcRenderer.invoke('db:markMeshcoreContactOffRadio', publicKeyHex),
+    getMeshcoreContactById: (nodeId: number) =>
+      ipcRenderer.invoke('db:getMeshcoreContactById', nodeId),
+    updateMeshcoreContactNickname: (nodeId: number, nickname: string | null) =>
+      ipcRenderer.invoke('db:updateMeshcoreContactNickname', nodeId, nickname),
+    updateMeshcoreContactFavorited: (
+      nodeId: number,
+      favorited: boolean,
+      publicKeyHex?: string | null,
+    ) => ipcRenderer.invoke('db:updateMeshcoreContactFavorited', nodeId, favorited, publicKeyHex),
+    savePositionHistory: (
+      nodeId: number,
+      lat: number,
+      lon: number,
+      recordedAt: number,
+      source: string,
+    ) => ipcRenderer.invoke('db:savePositionHistory', nodeId, lat, lon, recordedAt, source),
+    getPositionHistory: (sinceMs: number) => ipcRenderer.invoke('db:getPositionHistory', sinceMs),
+    clearPositionHistory: () => ipcRenderer.invoke('db:clearPositionHistory'),
+    saveMeshcoreHopHistory: (
+      nodeId: number,
+      timestamp: number,
+      hops: number | null,
+      snr: number | null,
+      rssi: number | null,
+    ) => ipcRenderer.invoke('db:saveMeshcoreHopHistory', nodeId, timestamp, hops, snr, rssi),
+    getMeshcoreHopHistory: (nodeId: number) =>
+      ipcRenderer.invoke('db:getMeshcoreHopHistory', nodeId),
+    getAllMeshcoreHopHistory: () => ipcRenderer.invoke('db:getAllMeshcoreHopHistory'),
+    saveMeshcoreTraceHistory: (
+      nodeId: number,
+      timestamp: number,
+      pathLen: number | null,
+      pathSnrs: number[],
+      lastSnr: number | null,
+      tag: number,
+    ) =>
+      ipcRenderer.invoke(
+        'db:saveMeshcoreTraceHistory',
+        nodeId,
+        timestamp,
+        pathLen,
+        pathSnrs,
+        lastSnr,
+        tag,
+      ),
+    getMeshcoreTraceHistory: (nodeId: number) =>
+      ipcRenderer.invoke('db:getMeshcoreTraceHistory', nodeId),
+    pruneMeshcorePathHistory: (nodeId: number) =>
+      ipcRenderer.invoke('db:pruneMeshcorePathHistory', nodeId),
+    upsertMeshcorePathHistory: (
+      nodeId: number,
+      pathHash: string,
+      hopCount: number,
+      pathBytes: number[],
+      wasFloodDiscovery: boolean,
+      routeWeight: number,
+    ) =>
+      ipcRenderer.invoke(
+        'db:upsertMeshcorePathHistory',
+        nodeId,
+        pathHash,
+        hopCount,
+        pathBytes,
+        wasFloodDiscovery,
+        routeWeight,
+      ),
+    recordMeshcorePathOutcome: (
+      nodeId: number,
+      pathHash: string,
+      success: boolean,
+      tripTimeMs?: number,
+    ) => ipcRenderer.invoke('db:recordMeshcorePathOutcome', nodeId, pathHash, success, tripTimeMs),
+    getMeshcorePathHistory: (nodeId: number) =>
+      ipcRenderer.invoke('db:getMeshcorePathHistory', nodeId),
+    getAllMeshcorePathHistory: () => ipcRenderer.invoke('db:getAllMeshcorePathHistory'),
+    deleteMeshcorePathHistoryForNode: (nodeId: number) =>
+      ipcRenderer.invoke('db:deleteMeshcorePathHistoryForNode', nodeId),
+    deleteAllMeshcorePathHistory: () => ipcRenderer.invoke('db:deleteAllMeshcorePathHistory'),
+    getContactGroups: (selfNodeId: number) => ipcRenderer.invoke('db:getContactGroups', selfNodeId),
+    createContactGroup: (selfNodeId: number, name: string) =>
+      ipcRenderer.invoke('db:createContactGroup', selfNodeId, name),
+    updateContactGroup: (groupId: number, name: string) =>
+      ipcRenderer.invoke('db:updateContactGroup', groupId, name),
+    deleteContactGroup: (groupId: number) => ipcRenderer.invoke('db:deleteContactGroup', groupId),
+    addContactToGroup: (groupId: number, contactNodeId: number) =>
+      ipcRenderer.invoke('db:addContactToGroup', groupId, contactNodeId),
+    removeContactFromGroup: (groupId: number, contactNodeId: number) =>
+      ipcRenderer.invoke('db:removeContactFromGroup', groupId, contactNodeId),
+    getContactGroupMembers: (groupId: number) =>
+      ipcRenderer.invoke('db:getContactGroupMembers', groupId),
+  },
+
+  // ─── MQTT ──────────────────────────────────────────────────────
+  mqtt: {
+    connect: (settings: MQTTSettings) => ipcRenderer.invoke('mqtt:connect', settings),
+    disconnect: (protocol?: MeshProtocol) => ipcRenderer.invoke('mqtt:disconnect', protocol),
+    powerResume: () => ipcRenderer.invoke('mqtt:powerResume'),
+    powerSuspend: () => ipcRenderer.invoke('mqtt:powerSuspend'),
+    onStatus: (cb: (payload: { status: MQTTStatus; protocol: MeshProtocol }) => void) => {
+      const handler = (_: unknown, payload: { status: MQTTStatus; protocol: MeshProtocol }) => {
+        cb(payload);
+      };
+      ipcRenderer.on('mqtt:status', handler);
+      return () => ipcRenderer.off('mqtt:status', handler);
+    },
+    onError: (cb: (payload: { error: string; protocol: MeshProtocol }) => void) => {
+      const handler = (_: unknown, payload: { error: string; protocol: MeshProtocol }) => {
+        cb(payload);
+      };
+      ipcRenderer.on('mqtt:error', handler);
+      return () => ipcRenderer.off('mqtt:error', handler);
+    },
+    onWarning: (cb: (payload: { warning: string; protocol: MeshProtocol }) => void) => {
+      const handler = (_: unknown, payload: { warning: string; protocol: MeshProtocol }) => {
+        cb(payload);
+      };
+      ipcRenderer.on('mqtt:warning', handler);
+      return () => ipcRenderer.off('mqtt:warning', handler);
+    },
+    onNodeUpdate: (
+      cb: (node: Partial<MeshNode> & { node_id: number; protocol?: MeshProtocol }) => void,
+    ) => {
+      const handler = (_: unknown, n: unknown) => {
+        cb(n as Partial<MeshNode> & { node_id: number; protocol?: MeshProtocol });
+      };
+      ipcRenderer.on('mqtt:node-update', handler);
+      return () => ipcRenderer.off('mqtt:node-update', handler);
+    },
+    onMessage: (cb: (msg: unknown) => void) => {
+      const handler = (_: unknown, m: unknown) => {
+        cb(m);
+      };
+      ipcRenderer.on('mqtt:message', handler);
+      return () => ipcRenderer.off('mqtt:message', handler);
+    },
+    onBrokerRaw: (
+      cb: (payload: { topic: string; payload: Uint8Array; retained: boolean }) => void,
+    ) => {
+      const handler = (_: unknown, p: unknown) => {
+        cb(p as { topic: string; payload: Uint8Array; retained: boolean });
+      };
+      ipcRenderer.on('mqtt:brokerRaw', handler);
+      return () => ipcRenderer.off('mqtt:brokerRaw', handler);
+    },
+    onTraceRouteReply: (
+      cb: (payload: {
+        meshFrom: number;
+        route: number[];
+        routeBack: number[];
+        protocol: 'meshtastic';
+      }) => void,
+    ) => {
+      const handler = (_: unknown, p: unknown) => {
+        cb(
+          p as {
+            meshFrom: number;
+            route: number[];
+            routeBack: number[];
+            protocol: 'meshtastic';
+          },
+        );
+      };
+      ipcRenderer.on('mqtt:trace-route-reply', handler);
+      return () => ipcRenderer.off('mqtt:trace-route-reply', handler);
+    },
+    onClientId: (cb: (payload: { clientId: string; protocol: MeshProtocol }) => void) => {
+      const handler = (_: unknown, payload: { clientId: string; protocol: MeshProtocol }) => {
+        cb(payload);
+      };
+      ipcRenderer.on('mqtt:clientId', handler);
+      return () => ipcRenderer.off('mqtt:clientId', handler);
+    },
+    getClientId: (protocol?: MeshProtocol): Promise<string> =>
+      ipcRenderer.invoke('mqtt:getClientId', protocol),
+    getCachedNodes: () => ipcRenderer.invoke('mqtt:getCachedNodes'),
+    getChannelNameToIndex: () => ipcRenderer.invoke('mqtt:getChannelNameToIndex'),
+    updateChannelKeys: (args: { entries: { name: string; pskBase64: string; index?: number }[] }) =>
+      ipcRenderer.invoke('mqtt:updateChannelKeys', args),
+    updateTopicPrefix: (args: { topicPrefix: string }) =>
+      ipcRenderer.invoke('mqtt:updateTopicPrefix', args),
+    publish: (args: {
+      text: string;
+      from: number;
+      channel: number;
+      destination?: number;
+      channelName?: string;
+      pskBase64?: string;
+      emoji?: number;
+      replyId?: number;
+      publishJsonMirror: boolean;
+    }) => ipcRenderer.invoke('mqtt:publish', args),
+    publishProxy: (args: { topic: string; data?: Uint8Array; text?: string; retained?: boolean }) =>
+      ipcRenderer.invoke('mqtt:publishProxy', args),
+    publishNodeInfo: (args: {
+      from: number;
+      longName: string;
+      shortName: string;
+      channelName?: string;
+      hwModel?: number;
+      pskBase64?: string;
+      publishJsonMirror: boolean;
+    }) => ipcRenderer.invoke('mqtt:publishNodeInfo', args),
+    publishPosition: (args: {
+      from: number;
+      channel: number;
+      channelName: string;
+      latitudeI: number;
+      longitudeI: number;
+      altitude?: number;
+      pskBase64?: string;
+      publishJsonMirror: boolean;
+    }) => ipcRenderer.invoke('mqtt:publishPosition', args),
+    publishWaypoint: (args: {
+      from: number;
+      to: number;
+      channel: number;
+      channelName: string;
+      pskBase64?: string;
+      publishJsonMirror: boolean;
+      waypoint: {
+        id: number;
+        latitudeI: number;
+        longitudeI: number;
+        name: string;
+        description?: string;
+        icon?: number;
+        lockedTo?: number;
+        expire?: number;
+      };
+    }) => ipcRenderer.invoke('mqtt:publishWaypoint', args),
+    publishMeshcore: (args: {
+      text: string;
+      channelIdx: number;
+      senderName?: string;
+      senderNodeId?: number;
+      timestamp?: number;
+    }) => ipcRenderer.invoke('mqtt:publishMeshcore', args),
+    publishMeshcorePacketLog: (args: {
+      origin: string;
+      snr: number;
+      rssi: number;
+      rawHex?: string;
+      len?: number;
+      packetType?: number;
+      route?: string;
+      payloadLen?: number;
+      hash?: string;
+      direction?: 'rx' | 'tx';
+    }) => ipcRenderer.invoke('mqtt:publishMeshcorePacketLog', args),
+    onMeshcoreChat: (cb: (msg: unknown) => void) => {
+      const handler = (_: unknown, m: unknown) => {
+        cb(m);
+      };
+      ipcRenderer.on('mqtt:meshcore-chat', handler);
+      return () => ipcRenderer.off('mqtt:meshcore-chat', handler);
+    },
+    refreshMeshcoreToken: (
+      serverHost: string,
+    ): Promise<{ token: string; expiresAt: number } | null> =>
+      ipcRenderer.invoke('mqtt:refreshMeshcoreToken', serverHost),
+    updateMeshcoreToken: (token: string, expiresAt: number): Promise<void> =>
+      ipcRenderer.invoke('mqtt:updateMeshcoreToken', { token, expiresAt }),
+    onRequestTokenRefresh: (cb: (serverHost: string) => void): (() => void) => {
+      const handler = (_: unknown, serverHost: string) => {
+        cb(serverHost);
+      };
+      ipcRenderer.on('mqtt:requestTokenRefresh', handler);
+      return () => ipcRenderer.off('mqtt:requestTokenRefresh', handler);
+    },
+  },
+
+  bleCoexistence: {
+    register: (mac: string, owner: BlePeripheralOwner) =>
+      ipcRenderer.invoke('bleCoexistence:register', mac, owner),
+    unregister: (mac: string, owner: BlePeripheralOwner) =>
+      ipcRenderer.invoke('bleCoexistence:unregister', mac, owner),
+    assertCanConnect: (owner: BlePeripheralOwner, mac: string) =>
+      ipcRenderer.invoke('bleCoexistence:assertCanConnect', owner, mac),
+    getState: () => ipcRenderer.invoke('bleCoexistence:getState'),
+    acquireScan: (owner: BleScanOwner) => ipcRenderer.invoke('bleCoexistence:acquireScan', owner),
+    releaseScan: (owner: BleScanOwner) => ipcRenderer.invoke('bleCoexistence:releaseScan', owner),
+    pauseNobleScan: () => ipcRenderer.invoke('bleCoexistence:pauseNobleScan'),
+    suspendNobleForReticulumBleConnect: () =>
+      ipcRenderer.invoke('bleCoexistence:suspendNobleForReticulumBleConnect'),
+  },
+
+  // ─── Noble BLE ──────────────────────────────────────────────────
+  onNobleBleAdapterState: (cb: (state: string) => void) => {
+    const handler = (_: unknown, state: string) => {
+      cb(state);
+    };
+    ipcRenderer.on('noble-ble-adapter-state', handler);
+    return () => ipcRenderer.off('noble-ble-adapter-state', handler);
+  },
+  onNobleBleDeviceDiscovered: (cb: (device: NobleBleDevice) => void) => {
+    const handler = (_: unknown, device: NobleBleDevice) => {
+      cb(device);
+    };
+    ipcRenderer.on('noble-ble-device-discovered', handler);
+    return () => ipcRenderer.off('noble-ble-device-discovered', handler);
+  },
+  onNobleBleLinkRssi: (cb: (payload: NobleBleLinkRssiPayload) => void) => {
+    const handler = (_: unknown, payload: NobleBleLinkRssiPayload) => {
+      cb(payload);
+    };
+    ipcRenderer.on('noble-ble-link-rssi', handler);
+    return () => ipcRenderer.off('noble-ble-link-rssi', handler);
+  },
+  onNobleBleConnected: (cb: (sessionId: NobleBleSessionId) => void) => {
+    const handler = (_: unknown, payload: { sessionId: NobleBleSessionId }) => {
+      cb(payload.sessionId);
+    };
+    ipcRenderer.on('noble-ble-connected', handler);
+    return () => ipcRenderer.off('noble-ble-connected', handler);
+  },
+  onNobleBleDisconnected: (cb: (sessionId: NobleBleSessionId) => void) => {
+    const handler = (_: unknown, payload: { sessionId: NobleBleSessionId }) => {
+      cb(payload.sessionId);
+    };
+    ipcRenderer.on('noble-ble-disconnected', handler);
+    return () => ipcRenderer.off('noble-ble-disconnected', handler);
+  },
+  onNobleBleConnectAborted: (
+    cb: (payload: { sessionId: NobleBleSessionId; message: string }) => void,
+  ) => {
+    const handler = (_: unknown, payload: { sessionId: NobleBleSessionId; message: string }) => {
+      cb(payload);
+    };
+    ipcRenderer.on('noble-ble-connect-aborted', handler);
+    return () => ipcRenderer.off('noble-ble-connect-aborted', handler);
+  },
+  onNobleBleFromRadio: (
+    cb: (payload: { sessionId: NobleBleSessionId; bytes: Uint8Array }) => void,
+  ) => {
+    const handler = (_: unknown, payload: { sessionId: NobleBleSessionId; bytes: Uint8Array }) => {
+      cb(payload);
+    };
+    ipcRenderer.on('noble-ble-from-radio', handler);
+    return () => ipcRenderer.off('noble-ble-from-radio', handler);
+  },
+  startNobleBleScanning: (sessionId: NobleBleSessionId) =>
+    ipcRenderer.invoke('noble-ble-start-scan', sessionId),
+  stopNobleBleScanning: (sessionId: NobleBleSessionId): Promise<void> =>
+    ipcRenderer.invoke('noble-ble-stop-scan', sessionId),
+  connectNobleBle: (
+    sessionId: NobleBleSessionId,
+    peripheralId: string,
+  ): Promise<NobleBleConnectResult> =>
+    ipcRenderer.invoke('noble-ble-connect', sessionId, peripheralId),
+  disconnectNobleBle: (sessionId: NobleBleSessionId): Promise<void> =>
+    ipcRenderer.invoke('noble-ble-disconnect', sessionId),
+  isNobleBleConnected: (sessionId: NobleBleSessionId): Promise<boolean> =>
+    ipcRenderer.invoke('noble-ble-is-connected', sessionId),
+  nobleBleToRadio: (sessionId: NobleBleSessionId, bytes: Uint8Array): Promise<void> =>
+    ipcRenderer.invoke('noble-ble-to-radio', sessionId, bytes),
+
+  // ─── Serial port selection ──────────────────────────────────────
+  // Main process intercepts select-serial-port and sends the port
+  // list here. Renderer shows a picker, then calls selectSerialPort.
+  onSerialPortsDiscovered: (callback: (ports: SerialPort[]) => void) => {
+    const handler = (_event: unknown, ports: SerialPort[]) => {
+      callback(ports);
+    };
+    ipcRenderer.on('serial-ports-discovered', handler);
+    return () => {
+      ipcRenderer.removeListener('serial-ports-discovered', handler);
+    };
+  },
+
+  selectSerialPort: (portId: string) => {
+    ipcRenderer.send('serial-port-selected', portId);
+  },
+
+  cancelSerialSelection: () => {
+    ipcRenderer.send('serial-port-cancelled');
+  },
+
+  // ─── Bluetooth device selection (Linux Web Bluetooth) ──────────────
+  // Main process intercepts select-bluetooth-device and sends the device
+  // list here. Renderer shows a picker, then calls selectBluetoothDevice.
+  onBluetoothDevicesDiscovered: (
+    callback: (devices: NobleBleDevice[], generation?: number) => void,
+  ) => {
+    const handler = (_event: unknown, devices: NobleBleDevice[], generation?: number) => {
+      callback(devices, generation);
+    };
+    ipcRenderer.on('bluetooth-devices-discovered', handler);
+    return () => {
+      ipcRenderer.removeListener('bluetooth-devices-discovered', handler);
+    };
+  },
+
+  selectBluetoothDevice: (deviceId: string) => {
+    ipcRenderer.send('bluetooth-device-selected', deviceId);
+  },
+
+  // Awaitable invoke so Connect can clear a stale chooser before requestDevice()
+  // (fire-and-forget send raced behind select-bluetooth-device and cancelled the new session).
+  cancelBluetoothSelection: async (generation?: number | null): Promise<{ cancelled: boolean }> => {
+    const gen =
+      typeof generation === 'number' && Number.isFinite(generation) ? generation : undefined;
+    return (await ipcRenderer.invoke('bluetooth-device-cancel', gen)) as { cancelled: boolean };
+  },
+
+  // ─── Bluetooth pairing (Linux) ──────────────────────────────────────
+  // Unpair a device via bluetoothctl remove
+  bluetoothUnpair: (macAddress: string): Promise<void> =>
+    ipcRenderer.invoke('bluetooth-unpair', macAddress),
+
+  // Start BLE scan
+  bluetoothStartScan: (): Promise<void> => ipcRenderer.invoke('bluetooth-start-scan'),
+
+  // Stop BLE scan
+  bluetoothStopScan: (): Promise<void> => ipcRenderer.invoke('bluetooth-stop-scan'),
+
+  // Pair a device
+  bluetoothPair: (macAddress: string, pin?: string): Promise<void> =>
+    ipcRenderer.invoke('bluetooth-pair', macAddress, pin),
+
+  // Connect to a paired device
+  bluetoothConnect: (macAddress: string): Promise<void> =>
+    ipcRenderer.invoke('bluetooth-connect', macAddress),
+
+  // Untrust a device (best-effort, ignore failures)
+  bluetoothUntrust: (macAddress: string): Promise<void> =>
+    ipcRenderer.invoke('bluetooth-untrust', macAddress),
+
+  bluetoothGetInfo: (macAddress: string): Promise<string> =>
+    ipcRenderer.invoke('bluetooth-get-info', macAddress),
+
+  // Listen for PIN required event from main process
+  onBluetoothPinRequired: (callback: (data: { deviceId: string }) => void) => {
+    const handler = (_event: unknown, data: { deviceId: string }) => {
+      callback(data);
+    };
+    ipcRenderer.on('bluetooth-pin-required', handler);
+    return () => {
+      ipcRenderer.removeListener('bluetooth-pin-required', handler);
+    };
+  },
+
+  // Provide PIN for pairing
+  provideBluetoothPin: (pin: string) => {
+    ipcRenderer.send('bluetooth-provide-pin', pin);
+  },
+
+  // Cancel pending pairing
+  cancelBluetoothPairing: () => {
+    ipcRenderer.send('bluetooth-cancel-pairing');
+  },
+
+  // Reset pairing retry count (call before starting a new BLE connection)
+  resetBlePairingRetryCount: (sessionKind?: MeshProtocol) => {
+    ipcRenderer.send('ble-reset-pairing-retry-count', sessionKind ?? 'meshtastic');
+  },
+
+  // ─── Session management ────────────────────────────────────────
+  clearSessionData: () => ipcRenderer.invoke('session:clearData'),
+
+  // ─── GPS ───────────────────────────────────────────────────────
+  getGpsFix: (): Promise<
+    | { lat: number; lon: number; source: string }
+    | { status: 'error'; message: string; code?: string }
+  > => ipcRenderer.invoke('gps:getFix'),
+
+  // ─── Update notifications ──────────────────────────────────────
+  update: {
+    check: () => ipcRenderer.invoke('update:check'),
+    download: () => ipcRenderer.invoke('update:download'),
+    install: () => ipcRenderer.invoke('update:install'),
+    openReleases: (url?: string) => ipcRenderer.invoke('update:open-releases', url),
+    onAvailable: (
+      cb: (info: {
+        version: string;
+        releaseUrl: string;
+        isPackaged: boolean;
+        isMac: boolean;
+      }) => void,
+    ) => {
+      const handler = (
+        _: unknown,
+        info: { version: string; releaseUrl: string; isPackaged: boolean; isMac: boolean },
+      ) => {
+        cb(info);
+      };
+      ipcRenderer.on('update:available', handler);
+      return () => ipcRenderer.off('update:available', handler);
+    },
+    onNotAvailable: (cb: () => void) => {
+      const handler = () => {
+        cb();
+      };
+      ipcRenderer.on('update:not-available', handler);
+      return () => ipcRenderer.off('update:not-available', handler);
+    },
+    onChecking: (cb: (payload?: UpdateCheckingPayload) => void) => {
+      const handler = (_: unknown, payload?: UpdateCheckingPayload) => {
+        cb(payload);
+      };
+      ipcRenderer.on('update:checking', handler);
+      return () => ipcRenderer.off('update:checking', handler);
+    },
+    onProgress: (cb: (info: { percent: number }) => void) => {
+      const handler = (_: unknown, info: { percent: number }) => {
+        cb(info);
+      };
+      ipcRenderer.on('update:progress', handler);
+      return () => ipcRenderer.off('update:progress', handler);
+    },
+    onDownloaded: (cb: () => void) => {
+      const handler = () => {
+        cb();
+      };
+      ipcRenderer.on('update:downloaded', handler);
+      return () => ipcRenderer.off('update:downloaded', handler);
+    },
+    onError: (cb: (info: { message: string }) => void) => {
+      const handler = (_: unknown, info: { message: string }) => {
+        cb(info);
+      };
+      ipcRenderer.on('update:error', handler);
+      return () => ipcRenderer.off('update:error', handler);
+    },
+  },
+
+  // ─── Connection status ─────────────────────────────────────────
+  notifyDeviceConnected: () => {
+    ipcRenderer.send('device-connected');
+  },
+  notifyDeviceDisconnected: () => {
+    ipcRenderer.send('device-disconnected');
+  },
+  setTrayUnread: (count: number) => {
+    ipcRenderer.send('set-tray-unread', count);
+  },
+  quitApp: () => ipcRenderer.invoke('app:quit'),
+  restartApp: () => ipcRenderer.invoke('app:relaunch'),
+
+  // ─── OS emoji panel ──────────────────────────────────────────────────────────
+  getPlatform: () => process.platform,
+  showEmojiPanel: () => ipcRenderer.invoke('app:showEmojiPanel'),
+
+  // ─── Microphone / camera ─────────────────────────────────────────────────────
+  media: {
+    ensureMicrophoneAccess: (): Promise<{ granted: boolean; status: string }> =>
+      ipcRenderer.invoke('media:ensureMicrophoneAccess'),
+    ensureCameraAccess: (): Promise<{ granted: boolean; status: string }> =>
+      ipcRenderer.invoke('media:ensureCameraAccess'),
+  },
+
+  // ─── System clipboard (main process; preload direct access is unreliable on macOS) ─
+  clipboard: {
+    writeText: (text: string): Promise<void> => ipcRenderer.invoke('clipboard:writeText', text),
+  },
+
+  // ─── Native OS notifications ───────────────────────────────────
+  notify: {
+    show: (title: string, body: string): Promise<void> =>
+      ipcRenderer.invoke('notify:message', title, body),
+    longSessionRestart: (opts: LongSessionRestartPayload): Promise<void> =>
+      ipcRenderer.invoke('notify:longSessionRestart', opts),
+    clearLongSessionNudge: (): Promise<void> => ipcRenderer.invoke('notify:clearLongSessionNudge'),
+  },
+
+  // ─── Safe storage (OS-keychain-backed encryption) ──────────────
+  safeStorage: {
+    encrypt: (plaintext: string): Promise<string | null> =>
+      ipcRenderer.invoke('storage:encrypt', plaintext),
+    decrypt: (ciphertext: string): Promise<string | null> =>
+      ipcRenderer.invoke('storage:decrypt', ciphertext),
+    isAvailable: (): Promise<boolean> => ipcRenderer.invoke('storage:isAvailable'),
+  },
+
+  // ─── App settings ──────────────────────────────────────────────
+  appSettings: {
+    getLoginItem: (): Promise<{ openAtLogin: boolean }> => ipcRenderer.invoke('app:getLoginItem'),
+    setLoginItem: (openAtLogin: boolean): Promise<void> =>
+      ipcRenderer.invoke('app:setLoginItem', openAtLogin),
+    getAll: (): Promise<Record<string, string>> => ipcRenderer.invoke('appSettings:get'),
+    set: (key: string, value: string): Promise<{ changes: number }> =>
+      ipcRenderer.invoke('appSettings:set', key, value),
+  },
+
+  // ─── Power events ──────────────────────────────────────────────
+  onPowerSuspend: (cb: () => void) => {
+    const handler = () => {
+      cb();
+    };
+    ipcRenderer.on('power:suspend', handler);
+    return () => ipcRenderer.off('power:suspend', handler);
+  },
+  onPowerResume: (cb: () => void) => {
+    const handler = () => {
+      cb();
+    };
+    ipcRenderer.on('power:resume', handler);
+    return () => ipcRenderer.off('power:resume', handler);
+  },
+  sendRendererHeartbeat: (payload?: { ts: number }) =>
+    ipcRenderer.invoke('app:rendererHeartbeat', payload),
+  getProcessUptimeSec: (): Promise<number> => ipcRenderer.invoke('app:getProcessUptimeSec'),
+  app: {
+    getRendererLiveness: () => ipcRenderer.invoke('app:getRendererLiveness'),
+  },
+  onSpellcheckReplace: (cb: (payload: SpellcheckReplacePayload) => void) => {
+    const handler = (_: unknown, payload: SpellcheckReplacePayload) => {
+      cb(payload);
+    };
+    ipcRenderer.on('spellcheck:replace', handler);
+    return () => ipcRenderer.off('spellcheck:replace', handler);
+  },
+
+  // ─── MeshCore TCP bridge ────────────────────────────────────────
+  meshcore: {
+    tcp: {
+      connect: (host: string, port: number) =>
+        ipcRenderer.invoke('meshcore:tcp-connect', host, port),
+      write: (bytes: number[]) => ipcRenderer.invoke('meshcore:tcp-write', bytes),
+      disconnect: () => ipcRenderer.invoke('meshcore:tcp-disconnect'),
+      onData: (cb: (bytes: Uint8Array) => void) => {
+        const handler = (_: unknown, bytes: Uint8Array) => {
+          cb(bytes);
+        };
+        ipcRenderer.on('meshcore:tcp-data', handler);
+        return () => ipcRenderer.off('meshcore:tcp-data', handler);
+      },
+      onDisconnected: (cb: () => void) => {
+        const handler = () => {
+          cb();
+        };
+        ipcRenderer.on('meshcore:tcp-disconnected', handler);
+        return () => ipcRenderer.off('meshcore:tcp-disconnected', handler);
+      },
+    },
+    openJsonFile: (): Promise<string | null> => ipcRenderer.invoke('meshcore:openJsonFile'),
+  },
+
+  // ─── Meshtastic HTTP bridge ───────────────────────────────────────
+  http: {
+    preflight: (host: string, tls: boolean): Promise<void> =>
+      ipcRenderer.invoke('http:preflight', host, tls),
+    connect: (host: string, tls: boolean): Promise<void> =>
+      ipcRenderer.invoke('http:connect', host, tls),
+    write: (bytes: number[]): Promise<void> => ipcRenderer.invoke('http:write', bytes),
+    disconnect: (): Promise<void> => ipcRenderer.invoke('http:disconnect'),
+    onData: (cb: (bytes: Uint8Array) => void): (() => void) => {
+      const handler = (_: unknown, bytes: Uint8Array) => {
+        cb(bytes);
+      };
+      ipcRenderer.on('http:data', handler);
+      return () => ipcRenderer.off('http:data', handler);
+    },
+  },
+
+  // ─── Host↔radio link quality (Connection panel) ───────────────────
+  hostLink: {
+    probeHttpRtt: (host: string, tls: boolean): Promise<number | null> =>
+      ipcRenderer.invoke('hostLink:probeHttpRtt', host, tls),
+    probeTcpRtt: (host: string, port: number): Promise<number | null> =>
+      ipcRenderer.invoke('hostLink:probeTcpRtt', host, port),
+    getSessionMeter: (
+      protocol: 'meshtastic' | 'meshcore',
+    ): Promise<{ rttMs: number | null } | null> =>
+      ipcRenderer.invoke('hostLink:getSessionMeter', protocol),
+  },
+
+  // ─── Meshtastic TCP bridge ────────────────────────────────────────
+  meshtastic: {
+    tcp: {
+      connect: (host: string, port: number): Promise<void> =>
+        ipcRenderer.invoke('meshtastic:tcp-connect', host, port),
+      write: async (bytes: number[]): Promise<void> => {
+        const result: unknown = await ipcRenderer.invoke('meshtastic:tcp-write', bytes);
+        // Main resolves 'no-socket' so Electron does not log handler [error].
+        // Reject here so TransportTcpIpc / the SDK see a failed write (do not replay bytes).
+        if (result === 'no-socket') {
+          throw new Error('meshtastic:tcp-write: no active socket');
+        }
+        if (result !== undefined) {
+          throw new Error('meshtastic:tcp-write: unexpected result');
+        }
+      },
+      disconnect: (): Promise<void> => ipcRenderer.invoke('meshtastic:tcp-disconnect'),
+      onData: (cb: (bytes: Uint8Array) => void): (() => void) => {
+        const handler = (_: unknown, bytes: Uint8Array) => {
+          cb(bytes);
+        };
+        ipcRenderer.on('meshtastic:tcp-data', handler);
+        return () => ipcRenderer.off('meshtastic:tcp-data', handler);
+      },
+      onDisconnected: (cb: () => void): (() => void) => {
+        const handler = () => {
+          cb();
+        };
+        ipcRenderer.on('meshtastic:tcp-disconnected', handler);
+        return () => ipcRenderer.off('meshtastic:tcp-disconnected', handler);
+      },
+    },
+  },
+
+  // ─── TAK server ──────────────────────────────────────────────────
+  tak: {
+    start: (settings: TAKSettings): Promise<void> => ipcRenderer.invoke('tak:start', settings),
+    stop: (): Promise<void> => ipcRenderer.invoke('tak:stop'),
+    getStatus: (): Promise<TAKServerStatus> => ipcRenderer.invoke('tak:getStatus'),
+    getConnectedClients: (): Promise<TAKClientInfo[]> =>
+      ipcRenderer.invoke('tak:getConnectedClients'),
+    generateDataPackage: (): Promise<void> => ipcRenderer.invoke('tak:generateDataPackage'),
+    regenerateCertificates: (): Promise<void> => ipcRenderer.invoke('tak:regenerateCertificates'),
+    pushNodeUpdate: (node: Record<string, unknown>): Promise<void> =>
+      ipcRenderer.invoke('tak:pushNodeUpdate', node),
+    onStatus: (cb: (status: TAKServerStatus) => void): (() => void) => {
+      const handler = (_: unknown, status: TAKServerStatus) => {
+        cb(status);
+      };
+      ipcRenderer.on('tak:status', handler);
+      return () => ipcRenderer.off('tak:status', handler);
+    },
+    onClientConnected: (cb: (client: TAKClientInfo) => void): (() => void) => {
+      const handler = (_: unknown, client: TAKClientInfo) => {
+        cb(client);
+      };
+      ipcRenderer.on('tak:clientConnected', handler);
+      return () => ipcRenderer.off('tak:clientConnected', handler);
+    },
+    onClientDisconnected: (cb: (clientId: string) => void): (() => void) => {
+      const handler = (_: unknown, clientId: string) => {
+        cb(clientId);
+      };
+      ipcRenderer.on('tak:clientDisconnected', handler);
+      return () => ipcRenderer.off('tak:clientDisconnected', handler);
+    },
+  },
+
+  // ─── Reticulum sidecar ───────────────────────────────────────────
+  reticulum: {
+    start: (opts?: ReticulumSidecarStartOptions): Promise<ReticulumSidecarStatus> =>
+      ipcRenderer.invoke('reticulum:start', opts),
+    stop: (): Promise<void> => ipcRenderer.invoke('reticulum:stop'),
+    getStatus: (): Promise<ReticulumSidecarStatus> => ipcRenderer.invoke('reticulum:getStatus'),
+    syncInterfaceIssueScope: (enabledInterfaceNames: string[]): Promise<ReticulumSidecarStatus> =>
+      ipcRenderer.invoke('reticulum:syncInterfaceIssueScope', enabledInterfaceNames),
+    proxyGet: (apiPath: string): Promise<unknown> =>
+      unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyGet', apiPath)),
+    proxyPost: (apiPath: string, body: unknown): Promise<unknown> =>
+      unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyPost', apiPath, body)),
+    proxyPut: (apiPath: string, body: unknown): Promise<unknown> =>
+      unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyPut', apiPath, body)),
+    proxyDelete: (apiPath: string): Promise<unknown> =>
+      unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyDelete', apiPath)),
+    factoryReset: (): Promise<unknown> => ipcRenderer.invoke('reticulum:factoryReset'),
+    readDefaultConfigFile: (): Promise<{ path: string | null; content: string | null }> =>
+      ipcRenderer.invoke('reticulum:readDefaultConfigFile'),
+    showConfigImportDialog: (): Promise<{ path: string | null; content: string | null }> =>
+      ipcRenderer.invoke('reticulum:showConfigImportDialog'),
+    showIdentityImportDialog: (): Promise<ReticulumIdentityImportDialogResult> =>
+      ipcRenderer.invoke('reticulum:showIdentityImportDialog'),
+    showIdentityBackupImportDialog: (): Promise<ReticulumIdentityBackupImportDialogResult> =>
+      ipcRenderer.invoke('reticulum:showIdentityBackupImportDialog'),
+    saveIdentityExportDialog: (opts: {
+      defaultPath: string;
+      contentBase64: string;
+    }): Promise<ReticulumIdentityExportSaveResult> =>
+      ipcRenderer.invoke('reticulum:saveIdentityExportDialog', opts),
+    saveBlocklistDialog: (
+      hashes: string[],
+    ): Promise<{ path: string | null; error: string | null }> =>
+      ipcRenderer.invoke('reticulum:saveBlocklistDialog', hashes),
+    openBlocklistDialog: (): Promise<{
+      hashes: string[] | null;
+      skipped: number;
+      error: string | null;
+    }> => ipcRenderer.invoke('reticulum:openBlocklistDialog'),
+    showNomadContentSourceDialog: (): Promise<{ canceled: boolean; path: string | null }> =>
+      ipcRenderer.invoke('reticulum:showNomadContentSourceDialog'),
+    setNomadContentSource: (path: string): Promise<unknown> =>
+      ipcRenderer.invoke('reticulum:setNomadContentSource', path),
+    validateConfig: () => ipcRenderer.invoke('reticulum:validateConfig'),
+    onEvent: (cb: (event: ReticulumSidecarEvent) => void): (() => void) => {
+      const handler = (_: unknown, event: ReticulumSidecarEvent) => {
+        cb(event);
+      };
+      ipcRenderer.on('reticulum:event', handler);
+      return () => ipcRenderer.off('reticulum:event', handler);
+    },
+    onVoiceAudio: (cb: (event: ReticulumSidecarEvent) => void): (() => void) => {
+      const handler = (_: unknown, event: ReticulumSidecarEvent) => {
+        cb(event);
+      };
+      ipcRenderer.on('reticulum:voiceAudio', handler);
+      return () => ipcRenderer.off('reticulum:voiceAudio', handler);
+    },
+    onStatus: (cb: (status: ReticulumSidecarStatus) => void): (() => void) => {
+      const handler = (_: unknown, status: ReticulumSidecarStatus) => {
+        cb(status);
+      };
+      ipcRenderer.on('reticulum:status', handler);
+      return () => ipcRenderer.off('reticulum:status', handler);
+    },
+    rrc: {
+      listHubs: () =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyGet', '/api/v1/rrc/hubs')),
+      upsertHub: (opts: { dest_hash: string; label?: string; favorited?: boolean }) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rrc/hubs', opts)),
+      setFavorite: (destHash: string, favorited: boolean) =>
+        unwrapReticulumProxy(
+          ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rrc/hubs/favorite', {
+            dest_hash: destHash,
+            favorited,
+          }),
+        ),
+      connect: (opts: { dest_hash: string; nickname?: string }) =>
+        unwrapReticulumProxy(
+          ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rrc/connect', opts),
+        ),
+      disconnect: (opts?: { dest_hash?: string }) =>
+        unwrapReticulumProxy(
+          ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rrc/disconnect', opts ?? {}),
+        ),
+      getStatus: () =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyGet', '/api/v1/rrc/status')),
+      join: (opts: { hub_dest_hash: string; room: string; key?: string }) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rrc/join', opts)),
+      part: (opts: { hub_dest_hash: string; room: string }) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rrc/part', opts)),
+      send: (opts: {
+        hub_dest_hash: string;
+        room?: string;
+        body: string;
+        type?: string;
+        dst_hash?: string;
+      }) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rrc/send', opts)),
+      setNickname: (opts: { nickname: string; hub_dest_hash?: string }) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rrc/nick', opts)),
+      getRooms: (hubDestHash?: string) => {
+        const q = hubDestHash?.trim()
+          ? `?hub_dest_hash=${encodeURIComponent(hubDestHash.trim().toLowerCase())}`
+          : '';
+        return unwrapReticulumProxy(
+          ipcRenderer.invoke('reticulum:proxyGet', `/api/v1/rrc/rooms${q}`),
+        );
+      },
+    },
+    rnsh: {
+      connect: (opts: { destination_hash: string }) =>
+        unwrapReticulumProxy(
+          ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rnsh/connect', opts),
+        ),
+      input: (opts: { session_id: string; data: string; encoding?: 'base64' }) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rnsh/input', opts)),
+      resize: (opts: { session_id: string; rows?: number; cols?: number }) =>
+        unwrapReticulumProxy(
+          ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rnsh/resize', opts),
+        ),
+      disconnect: (opts: { session_id: string }) =>
+        unwrapReticulumProxy(
+          ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rnsh/disconnect', opts),
+        ),
+      getStatus: () =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyGet', '/api/v1/rnsh/status')),
+    },
+    voice: {
+      getStatus: () =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyGet', '/api/v1/voice/status')),
+      call: (opts: { identity_hash: string }) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/voice/call', opts)),
+      answer: () =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/voice/answer', {})),
+      reject: () =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/voice/reject', {})),
+      hangup: () =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/voice/hangup', {})),
+      mute: (opts: { muted: boolean }) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/voice/mute', opts)),
+      sendAudio: (opts: { profile?: number; channels: number; samples_b64: string }) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:voiceSendAudio', opts)),
+    },
+    voiceMemo: {
+      start: () => unwrapReticulumProxy(ipcRenderer.invoke('reticulum:voiceMemoStart', {})),
+      sendAudio: (opts: { session_id: string; channels: 1; samples_b64: string }) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:voiceMemoSendAudio', opts)),
+      stop: (opts: { session_id: string }) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:voiceMemoStop', opts)),
+      cancel: (opts: { session_id: string }) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:voiceMemoCancel', opts)),
+    },
+    /** LRGP games — dedicated IPC (blocked on generic proxy). */
+    games: {
+      getStatus: () => unwrapReticulumProxy(ipcRenderer.invoke('reticulum:gamesStatus')),
+      listApps: () => unwrapReticulumProxy(ipcRenderer.invoke('reticulum:gamesApps')),
+      listSessions: (peer?: string) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:gamesSessions', peer)),
+      getSession: (sessionId: string) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:gamesSessionDetail', sessionId)),
+      sendAction: (opts: {
+        dest_hash: string;
+        app_id: string;
+        command: string;
+        session_id?: string;
+        payload?: Record<string, unknown>;
+        delivery_method?: string;
+      }) => unwrapReticulumProxy(ipcRenderer.invoke('reticulum:gamesAction', opts)),
+      resend: (sessionId: string) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:gamesResend', sessionId)),
+      markRead: (sessionId: string) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:gamesMarkRead', sessionId)),
+      deleteSession: (sessionId: string) =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:gamesDeleteSession', sessionId)),
+    },
+    rncp: {
+      send: (opts: { destination_hash: string; path: string }) =>
+        ipcRenderer.invoke('reticulum:rncpSend', opts),
+      fetch: (opts: { destination_hash: string; remote_path: string; save_path?: string }) =>
+        ipcRenderer.invoke('reticulum:rncpFetch', opts),
+      cancel: (opts: { transfer_id: string }) =>
+        unwrapReticulumProxy(
+          ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rncp/cancel', opts),
+        ),
+      accept: (opts: { transfer_id: string }) =>
+        unwrapReticulumProxy(
+          ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rncp/accept', opts),
+        ),
+      reject: (opts: { transfer_id: string }) =>
+        unwrapReticulumProxy(
+          ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rncp/reject', opts),
+        ),
+      getStatus: () =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyGet', '/api/v1/rncp/status')),
+      getListener: () =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyGet', '/api/v1/rncp/listener')),
+      setListener: (opts: {
+        enabled: boolean;
+        save_dir?: string;
+        allow_fetch?: boolean;
+        fetch_jail?: string;
+        overwrite?: boolean;
+        allowed?: string[];
+        blocked?: string[];
+      }) => ipcRenderer.invoke('reticulum:setRncpListener', opts),
+      announce: (): Promise<{ ok: boolean; error?: string }> =>
+        unwrapReticulumProxy(
+          ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/rncp/announce', {}),
+        ),
+      showOpenFileDialog: (): Promise<{ canceled: boolean; path: string | null }> =>
+        ipcRenderer.invoke('reticulum:showRncpOpenFileDialog'),
+      showSaveDirectoryDialog: (): Promise<{ canceled: boolean; path: string | null }> =>
+        ipcRenderer.invoke('reticulum:showRncpSaveDirectoryDialog'),
+      revealInFolder: (path: string): Promise<{ ok: boolean; error?: string }> =>
+        ipcRenderer.invoke('reticulum:revealInFolder', path),
+    },
+    remote: {
+      pathCapability: (opts: { destination_hash: string }) =>
+        unwrapReticulumProxy(
+          ipcRenderer.invoke('reticulum:proxyPost', '/api/v1/remote/path-capability', opts),
+        ),
+      getIdentity: () =>
+        unwrapReticulumProxy(ipcRenderer.invoke('reticulum:proxyGet', '/api/v1/remote/identity')),
+    },
+  },
+
+  // ─── Reticulum identity vault ────────────────────────────────────
+  vault: {
+    setPasscode: (passcode: string, secret: string) =>
+      ipcRenderer.invoke('vault:setPasscode', passcode, secret),
+    unlock: (passcode: string) => ipcRenderer.invoke('vault:unlock', passcode),
+    lock: () => ipcRenderer.invoke('vault:lock'),
+    status: () => ipcRenderer.invoke('vault:status'),
+  },
+
+  // ─── Chat export ─────────────────────────────────────────────────
+  gps: {
+    exportGpx: (opts?: { nodeId?: number; sinceMs?: number }) =>
+      ipcRenderer.invoke('gps:exportGpx', opts ?? {}) as Promise<{
+        success: boolean;
+        path?: string;
+        reason?: 'empty' | 'cancelled' | 'no_db' | 'no_window';
+      }>,
+  },
+  chat: {
+    export: (messages: unknown[]) =>
+      ipcRenderer.invoke('chat:export', messages) as Promise<{ success: boolean; path?: string }>,
+    saveReticulumAttachment: (opts: {
+      fileName: string;
+      mimeType?: string;
+      dataBase64: string;
+      promptSave?: boolean;
+    }) =>
+      ipcRenderer.invoke('chat:saveReticulumAttachment', opts) as Promise<{
+        success: boolean;
+        path?: string;
+      }>,
+    showItemInFolder: (filePath: string) =>
+      ipcRenderer.invoke('chat:showItemInFolder', filePath) as Promise<{ ok: boolean }>,
+    readReticulumAttachmentAsDataUrl: (opts: ReadReticulumAttachmentAsDataUrlOpts) =>
+      ipcRenderer.invoke(
+        'chat:readReticulumAttachmentAsDataUrl',
+        opts,
+      ) as Promise<ReadReticulumAttachmentAsDataUrlResult>,
+    readReticulumAttachmentBytes: (filePath: string) =>
+      ipcRenderer.invoke(
+        'chat:readReticulumAttachmentBytes',
+        filePath,
+      ) as Promise<ReadReticulumAttachmentBytesResult>,
+    linkPreview: {
+      fetch: (url: string) =>
+        ipcRenderer.invoke('chat:fetchLinkPreview', url) as Promise<{
+          title: string;
+          description?: string;
+          image?: string;
+          kind?: 'image';
+        } | null>,
+    },
+    outbox: {
+      list: (protocol: string) =>
+        ipcRenderer.invoke('chat:outbox:list', protocol) as Promise<OutboxEntry[]>,
+      add: (entry: OutboxEntryInput) =>
+        ipcRenderer.invoke('chat:outbox:add', entry) as Promise<OutboxEntry>,
+      updateStatus: (
+        id: number,
+        status: OutboxStatus,
+        error?: string,
+        nextRetryAt?: number,
+        attemptCount?: number,
+      ) =>
+        ipcRenderer.invoke(
+          'chat:outbox:updateStatus',
+          id,
+          status,
+          error,
+          nextRetryAt,
+          attemptCount,
+        ),
+      remove: (id: number) => ipcRenderer.invoke('chat:outbox:remove', id),
+    },
+  },
+
+  meshtasticXmodem: {
+    pickUploadFile: () =>
+      ipcRenderer.invoke('meshtastic:xmodemPickUpload') as Promise<{
+        filename: string;
+        data: Uint8Array;
+      } | null>,
+    saveDownloadFile: (filename: string, data: Uint8Array) =>
+      ipcRenderer.invoke('meshtastic:xmodemSaveDownload', filename, data) as Promise<{
+        success: boolean;
+        path?: string;
+      }>,
+  },
+
+  // ─── Support / bug-report bundles ────────────────────────────────
+  support: {
+    exportBundle: (mode: 'github' | 'developer', debugSnapshotJson: string) =>
+      ipcRenderer.invoke('support:exportBundle', mode, debugSnapshotJson),
+  },
+
+  deepLink: {
+    onOpenUrl: (cb: (url: string) => void) => {
+      const handler = (_: unknown, url: string) => {
+        if (typeof url === 'string') cb(url);
+      };
+      ipcRenderer.on('mesh-client:openUrl', handler);
+      return () => ipcRenderer.off('mesh-client:openUrl', handler);
+    },
+  },
+
+  // ─── Log panel ───────────────────────────────────────────────────
+  log: {
+    getPath: (): Promise<string> => ipcRenderer.invoke('log:getPath'),
+    getRecentLines: (): Promise<{ ts: number; level: string; source: string; message: string }[]> =>
+      ipcRenderer.invoke('log:getRecentLines'),
+    clear: () => ipcRenderer.invoke('log:clear'),
+    export: (): Promise<string | null> => ipcRenderer.invoke('log:export'),
+    onLine: (
+      cb: (entry: { ts: number; level: string; source: string; message: string }) => void,
+    ) => {
+      const handler = (
+        _: unknown,
+        entry: { ts: number; level: string; source: string; message: string },
+      ) => {
+        cb(entry);
+      };
+      ipcRenderer.on('log:line', handler);
+      return () => ipcRenderer.off('log:line', handler);
+    },
+    logDeviceConnection: (detail: string) => ipcRenderer.invoke('log:device-connection', detail),
+  },
+} satisfies ElectronAPI);

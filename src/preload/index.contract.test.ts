@@ -1,0 +1,67 @@
+// @vitest-environment node
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { describe, expect, it } from 'vitest';
+
+const PRELOAD_SOURCE = readFileSync(join(__dirname, 'index.ts'), 'utf-8');
+const TYPES_SOURCE = readFileSync(join(__dirname, '../shared/electron-api.types.ts'), 'utf-8');
+
+/** Top-level electronAPI namespaces declared on ElectronAPI in shared types. */
+const EXPECTED_TOP_LEVEL_KEYS = [
+  'db',
+  'mqtt',
+  'update',
+  'clipboard',
+  'notify',
+  'safeStorage',
+  'appSettings',
+  'meshcore',
+  'http',
+  'tak',
+  'chat',
+  'log',
+  'support',
+];
+
+describe('preload bridge contract', () => {
+  it('exposes electronAPI via contextBridge', () => {
+    expect(PRELOAD_SOURCE).toContain("contextBridge.exposeInMainWorld('electronAPI'");
+  });
+
+  it('declares expected top-level namespaces on electronAPI', () => {
+    for (const key of EXPECTED_TOP_LEVEL_KEYS) {
+      expect(PRELOAD_SOURCE).toContain(`${key}: {`);
+    }
+  });
+
+  it('ElectronAPI interface documents db namespace', () => {
+    expect(TYPES_SOURCE).toMatch(/db:\s*\{/);
+    expect(TYPES_SOURCE).toContain('getMessages:');
+    expect(TYPES_SOURCE).toContain('saveMessage:');
+  });
+
+  it('preload invokes chat export IPC', () => {
+    expect(PRELOAD_SOURCE).toContain("'chat:export'");
+  });
+
+  it('preload exposes readReticulumAttachmentAsDataUrl and linkPreview kind', () => {
+    expect(PRELOAD_SOURCE).toContain("'chat:readReticulumAttachmentAsDataUrl'");
+    expect(TYPES_SOURCE).toContain('readReticulumAttachmentAsDataUrl');
+    expect(TYPES_SOURCE).toContain("kind?: 'image'");
+  });
+
+  it('preload invokes renderer heartbeat and support export IPC', () => {
+    expect(PRELOAD_SOURCE).toContain("'app:rendererHeartbeat'");
+    expect(PRELOAD_SOURCE).toContain("'app:getRendererLiveness'");
+    expect(PRELOAD_SOURCE).toContain("'support:exportBundle'");
+    // Namespaced under `app:` (4-space indent), not a root-level key (2-space).
+    expect(PRELOAD_SOURCE).toMatch(/\n {2}app: \{\n {4}getRendererLiveness:/);
+    expect(PRELOAD_SOURCE).not.toMatch(/\n {2}getRendererLiveness:/);
+    expect(TYPES_SOURCE).toContain('exportBundle');
+    expect(TYPES_SOURCE).toContain('sendRendererHeartbeat');
+    expect(TYPES_SOURCE).toContain('app: {');
+    expect(TYPES_SOURCE).toContain('getRendererLiveness:');
+    expect(TYPES_SOURCE).not.toMatch(/\n {2}getRendererLiveness:/);
+    expect(TYPES_SOURCE).toContain('RendererLivenessSnapshot');
+  });
+});

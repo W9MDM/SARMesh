@@ -1,0 +1,227 @@
+name: CI Build
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Merge queue temporary refs (required when main uses a merge queue ruleset).
+  merge_group:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect CI changes
+    permissions:
+      contents: read
+      pull-requests: read
+    runs-on: ubuntu-latest
+    outputs:
+      flatpak: ${{ steps.filter.outputs.flatpak }}
+    steps:
+      # actions/checkout v6.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+          # PR filtering uses the API; push-like events still need history.
+          fetch-depth: ${{ github.event_name == 'pull_request' && 1 || 0 }}
+      # dorny/paths-filter v4.0.0
+      - uses: dorny/paths-filter@9d7afb8d214ad99e78fbd4247752c4caed2b6e4c
+        id: filter
+        with:
+          filters: |
+            flatpak:
+              - 'flatpak/**'
+              - 'org.coloradomesh.MeshClient.yml'
+              - '.npmrc'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'patches/**'
+              - 'scripts/check-flatpak*.mjs'
+              - 'scripts/flatpakPnpmStoreVersion*.mjs'
+              - 'scripts/flatpak-pnpm-install*'
+              - 'scripts/sync-flatpak-electron*'
+              - '.github/actions/setup-node-pnpm/action.yaml'
+              - '.github/workflows/ci.yaml'
+
+  quality:
+    name: Code quality
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout v6.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - name: Format check
+        run: pnpm run format:check
+
+      - name: Markdown lint
+        run: pnpm run lint:md
+
+      - name: Audit Open Source Licenses
+        run: pnpm run check:licenses
+
+      - name: Install actionlint
+        run: pnpm run setup:actionlint
+
+      - name: Actionlint
+        run: |
+          export PATH="${GITHUB_WORKSPACE}/.githooks/bin:${PATH}"
+          actionlint
+
+      - name: pnpm audit (high+)
+        run: pnpm audit --audit-level=high
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: YAML Lint
+        run: yamllint -f github -s .
+
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout v6.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-pnpm
+      # Bound worker count because each type-aware worker loads TypeScript programs.
+      - run: pnpm run lint --concurrency 2 --config eslint.ci.config.mjs
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout v6.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-pnpm
+      - run: pnpm run typecheck
+
+  app-build:
+    name: Application build
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout v6.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-pnpm
+      - run: pnpm run build
+
+  flatpak:
+    name: Flatpak checks
+    needs: changes
+    if: needs.changes.outputs.flatpak == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout v6.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - name: Check Flatpak
+        run: pnpm run check:flatpak
+
+      # PR-cycle only (not pre-commit): needs flatpak-node-generator to verify offline store vN.
+      - name: Install flatpak-node-generator
+        run: |
+          FBTOOLS=git+https://github.com/flatpak/flatpak-builder-tools
+          # Keep in sync with scripts/flatpakPnpmStoreVersion.mjs FLATPAK_NODE_GENERATOR_COMMIT.
+          # --force-reinstall: same 0.1.0 version across commits; plain pip is a no-op on
+          # preinstalled images and leaves the storeDir= generator.
+          pip3 install --force-reinstall --no-cache-dir \
+            "${FBTOOLS}@ac5a296ac6111aa2319daf532f609a067b88d8a9#subdirectory=node"
+
+      - name: Check Flatpak offline pnpm sources
+        run: pnpm run check:flatpak-offline-pnpm
+
+      - name: Install Flatpak validation tools
+        run: sudo apt-get install -y desktop-file-utils appstream
+
+      - name: Validate desktop file
+        run: desktop-file-validate flatpak/org.coloradomesh.MeshClient.desktop
+
+      - name: Validate metainfo
+        run: appstreamcli validate --no-net flatpak/org.coloradomesh.MeshClient.metainfo.xml
+
+  # Cheap always-on check:* scanners (pre-commit / release). Blocks --no-verify / web edits.
+  policy-scanners:
+    name: Policy scanners
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout v6.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node-pnpm
+      - name: Always-on policy scanners
+        run: |
+          pnpm run check:electron-security
+          pnpm run check:log-injection
+          pnpm run check:log-service-sinks
+          pnpm run check:codeql-extensions
+          pnpm run check:insecure-temp-files
+          pnpm run check:ipc-contract
+          pnpm run check:console-log
+          pnpm run check:silent-catches
+          pnpm run check:url-hostname-sanitization
+          pnpm run check:xss-patterns
+          pnpm run check:protocol-string-gates
+          pnpm run check:log-panel-filter
+
+  build:
+    name: Build & Test
+    needs: [changes, quality, lint, typecheck, app-build, flatpak, policy-scanners]
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+    env:
+      CHANGES_RESULT: ${{ needs.changes.result }}
+      QUALITY_RESULT: ${{ needs.quality.result }}
+      LINT_RESULT: ${{ needs.lint.result }}
+      TYPECHECK_RESULT: ${{ needs.typecheck.result }}
+      BUILD_RESULT: ${{ needs.app-build.result }}
+      FLATPAK_RESULT: ${{ needs.flatpak.result }}
+      POLICY_SCANNERS_RESULT: ${{ needs.policy-scanners.result }}
+    steps:
+      - name: Verify CI fan-out
+        shell: bash
+        run: |
+          required_ok=true
+          for result in "$CHANGES_RESULT" "$QUALITY_RESULT" "$LINT_RESULT" \
+            "$TYPECHECK_RESULT" "$BUILD_RESULT" "$POLICY_SCANNERS_RESULT"; do
+            [[ "$result" == 'success' ]] || required_ok=false
+          done
+          flatpak_ok=false
+          [[ "$FLATPAK_RESULT" == 'success' || "$FLATPAK_RESULT" == 'skipped' ]] && flatpak_ok=true
+
+          {
+            echo '## CI fan-out'
+            echo
+            echo "- Changes: $CHANGES_RESULT"
+            echo "- Code quality: $QUALITY_RESULT"
+            echo "- ESLint: $LINT_RESULT"
+            echo "- Typecheck: $TYPECHECK_RESULT"
+            echo "- Application build: $BUILD_RESULT"
+            echo "- Flatpak checks: $FLATPAK_RESULT"
+            echo "- Policy scanners: $POLICY_SCANNERS_RESULT"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          [[ "$required_ok" == true && "$flatpak_ok" == true ]]

@@ -1,0 +1,335 @@
+import { meshcoreTraceDataHashLayout } from '@/shared/meshcorePathHash';
+
+import { waitForMeshcoreRadioSentAck } from './meshcoreRadioSentWait';
+import type { MeshcoreRadioConnection } from './meshcoreRepeaterRpcCommon';
+
+/** Trace path RPC surface: radio connection plus meshcore.js sendCommandSendTracePath. */
+export type MeshcoreTracePathConnection = MeshcoreRadioConnection & {
+  sendCommandSendTracePath(tag: number, auth: number, path: Uint8Array): Promise<void>;
+};
+
+/** Same shape as meshcore.js `tracePath` resolve value. */
+export interface MeshcoreTracePathResult {
+  /** Hop/segment count along the traced route (for {@link meshcoreTracePathLenToHops}). */
+  pathLen: number;
+  /** Raw TraceData pathLen byte (total hash bytes on wire). */
+  pathLenByte: number;
+  flags: number;
+  pathHashes: number[];
+  pathSnrs: number[];
+  lastSnr: number;
+  tag: number;
+}
+
+interface PendingTrace {
+  resolve: (r: MeshcoreTracePathResult) => void;
+  reject: (e: unknown) => void;
+  traceTimeoutId?: ReturnType<typeof setTimeout>;
+  awaitingResponse?: boolean;
+}
+
+/** TraceData responses in flight (send passed the companion queue; radio may still be tracing). */
+let traceResponsesInFlight = 0;
+
+/** Traces registered in the multiplex pending map (includes pre-SENT and awaiting TraceData). */
+let tracePendingRouteCount = 0;
+
+/** Count of traces awaiting TraceData after the companion accepted SendTracePath. */
+export function meshcoreTraceResponsesInFlightCount(): number {
+  return traceResponsesInFlight;
+}
+
+/** Pending trace routes not yet settled (queued send, awaiting SENT, or awaiting TraceData). */
+export function meshcoreTracePendingRouteCount(): number {
+  return tracePendingRouteCount;
+}
+
+/** Cancel all pending TraceData waits for a companion connection (e.g. 0-hop CLI preempt). */
+export function cancelAllPendingMeshcoreTracePaths(conn: object, reason = 'cancelled'): number {
+  const state = muxByConn.get(conn);
+  if (!state) return 0;
+  const pending = [...new Set(state.pendingByTag.values())];
+  for (const p of pending) {
+    p.reject(new Error(reason));
+  }
+  return pending.length;
+}
+
+/** @internal Test hook */
+export function resetMeshcoreTraceResponsesInFlightForTests(): void {
+  traceResponsesInFlight = 0;
+  tracePendingRouteCount = 0;
+}
+
+/** Cancel pending traces and reset counters when the radio disconnects. */
+export function resetMeshcoreTracePathMultiplexOnDisconnect(conn?: object): void {
+  if (conn) {
+    const state = muxByConn.get(conn);
+    if (state) {
+      for (const pending of state.pendingByTag.values()) {
+        if (pending.traceTimeoutId !== undefined) {
+          clearTimeout(pending.traceTimeoutId);
+        }
+        pending.reject(new Error('disconnect'));
+      }
+      state.pendingByTag.clear();
+      muxByConn.delete(conn);
+    }
+  }
+  traceResponsesInFlight = 0;
+  tracePendingRouteCount = 0;
+}
+
+function incrementTraceResponsesInFlight(): void {
+  traceResponsesInFlight += 1;
+}
+
+function decrementTraceResponsesInFlight(): void {
+  traceResponsesInFlight = Math.max(0, traceResponsesInFlight - 1);
+}
+
+interface MuxState {
+  pendingByTag: Map<number, PendingTrace>;
+  onTraceData: (response: Record<string, unknown>) => void;
+}
+
+const muxByConn = new WeakMap<object, MuxState>();
+
+const MC_PUSH_TRACE_DATA = 0x89;
+
+function getMuxState(conn: object): MuxState {
+  let s = muxByConn.get(conn);
+  if (s) return s;
+  const pendingByTag = new Map<number, PendingTrace>();
+  const onTraceData = (...args: unknown[]) => {
+    const response = args[0] as Record<string, unknown>;
+
+    let tagRaw = response.tag;
+    if (typeof tagRaw === 'string') tagRaw = Number(tagRaw);
+    if (typeof tagRaw !== 'number' || !Number.isFinite(tagRaw)) {
+      return;
+    }
+
+    const tagSigned = tagRaw;
+    const tagUnsigned = tagRaw >>> 0;
+
+    const p = pendingByTag.get(tagUnsigned) ?? pendingByTag.get(tagSigned);
+    if (!p) {
+      console.debug(
+        '[meshcoreTracePathMultiplex] TraceData with no pending trace, tag=',
+        tagUnsigned.toString(16),
+      );
+      return;
+    }
+
+    if (p.traceTimeoutId !== undefined) clearTimeout(p.traceTimeoutId);
+    pendingByTag.delete(tagUnsigned);
+    pendingByTag.delete(tagSigned);
+
+    try {
+      const result = traceDataPayloadToResult(response);
+      p.resolve(result);
+    } catch (err) {
+      // catch-no-log-ok bad TraceData shape; caller gets Error via p.reject
+      p.reject(unknownToError(err, 'invalid trace response'));
+    }
+  };
+  (conn as MeshcoreTracePathConnection).on(MC_PUSH_TRACE_DATA, onTraceData);
+  s = { pendingByTag, onTraceData };
+  muxByConn.set(conn, s);
+  return s;
+}
+
+/** @internal Exported for unit tests decoding TraceData payloads. */
+export function traceDataPayloadToResult(
+  response: Record<string, unknown>,
+): MeshcoreTracePathResult {
+  const pathLenByte = Math.max(0, Math.floor(Number(response.pathLen ?? 0)));
+  const flags = Math.floor(Number(response.flags ?? 0));
+  const layout = meshcoreTraceDataHashLayout(pathLenByte, flags);
+
+  const getArray = (val: unknown): number[] => {
+    if (Array.isArray(val)) return val.map((x) => Number(x) || 0);
+    if (val instanceof Uint8Array) return Array.from(val);
+    if (val instanceof ArrayBuffer) return Array.from(new Uint8Array(val));
+    if (val != null && typeof val === 'object' && 'length' in val) {
+      return Array.from(val as ArrayLike<unknown>).map((x) => Number(x) || 0);
+    }
+    return [];
+  };
+
+  let pathHashes = getArray(response.pathHashes);
+  let pathSnrsWire = getArray(response.pathSnrs);
+
+  if (pathHashes.length > layout.hashByteLength) {
+    pathHashes = pathHashes.slice(0, layout.hashByteLength);
+  }
+  const snrHopCount = Math.max(0, layout.snrByteLength - 1);
+  if (pathSnrsWire.length > layout.snrByteLength) {
+    pathSnrsWire = pathSnrsWire.slice(0, layout.snrByteLength);
+  }
+
+  while (pathHashes.length < layout.hashByteLength) pathHashes.push(0);
+  while (pathSnrsWire.length < layout.snrByteLength) pathSnrsWire.push(0);
+
+  const pathSnrs = snrHopCount > 0 ? pathSnrsWire.slice(0, snrHopCount) : [];
+
+  const lastFromResponse = response.lastSnr;
+  let lastSnr: number;
+  if (typeof lastFromResponse === 'number' && Number.isFinite(lastFromResponse)) {
+    lastSnr = lastFromResponse;
+  } else if (snrHopCount > 0 && pathSnrsWire.length > snrHopCount) {
+    lastSnr = (pathSnrsWire[snrHopCount] & 0xff) / 4;
+  } else if (pathSnrsWire.length > 0) {
+    lastSnr = (pathSnrsWire[pathSnrsWire.length - 1] & 0xff) / 4;
+  } else {
+    lastSnr = 0;
+  }
+
+  return {
+    pathLen: layout.hopCount,
+    pathLenByte,
+    flags,
+    pathHashes,
+    pathSnrs,
+    lastSnr,
+    tag: Number(response.tag ?? 0) >>> 0,
+  };
+}
+
+function randomTraceTag(): number {
+  const b = new Uint8Array(4);
+  crypto.getRandomValues(b);
+  return new DataView(b.buffer).getUint32(0, true) >>> 0;
+}
+
+function unknownToError(e: unknown, fallback: string): Error {
+  if (e instanceof Error) return e;
+  if (e === null || e === undefined) return new Error(fallback);
+  if (typeof e === 'string') return new Error(e);
+  if (typeof e === 'number' || typeof e === 'boolean' || typeof e === 'bigint')
+    return new Error(String(e));
+  try {
+    return new Error(JSON.stringify(e));
+  } catch {
+    // catch-no-log-ok JSON.stringify throws on circular structures
+    return new Error(fallback);
+  }
+}
+
+/**
+ * Start a trace route: one companion `Sent` + `SendTracePath` pair is serialized with other RPCs
+ * (via `runSerialized`), while multiple traces can wait for `TraceData` at the same time; responses
+ * are matched by the 32-bit tag (same as meshcore.js `tracePath`, but shared `TraceData` listener).
+ */
+export interface MeshcoreTracePathHandle {
+  promise: Promise<MeshcoreTracePathResult>;
+  /** Drop pending TraceData wait and release admin-RF idle counters (e.g. outer withTimeout). */
+  cancel: (reason?: string) => void;
+}
+
+export function startMeshcoreTracePathMultiplexed(
+  conn: MeshcoreTracePathConnection,
+  path: Uint8Array,
+  extraTimeoutMillis: number,
+  runSerialized: <T>(fn: () => Promise<T>) => Promise<T>,
+): MeshcoreTracePathHandle {
+  let cancelFn: ((reason?: string) => void) | undefined;
+  const promise = new Promise<MeshcoreTracePathResult>((resolve, reject) => {
+    let tag = randomTraceTag();
+    const state = getMuxState(conn);
+    while (state.pendingByTag.has(tag)) {
+      tag = randomTraceTag();
+    }
+
+    let settled = false;
+    const isSettled = () => settled;
+    let traceTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    const releaseAwaitingResponse = () => {
+      if (pending.awaitingResponse) {
+        pending.awaitingResponse = false;
+        decrementTraceResponsesInFlight();
+      }
+    };
+
+    const fail = (e: unknown) => {
+      if (settled) return;
+      settled = true;
+      if (traceTimeoutId !== undefined) clearTimeout(traceTimeoutId);
+      releaseAwaitingResponse();
+      state.pendingByTag.delete(tag);
+      tracePendingRouteCount = Math.max(0, tracePendingRouteCount - 1);
+      reject(unknownToError(e, 'trace failed'));
+    };
+
+    cancelFn = (reason = 'cancelled') => {
+      fail(new Error(reason));
+    };
+
+    const succeed = (r: MeshcoreTracePathResult) => {
+      if (settled) return;
+      settled = true;
+      if (traceTimeoutId !== undefined) clearTimeout(traceTimeoutId);
+      releaseAwaitingResponse();
+      state.pendingByTag.delete(tag);
+      tracePendingRouteCount = Math.max(0, tracePendingRouteCount - 1);
+      resolve(r);
+    };
+
+    const pending: PendingTrace = {
+      resolve: succeed,
+      reject: fail,
+    };
+    state.pendingByTag.set(tag, pending);
+    tracePendingRouteCount += 1;
+
+    void runSerialized(async () => {
+      try {
+        // Firmware allows one active traceroute cycle. Wait for prior TraceData before
+        // SendTracePath so room-login resolve and user Ping cannot overlap on air.
+        const idleWaitStart = Date.now();
+        while (traceResponsesInFlight > 0) {
+          if (isSettled()) return;
+          if (Date.now() - idleWaitStart > extraTimeoutMillis + 60_000) {
+            throw new Error('timeout waiting for prior trace');
+          }
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        if (isSettled()) return;
+        const { estTimeoutMs } = await waitForMeshcoreRadioSentAck(
+          conn,
+          () => {
+            if (isSettled()) {
+              throw new Error('cancelled before SendTracePath');
+            }
+            return conn.sendCommandSendTracePath(tag, 0, path);
+          },
+          {
+            rejectErrMsg: 'radio rejected trace',
+            rejectSentMsg: 'timeout waiting for trace acknowledgment',
+          },
+        );
+
+        // Cancel during idle wait / SENT must not increment — fail() already ran with
+        // awaitingResponse false, so a later increment would leak forever.
+        if (isSettled()) return;
+        traceTimeoutId = setTimeout(() => {
+          fail(new Error('timeout'));
+        }, estTimeoutMs + extraTimeoutMillis);
+        pending.traceTimeoutId = traceTimeoutId;
+        pending.awaitingResponse = true;
+        incrementTraceResponsesInFlight();
+      } catch (e) {
+        // catch-no-log-ok trace send/Sent path; fail() rejects the multiplex Promise
+        if (isSettled()) return;
+        fail(e);
+      }
+    }).catch((e: unknown) => {
+      if (!isSettled()) fail(e);
+    });
+  });
+  return {
+    promise,
+    cancel: (reason?: string) => cancelFn?.(reason),
+  };
+}

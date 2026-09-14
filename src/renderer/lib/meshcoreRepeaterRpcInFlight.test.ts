@@ -1,0 +1,260 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import {
+  awaitMeshcoreCliReplyHoldClear,
+  beginMeshcoreCliReplyHold,
+  endMeshcoreCliReplyHold,
+  meshcoreCliReplyHoldActive,
+  meshcoreCompanionRepeaterRfBusy,
+  resetMeshcoreRepeaterRpcInFlightForTests,
+  resetMeshcoreRepeaterRpcInFlightOnDisconnect,
+  runMeshcoreRepeaterRpcOnce,
+} from './meshcoreRepeaterRpcInFlight';
+import * as traceMultiplex from './meshcoreTracePathMultiplex';
+
+describe('runMeshcoreRepeaterRpcOnce', () => {
+  it('returns the same promise for duplicate cli requests on one node', async () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    const fn = vi.fn(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+      return 'cli-ok';
+    });
+    const first = runMeshcoreRepeaterRpcOnce('cli', 42, fn);
+    const second = runMeshcoreRepeaterRpcOnce('cli', 42, fn);
+    expect(second).toBe(first);
+    await expect(first).resolves.toBe('cli-ok');
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns the same promise for duplicate neighbors requests on one node', async () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    const fn = vi.fn(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+      return 'ok';
+    });
+    const first = runMeshcoreRepeaterRpcOnce('neighbors', 42, fn);
+    const second = runMeshcoreRepeaterRpcOnce('neighbors', 42, fn);
+    expect(second).toBe(first);
+    await expect(first).resolves.toBe('ok');
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('coalesces neighbors with the same coalesceKey', async () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    const fn = vi.fn(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+      return 'page-0';
+    });
+    const first = runMeshcoreRepeaterRpcOnce('neighbors', 42, fn, { coalesceKey: '0' });
+    const second = runMeshcoreRepeaterRpcOnce('neighbors', 42, fn, { coalesceKey: '0' });
+    expect(second).toBe(first);
+    await expect(first).resolves.toBe('page-0');
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('queues neighbors with different coalesceKeys so both fns run', async () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    const order: string[] = [];
+    let releaseFirst!: () => void;
+    const firstGate = new Promise<void>((r) => {
+      releaseFirst = r;
+    });
+    const fn0 = vi.fn(async () => {
+      order.push('0');
+      await firstGate;
+      return 'page-0';
+    });
+    const fn50 = vi.fn(() => {
+      order.push('50');
+      return Promise.resolve('page-50');
+    });
+    const first = runMeshcoreRepeaterRpcOnce('neighbors', 42, fn0, { coalesceKey: '0' });
+    const second = runMeshcoreRepeaterRpcOnce('neighbors', 42, fn50, { coalesceKey: '50' });
+    expect(second).not.toBe(first);
+    await Promise.resolve();
+    expect(fn0).toHaveBeenCalledTimes(1);
+    expect(fn50).not.toHaveBeenCalled();
+    releaseFirst();
+    await expect(first).resolves.toBe('page-0');
+    await expect(second).resolves.toBe('page-50');
+    expect(fn50).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(['0', '50']);
+  });
+
+  it('allows parallel admin requests for different nodes', async () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    const fnA = vi.fn(() => Promise.resolve('a'));
+    const fnB = vi.fn(() => Promise.resolve('b'));
+    await Promise.all([
+      runMeshcoreRepeaterRpcOnce('telemetry', 1, fnA),
+      runMeshcoreRepeaterRpcOnce('telemetry', 2, fnB),
+    ]);
+    expect(fnA).toHaveBeenCalledTimes(1);
+    expect(fnB).toHaveBeenCalledTimes(1);
+  });
+
+  it('serializes status and neighbors on the same node', async () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    const order: string[] = [];
+    let releaseStatus!: () => void;
+    const statusGate = new Promise<void>((r) => {
+      releaseStatus = r;
+    });
+    const statusFn = vi.fn(async () => {
+      order.push('status');
+      await statusGate;
+      return 'status-ok';
+    });
+    const neighborsFn = vi.fn(() => {
+      order.push('neighbors');
+      return Promise.resolve('neighbors-ok');
+    });
+    const statusPromise = runMeshcoreRepeaterRpcOnce('status', 42, statusFn);
+    const neighborsPromise = runMeshcoreRepeaterRpcOnce('neighbors', 42, neighborsFn);
+    await Promise.resolve();
+    expect(statusFn).toHaveBeenCalledTimes(1);
+    expect(neighborsFn).not.toHaveBeenCalled();
+    releaseStatus();
+    await expect(statusPromise).resolves.toBe('status-ok');
+    await expect(neighborsPromise).resolves.toBe('neighbors-ok');
+    expect(order).toEqual(['status', 'neighbors']);
+  });
+
+  it('returns the same promise for duplicate trace requests on one node', async () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    const fn = vi.fn(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+      return 'trace-ok';
+    });
+    const first = runMeshcoreRepeaterRpcOnce('trace', 42, fn);
+    const second = runMeshcoreRepeaterRpcOnce('trace', 42, fn);
+    expect(second).toBe(first);
+    await expect(first).resolves.toBe('trace-ok');
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('queues concurrent trace requests for different nodes on the radio', async () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    const order: number[] = [];
+    let releaseFirst!: () => void;
+    const firstGate = new Promise<void>((r) => {
+      releaseFirst = r;
+    });
+    const fn1 = vi.fn(async () => {
+      order.push(1);
+      await firstGate;
+      return 'trace-1';
+    });
+    const fn2 = vi.fn(() => {
+      order.push(2);
+      return Promise.resolve('trace-2');
+    });
+    const first = runMeshcoreRepeaterRpcOnce('trace', 1, fn1);
+    const second = runMeshcoreRepeaterRpcOnce('trace', 2, fn2);
+    expect(second).not.toBe(first);
+    await Promise.resolve();
+    expect(fn1).toHaveBeenCalledTimes(1);
+    expect(fn2).not.toHaveBeenCalled();
+    releaseFirst();
+    await expect(first).resolves.toBe('trace-1');
+    await expect(second).resolves.toBe('trace-2');
+    expect(fn2).toHaveBeenCalledTimes(1);
+    expect(order).toEqual([1, 2]);
+  });
+});
+
+describe('meshcoreCompanionRepeaterRfBusy', () => {
+  it('is false when no repeater admin or trace is in flight', () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    expect(meshcoreCompanionRepeaterRfBusy()).toBe(false);
+  });
+
+  it('is true while a repeater admin RPC wrapper is running', async () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const pending = runMeshcoreRepeaterRpcOnce('status', 1, async () => {
+      await gate;
+      return 'ok';
+    });
+    await Promise.resolve();
+    expect(meshcoreCompanionRepeaterRfBusy()).toBe(true);
+    release();
+    await pending;
+    expect(meshcoreCompanionRepeaterRfBusy()).toBe(false);
+  });
+
+  it('is true while trace responses are in flight', () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    const spy = vi.spyOn(traceMultiplex, 'meshcoreTraceResponsesInFlightCount').mockReturnValue(1);
+    expect(meshcoreCompanionRepeaterRfBusy()).toBe(true);
+    spy.mockRestore();
+  });
+
+  it('is true while a CLI reply hold is active and fails queued traces fast', async () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    beginMeshcoreCliReplyHold();
+    expect(meshcoreCompanionRepeaterRfBusy()).toBe(true);
+    expect(meshcoreCliReplyHoldActive()).toBe(true);
+
+    const fn = vi.fn(() => Promise.resolve('trace-ok'));
+    const pending = runMeshcoreRepeaterRpcOnce('trace', 9, fn);
+    await expect(pending).rejects.toThrow(/0-hop CLI preempted/i);
+    expect(fn).not.toHaveBeenCalled();
+
+    endMeshcoreCliReplyHold();
+    expect(meshcoreCompanionRepeaterRfBusy()).toBe(false);
+
+    const after = runMeshcoreRepeaterRpcOnce('trace', 9, fn);
+    await expect(after).resolves.toBe('trace-ok');
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('disconnect reset clears CLI reply hold so queued traces start', async () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    beginMeshcoreCliReplyHold();
+    resetMeshcoreRepeaterRpcInFlightOnDisconnect();
+    expect(meshcoreCliReplyHoldActive()).toBe(false);
+
+    const fn = vi.fn(() => Promise.resolve('trace-ok'));
+    await expect(runMeshcoreRepeaterRpcOnce('trace', 3, fn)).resolves.toBe('trace-ok');
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('awaitMeshcoreCliReplyHoldClear throws after max wait', async () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    beginMeshcoreCliReplyHold();
+    await expect(awaitMeshcoreCliReplyHoldClear(20)).rejects.toThrow(
+      /timeout waiting for CLI reply hold/i,
+    );
+    endMeshcoreCliReplyHold();
+  });
+
+  it('does not coalesce ping and room-login traces on the same node', async () => {
+    resetMeshcoreRepeaterRpcInFlightForTests();
+    let releasePing!: () => void;
+    const pingGate = new Promise<void>((r) => {
+      releasePing = r;
+    });
+    const pingFn = vi.fn(async () => {
+      await pingGate;
+      return true;
+    });
+    const loginFn = vi.fn(() => Promise.resolve({ pathLenByte: 2 }));
+
+    const ping = runMeshcoreRepeaterRpcOnce('trace', 42, pingFn);
+    const login = runMeshcoreRepeaterRpcOnce('trace', 42, loginFn, {
+      coalesceKey: 'room-login',
+    });
+    expect(login).not.toBe(ping);
+    await Promise.resolve();
+    expect(pingFn).toHaveBeenCalledTimes(1);
+    expect(loginFn).not.toHaveBeenCalled();
+    releasePing();
+    await expect(ping).resolves.toBe(true);
+    await expect(login).resolves.toEqual({ pathLenByte: 2 });
+    expect(loginFn).toHaveBeenCalledTimes(1);
+  });
+});

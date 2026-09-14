@@ -1,0 +1,204 @@
+/**
+ * Tests for log sanitization (log injection prevention).
+ * See AGENTS.md (Security & Error Handling, log injection; CodeQL js/log-injection). When changing
+ * the log pipeline or sanitizeLogMessage/sanitizeForLogSink, ensure these tests
+ * still pass so regressions are caught by the suite (including pre-commit).
+ */
+import { execFileSync } from 'child_process';
+import path from 'path';
+import { describe, expect, it } from 'vitest';
+
+import {
+  sanitizeForConsoleEcho,
+  sanitizeForLogSink,
+  sanitizeLogMessage,
+  sanitizeLogPayloadForDisk,
+} from '@/main/sanitize-log-message';
+
+describe('sanitizeLogMessage', () => {
+  it('strips newlines and keeps output on one line', () => {
+    expect(sanitizeLogMessage('a\nb')).toBe('a b');
+    expect(sanitizeLogMessage('a\r\nb')).toBe('a b');
+    expect(sanitizeLogMessage('line1\n[INFO] forged\nline2')).toBe('line1 [INFO] forged line2');
+  });
+
+  it('strips other control characters', () => {
+    expect(sanitizeLogMessage('a\x00b')).toBe('a b');
+    expect(sanitizeLogMessage('a\tb')).toBe('a b');
+    expect(sanitizeLogMessage('a\u2028b')).toBe('a b');
+  });
+
+  it('normalizes multiple spaces to one', () => {
+    expect(sanitizeLogMessage('a   b')).toBe('a b');
+  });
+
+  it('trims leading and trailing whitespace', () => {
+    expect(sanitizeLogMessage('  x  ')).toBe('x');
+  });
+
+  it('handles non-strings by stringifying', () => {
+    expect(sanitizeLogMessage(123)).toBe('123');
+    expect(sanitizeLogMessage(null)).toBe('null');
+  });
+});
+
+describe('sanitizeForConsoleEcho (terminal console.* echo, CodeQL newline barrier)', () => {
+  it('removes newlines with empty replacement then normalizes whitespace', () => {
+    expect(sanitizeForConsoleEcho('a\nb')).toBe('ab');
+    expect(sanitizeForConsoleEcho('a \n b')).toBe('a b');
+    expect(sanitizeForConsoleEcho('a\r\nb')).toBe('ab');
+  });
+
+  it('still collapses forged multi-line payloads to a single line', () => {
+    expect(sanitizeForConsoleEcho('line1\n[INFO] forged\nline2')).toBe('line1[INFO] forgedline2');
+  });
+});
+
+describe('sanitizeForLogSink (console path, CodeQL pattern)', () => {
+  it('strips newlines and keeps output on one line', () => {
+    expect(sanitizeForLogSink('a\nb')).toBe('a b');
+    expect(sanitizeForLogSink('a\r\nb')).toBe('a b');
+    expect(sanitizeForLogSink('line1\n[INFO] forged\nline2')).toBe('line1 [INFO] forged line2');
+  });
+
+  it('strips other control characters', () => {
+    expect(sanitizeForLogSink('a\x00b')).toBe('a b');
+    expect(sanitizeForLogSink('a\tb')).toBe('a b');
+    expect(sanitizeForLogSink('a\u2028b')).toBe('a b');
+  });
+
+  it('normalizes multiple spaces and trims', () => {
+    expect(sanitizeForLogSink('a   b')).toBe('a b');
+    expect(sanitizeForLogSink('  x  ')).toBe('x');
+  });
+
+  it('matches sanitizeLogMessage for string input (same effective behavior)', () => {
+    const inputs = ['a\nb', 'x\ry', 'line1\n[FAKE]\nline2', '  spaces  ', 'a\x00b'];
+    for (const s of inputs) {
+      expect(sanitizeForLogSink(s)).toBe(sanitizeLogMessage(s));
+    }
+  });
+});
+
+describe('sanitizeLogPayloadForDisk (log file sink, MaD file-content-store barrier)', () => {
+  it('preserves a trailing newline for a single formatted line', () => {
+    const line = '2026-01-01T00:00:00.000Z [log] [main] hello\n';
+    expect(sanitizeLogPayloadForDisk(line)).toBe(line);
+  });
+
+  it('sanitizes each logical line and keeps newline boundaries between segments', () => {
+    const forged = 'line1\nline2\n[INJECTED]\nline3\n';
+    expect(sanitizeLogPayloadForDisk(forged)).toBe('line1\nline2\n[INJECTED]\nline3\n');
+  });
+
+  it('collapses CR/LF inside a segment (per-line sink sanitization)', () => {
+    expect(sanitizeLogPayloadForDisk('a\rb\n')).toBe('a b\n');
+  });
+
+  it('is stable on already-sanitized multiline payloads', () => {
+    const once = sanitizeLogPayloadForDisk('a\nb\n');
+    expect(sanitizeLogPayloadForDisk(once)).toBe(once);
+  });
+});
+
+describe('CodeQL extensions layout', () => {
+  it('embedded model pack under .github/codeql/extensions is valid', () => {
+    const projectRoot = path.resolve(import.meta.dirname, '..', '..', '..');
+    const checkOutput = execFileSync(
+      'node',
+      [path.join(projectRoot, 'scripts', 'check-codeql-extensions.mjs')],
+      {
+        encoding: 'utf8',
+        stdio: 'pipe',
+        cwd: projectRoot,
+      },
+    );
+
+    expect(typeof checkOutput).toBe('string');
+  });
+});
+
+describe('log-injection check (main process)', () => {
+  it('main process has no unsanitized console.*(..., err|e|error|reason) calls', () => {
+    const projectRoot = path.resolve(import.meta.dirname, '..', '..', '..');
+    const checkOutput = execFileSync(
+      'node',
+      [path.join(projectRoot, 'scripts', 'check-log-injection.mjs')],
+      {
+        encoding: 'utf8',
+        stdio: 'pipe',
+        cwd: projectRoot,
+      },
+    );
+
+    expect(typeof checkOutput).toBe('string');
+  });
+});
+
+describe('silent-catch check (main process + renderer)', () => {
+  it('no catch block swallows errors without logging or rethrowing', () => {
+    const projectRoot = path.resolve(import.meta.dirname, '..', '..', '..');
+    const checkOutput = execFileSync(
+      'node',
+      [path.join(projectRoot, 'scripts', 'check-silent-catches.mjs')],
+      {
+        encoding: 'utf8',
+        stdio: 'pipe',
+        cwd: projectRoot,
+      },
+    );
+
+    expect(typeof checkOutput).toBe('string');
+  });
+});
+
+describe('console-log check (main process + renderer)', () => {
+  it('no bare console.log() calls — use console.debug/warn/error instead', () => {
+    const projectRoot = path.resolve(import.meta.dirname, '..', '..', '..');
+    const checkOutput = execFileSync(
+      'node',
+      [path.join(projectRoot, 'scripts', 'check-console-log.mjs')],
+      {
+        encoding: 'utf8',
+        stdio: 'pipe',
+        cwd: projectRoot,
+      },
+    );
+
+    expect(typeof checkOutput).toBe('string');
+  });
+});
+
+describe('xss-patterns check (all source)', () => {
+  it('no XSS-risk patterns in source files', () => {
+    const projectRoot = path.resolve(import.meta.dirname, '..', '..', '..');
+    const checkOutput = execFileSync(
+      'node',
+      [path.join(projectRoot, 'scripts', 'check-xss-patterns.mjs')],
+      {
+        encoding: 'utf8',
+        stdio: 'pipe',
+        cwd: projectRoot,
+      },
+    );
+
+    expect(typeof checkOutput).toBe('string');
+  });
+});
+
+describe('url-hostname-sanitization check (main, preload, renderer)', () => {
+  it('no hostname substring checks on URL-like values', () => {
+    const projectRoot = path.resolve(import.meta.dirname, '..', '..', '..');
+    const checkOutput = execFileSync(
+      'node',
+      [path.join(projectRoot, 'scripts', 'check-url-hostname-sanitization.mjs')],
+      {
+        encoding: 'utf8',
+        stdio: 'pipe',
+        cwd: projectRoot,
+      },
+    );
+
+    expect(typeof checkOutput).toBe('string');
+  });
+});

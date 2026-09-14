@@ -1,0 +1,191 @@
+/**
+ * MeshCore RF path prefix layout (path/trace/advert floods share this header).
+ * Mirrors `src/main/meshcore-path-decoder.ts` — keep in sync.
+ */
+
+export const MESHCORE_TYPE_MASK = 0x3c;
+/** Payload type nibble is in bits 2–5 of header byte 0. */
+export const MESHCORE_TYPE_SHIFT = 2;
+export const MESHCORE_ROUTE_MASK = 0x03;
+
+export const PAYLOAD_TYPE_PATH = 0x08;
+export const PAYLOAD_TYPE_TRACE = 0x09;
+/** Header payload-type nibble value for node advertisement (`PAYLOAD_TYPE_ADVERT`). */
+export const MESHCORE_PAYLOAD_TYPE_ADVERT_NIBBLE = 4;
+/** Align with `@liamcottle/meshcore.js` `Packet.PAYLOAD_TYPE_GRP_TXT` (0x05). */
+export const MESHCORE_PAYLOAD_TYPE_GRP_TXT_NIBBLE = 5;
+/** Group datagram payload type nibble (0x06). */
+export const MESHCORE_PAYLOAD_TYPE_GRP_DATA_NIBBLE = 6;
+/** Response to REQ_RESP or ANON_REQ (nibble 1). Inner: dest_hash(1)|src_hash(1)|mac(2)|ciphertext. */
+export const MESHCORE_PAYLOAD_TYPE_RESPONSE_NIBBLE = 1;
+/** Anonymous request with plaintext sender pubkey (nibble 7). Inner: dest_hash(1)|sender_pubkey(32)|mac(2)|ciphertext. */
+export const MESHCORE_PAYLOAD_TYPE_ANON_REQ_NIBBLE = 7;
+/** Multipart payload type nibble (0x0a). */
+export const MESHCORE_PAYLOAD_TYPE_MULTIPART_NIBBLE = 10;
+/** Control payload type nibble (0x0b). */
+export const MESHCORE_PAYLOAD_TYPE_CONTROL_NIBBLE = 11;
+/** Raw custom payload type nibble (0x0f). */
+export const MESHCORE_PAYLOAD_TYPE_RAW_CUSTOM_NIBBLE = 15;
+
+const ROUTE_TYPE_TRANSPORT_FLOOD = 0x00;
+const ROUTE_TYPE_TRANSPORT_DIRECT = 0x03;
+const TRANSPORT_CODES_SIZE = 4;
+
+/** Route bits 0–1 of the first header byte (see MeshCore `docs/packet_format.md`). */
+export type MeshCoreRouteBits = 0 | 1 | 2 | 3;
+
+/**
+ * Decode path hashes and return the byte offset where the inner application payload begins
+ * (e.g. ADVERT pubkey + name after the path segment).
+ */
+export function decodeMeshCorePathPrefix(raw: Uint8Array): {
+  hops: number;
+  pathEndOffset: number;
+  path: number[];
+  hashSizeBytes: 1 | 2 | 3;
+  /** Present when route is transport flood (`0x00`) or transport direct (`0x03`): `[scope, returnRegion]` as on-air uint16 LE. */
+  transportCodes: readonly [number, number] | null;
+} {
+  if (raw.length < 2) throw new Error('Packet too short for PATH header');
+
+  const byte0 = raw.at(0);
+  if (byte0 === undefined) throw new Error('Packet too short for PATH header');
+  const routeType = byte0 & MESHCORE_ROUTE_MASK;
+  const hasTransportCodes =
+    routeType === ROUTE_TYPE_TRANSPORT_FLOOD || routeType === ROUTE_TYPE_TRANSPORT_DIRECT;
+  let transportCodes: readonly [number, number] | null = null;
+  if (hasTransportCodes) {
+    if (raw.length < 1 + TRANSPORT_CODES_SIZE) {
+      throw new Error('Packet too short for transport codes');
+    }
+    const view = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+    transportCodes = [view.getUint16(1, true), view.getUint16(3, true)];
+  }
+  const pathLengthOffset = 1 + (hasTransportCodes ? TRANSPORT_CODES_SIZE : 0);
+
+  if (raw.length < pathLengthOffset + 1) {
+    throw new Error(
+      `Packet too short: need path_length at offset ${pathLengthOffset}, but buffer is ${raw.length} bytes`,
+    );
+  }
+
+  const pathLengthByte = raw.at(pathLengthOffset);
+  if (pathLengthByte === undefined) {
+    throw new Error(`Packet too short for path_length at offset ${pathLengthOffset}`);
+  }
+  const pathLength = pathLengthByte & 0x3f;
+  // Upper 2 bits encode hash-size code (0..3), mapping to hash sizes 1..4 bytes.
+  const hashSizeCode = (pathLengthByte >> 6) & 0x03;
+  const hashSize = hashSizeCode + 1;
+  const pathByteLength = pathLength * hashSize;
+  const pathStartOffset = pathLengthOffset + 1;
+  const pathEndOffset = pathStartOffset + pathByteLength;
+
+  if (raw.length < pathEndOffset) {
+    throw new Error(
+      `Buffer Underrun: path_length is ${pathLength}, hash_size is ${hashSize} (${pathByteLength} bytes), but only ${raw.length - pathStartOffset} bytes remain.`,
+    );
+  }
+
+  const path = raw.subarray(pathStartOffset, pathEndOffset);
+
+  return {
+    hops: pathLength,
+    pathEndOffset,
+    path: Array.from(path),
+    hashSizeBytes: hashSize as 1 | 2 | 3,
+    transportCodes,
+  };
+}
+
+export function meshCorePayloadTypeNibble(byte0: number): number {
+  return (byte0 & MESHCORE_TYPE_MASK) >> MESHCORE_TYPE_SHIFT;
+}
+
+export function meshCoreRouteBits(byte0: number): MeshCoreRouteBits {
+  return (byte0 & MESHCORE_ROUTE_MASK) as MeshCoreRouteBits;
+}
+
+/** Align with `@liamcottle/meshcore.js` `Packet.route_type_string` / RawPacketLogPanel. */
+export function meshCoreRouteTypeStringFromByte0(byte0: number): string {
+  switch (meshCoreRouteBits(byte0)) {
+    case 0:
+      return 'TRANSPORT_FLOOD';
+    case 1:
+      return 'FLOOD';
+    case 2:
+      return 'DIRECT';
+    case 3:
+      return 'TRANSPORT_DIRECT';
+    default:
+      return 'FLOOD';
+  }
+}
+
+/**
+ * Human-readable payload label from header bits 2–5 (align with MeshCore `PAYLOAD_TYPE_*`).
+ * When unsure, uses `PAYLOAD_0xN` so the raw log stays stable.
+ */
+export function meshCorePayloadTypeStringFromByte0(byte0: number): string {
+  const t = meshCorePayloadTypeNibble(byte0);
+  switch (t) {
+    case 0:
+      return 'REQ_RESP';
+    case MESHCORE_PAYLOAD_TYPE_RESPONSE_NIBBLE:
+      return 'RESPONSE';
+    case 2:
+      return 'TXT_MSG';
+    case 4:
+      return 'ADVERT';
+    case MESHCORE_PAYLOAD_TYPE_GRP_TXT_NIBBLE:
+      return 'GRP_TXT';
+    case MESHCORE_PAYLOAD_TYPE_GRP_DATA_NIBBLE:
+      return 'GRP_DATA';
+    case MESHCORE_PAYLOAD_TYPE_ANON_REQ_NIBBLE:
+      return 'ANON_REQ';
+    case 8:
+      return 'PATH';
+    case 9:
+      return 'TRACE';
+    case MESHCORE_PAYLOAD_TYPE_MULTIPART_NIBBLE:
+      return 'MULTIPART';
+    case MESHCORE_PAYLOAD_TYPE_CONTROL_NIBBLE:
+      return 'CONTROL';
+    case MESHCORE_PAYLOAD_TYPE_RAW_CUSTOM_NIBBLE:
+      return 'RAW_CUSTOM';
+    default:
+      return `PAYLOAD_0x${t.toString(16)}`;
+  }
+}
+
+export function isMeshCorePathPacketByte0(byte0: number): boolean {
+  return meshCorePayloadTypeNibble(byte0) === PAYLOAD_TYPE_PATH;
+}
+
+export function isMeshCoreTracePacketByte0(byte0: number): boolean {
+  return meshCorePayloadTypeNibble(byte0) === PAYLOAD_TYPE_TRACE;
+}
+
+/**
+ * True when `decodeMeshCorePathPrefix` succeeds and the header looks like intentional MeshCore RF
+ * (not arbitrary bytes that accidentally parse). Used after Meshtastic heuristics miss.
+ */
+export function shouldClassifyRfPayloadAsMeshCoreFromPathDecode(raw: Uint8Array): boolean {
+  let decoded: { hops: number; pathEndOffset: number };
+  try {
+    decoded = decodeMeshCorePathPrefix(raw);
+  } catch {
+    return false;
+  }
+  const byte0 = raw.at(0);
+  if (byte0 === undefined) return false;
+  const nibble = meshCorePayloadTypeNibble(byte0);
+  const route = byte0 & MESHCORE_ROUTE_MASK;
+  const hasTransportCodes =
+    route === ROUTE_TYPE_TRANSPORT_FLOOD || route === ROUTE_TYPE_TRANSPORT_DIRECT;
+  if (hasTransportCodes) return true;
+  if (decoded.hops > 0) return true;
+  if (nibble === MESHCORE_PAYLOAD_TYPE_ADVERT_NIBBLE) return true;
+  if (nibble === PAYLOAD_TYPE_PATH || nibble === PAYLOAD_TYPE_TRACE) return true;
+  return false;
+}

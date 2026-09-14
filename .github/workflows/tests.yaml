@@ -1,0 +1,271 @@
+name: Tests
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Merge queue temporary refs (required when main uses a merge queue ruleset).
+  merge_group:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect test changes
+    permissions:
+      contents: read
+      pull-requests: read
+    runs-on: ubuntu-latest
+    outputs:
+      reticulum-sidecar: ${{ steps.filter.outputs.reticulum-sidecar }}
+      vitest_mode: ${{ steps.vitest.outputs.vitest_mode }}
+      vitest_paths: ${{ steps.vitest.outputs.vitest_paths }}
+      vitest_projects: ${{ steps.vitest.outputs.vitest_projects }}
+    steps:
+      # actions/checkout v6.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # Full history is required for merge-base change detection and paths-filter on push.
+          fetch-depth: 0
+      # dorny/paths-filter v4.0.0
+      - uses: dorny/paths-filter@9d7afb8d214ad99e78fbd4247752c4caed2b6e4c
+        id: filter
+        with:
+          filters: |
+            reticulum-sidecar:
+              - 'reticulum-sidecar/**'
+              - 'scripts/clone-ratspeak-stack.sh'
+              - 'scripts/ensure-rsReticulum-patches.sh'
+              - 'scripts/apply-rsReticulum-*.sh'
+              - 'scripts/apply-rsLXMF-*.sh'
+              - 'scripts/check-reticulum-sidecar.sh'
+              - '.github/workflows/tests.yaml'
+
+      - name: Resolve Vitest scope
+        id: vitest
+        env:
+          CI_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/ci-test-scope.mjs
+
+  test-shards:
+    name: Vitest (${{ matrix.project }}, ${{ matrix.shard }}/${{ matrix.shards }})
+    needs: changes
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: renderer-ui
+            shard: 1
+            shards: 3
+          - project: renderer-ui
+            shard: 2
+            shards: 3
+          - project: renderer-ui
+            shard: 3
+            shards: 3
+          - project: renderer-logic
+            shard: 1
+            shards: 1
+          - project: main
+            shard: 1
+            shards: 1
+    env:
+      VITEST_COVERAGE_SHARD: '1'
+    steps:
+      # actions/checkout v6.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        if: contains(fromJSON(needs.changes.outputs.vitest_projects), matrix.project)
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/setup-node-pnpm
+        if: contains(fromJSON(needs.changes.outputs.vitest_projects), matrix.project)
+
+      - name: Run selected tests (${{ matrix.project }})
+        if: contains(fromJSON(needs.changes.outputs.vitest_projects), matrix.project)
+        env:
+          VITEST_MODE: ${{ needs.changes.outputs.vitest_mode }}
+          VITEST_PATHS_JSON: ${{ needs.changes.outputs.vitest_paths }}
+          VITEST_PROJECT: ${{ matrix.project }}
+          VITEST_SHARD: ${{ matrix.shard }}/${{ matrix.shards }}
+        run: node scripts/ci-run-vitest.mjs
+
+      - name: Upload blob report
+        if: >-
+          always() && needs.changes.outputs.vitest_mode == 'full' &&
+          contains(fromJSON(needs.changes.outputs.vitest_projects), matrix.project)
+        uses: actions/upload-artifact@v7
+        with:
+          name: vitest-blob-${{ matrix.project }}-${{ matrix.shard }}
+          path: .vitest-reports/*
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload scoped test results
+        if: >-
+          always() && needs.changes.outputs.vitest_mode == 'related' &&
+          contains(fromJSON(needs.changes.outputs.vitest_projects), matrix.project)
+        uses: actions/upload-artifact@v7
+        with:
+          name: vitest-junit-${{ matrix.project }}-${{ matrix.shard }}
+          path: test-results/junit-${{ matrix.project }}-${{ matrix.shard }}-${{ matrix.shards }}.xml
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Record skipped project
+        if: ${{ !contains(fromJSON(needs.changes.outputs.vitest_projects), matrix.project) }}
+        run: echo 'No tests selected for ${{ matrix.project }}.' >> "$GITHUB_STEP_SUMMARY"
+
+  # Keep the required check names stable while the execution matrix changes.
+  tests:
+    name: Coverage (${{ matrix.project }})
+    needs: [changes, test-shards]
+    if: always() && !cancelled()
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [renderer-ui, renderer-logic, main]
+    steps:
+      - name: Verify test shards
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          SHARDS_RESULT: ${{ needs.test-shards.result }}
+        run: |
+          [[ "$CHANGES_RESULT" == 'success' && "$SHARDS_RESULT" == 'success' ]]
+
+  reticulum-sidecar-coverage:
+    name: Reticulum sidecar coverage
+    needs: changes
+    if: needs.changes.outputs.reticulum-sidecar == 'true'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout v6.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Clone Ratspeak stack (rsReticulum, rsLXMF)
+        shell: bash
+        env:
+          WORKSPACE_ROOT: ${{ github.workspace }}/.rsstack
+        run: bash scripts/clone-ratspeak-stack.sh
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
+        with:
+          components: llvm-tools-preview
+      - name: Install Linux BLE build deps
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+      - name: cargo llvm-cov (threshold)
+        working-directory: reticulum-sidecar
+        # Baseline ~45% lines (2026-07 CI); ratchet toward Vitest-aligned 52% over time.
+        run: >-
+          cargo llvm-cov
+          --features rns-stack,rns-ble,rns-rnode-tcp
+          --ignore-filename-regex 'rsReticulum|rsLXMF'
+          --fail-under-lines 45
+          --lcov --output-path lcov.info
+      - name: Upload lcov
+        if: always() && github.actor != 'nektos/act'
+        uses: actions/upload-artifact@v7
+        with:
+          name: reticulum-sidecar-lcov
+          path: reticulum-sidecar/lcov.info
+          retention-days: 7
+          if-no-files-found: warn
+
+  merge-reports:
+    name: Merge coverage
+    needs: [changes, tests, reticulum-sidecar-coverage]
+    if: always() && !cancelled()
+    permissions:
+      contents: read
+      pull-requests: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify selected test jobs
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          SIDECAR_SELECTED: ${{ needs.changes.outputs.reticulum-sidecar }}
+          SIDECAR_RESULT: ${{ needs.reticulum-sidecar-coverage.result }}
+          TESTS_RESULT: ${{ needs.tests.result }}
+          VITEST_MODE: ${{ needs.changes.outputs.vitest_mode }}
+        run: |
+          if [[ "$CHANGES_RESULT" != 'success' ]]; then
+            echo "Test change detection finished with: $CHANGES_RESULT" >&2
+            exit 1
+          fi
+          if [[ "$VITEST_MODE" != 'skip' && "$TESTS_RESULT" != 'success' ]]; then
+            echo "Selected Vitest jobs finished with: $TESTS_RESULT" >&2
+            exit 1
+          fi
+          if [[ "$SIDECAR_SELECTED" == 'true' && "$SIDECAR_RESULT" != 'success' ]]; then
+            echo "Reticulum sidecar coverage finished with: $SIDECAR_RESULT" >&2
+            exit 1
+          fi
+
+      # actions/checkout v6.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        if: needs.changes.outputs.vitest_mode == 'full'
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: ./.github/actions/setup-node-pnpm
+        if: needs.changes.outputs.vitest_mode == 'full'
+
+      - name: Download blob reports
+        if: needs.changes.outputs.vitest_mode == 'full'
+        uses: actions/download-artifact@v7
+        with:
+          path: .vitest-reports
+          pattern: vitest-blob-*
+          merge-multiple: true
+
+      - name: Merge coverage reports
+        if: needs.changes.outputs.vitest_mode == 'full'
+        run: pnpm run test:coverage:merge
+
+      # Related shards already wrote JUnit; collecting them needs no repository or dependencies.
+      - name: Download scoped test results
+        if: always() && needs.changes.outputs.vitest_mode == 'related'
+        uses: actions/download-artifact@v7
+        with:
+          path: test-results
+          pattern: vitest-junit-*
+          merge-multiple: true
+
+      - name: Record skipped test scope
+        if: needs.changes.outputs.vitest_mode == 'skip'
+        run: echo 'No Vitest-relevant files changed; test matrix skipped.' >> "$GITHUB_STEP_SUMMARY"
+
+      # Skip actions/upload-code-coverage: GitHub Code Quality (Team/Enterprise)
+      # is not available on the free org plan — uploads return HTTP 403.
+
+      - name: Upload test results
+        if: >-
+          always() && needs.changes.outputs.vitest_mode != 'skip' &&
+          github.actor != 'nektos/act'
+        uses: actions/upload-artifact@v7
+        with:
+          name: vitest-report
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: warn

@@ -1,0 +1,816 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { errLikeToLogString } from '@/renderer/lib/errLikeToLogString';
+import { syncMeshcoreActiveIdentityFromBackup } from '@/renderer/lib/letsMeshJwt';
+import { formatMeshtasticModuleApplyError } from '@/renderer/lib/meshtastic/meshtasticApplyErrorMessage';
+import { clearMeshtasticClientNotification } from '@/renderer/lib/meshtastic/meshtasticClientNotification';
+import {
+  mergeMeshtasticConfigApplyValue,
+  stripMeshtasticProtobufMeta,
+} from '@/renderer/lib/meshtastic/meshtasticConfigApply';
+import type { ConfigTargetContext, MeshProtocol } from '@/renderer/lib/types';
+import { writeClipboardText } from '@/renderer/lib/writeClipboardText';
+
+import { ConfigApplyNotice } from './ConfigApplyNotice';
+import { ConfirmModal } from './ConfirmModal';
+import { KeyBackupRestoreSection } from './KeyBackupRestoreSection';
+import { useToast } from './Toast';
+
+interface SecurityConfig {
+  publicKey: Uint8Array;
+  privateKey?: Uint8Array;
+  adminKey: Uint8Array[];
+  isManaged: boolean;
+  serialEnabled: boolean;
+  debugLogApiEnabled: boolean;
+  adminChannelEnabled: boolean;
+}
+
+interface Props {
+  configTarget?: ConfigTargetContext;
+  onSetConfig: (config: unknown) => Promise<void>;
+  onCommit: () => Promise<void>;
+  isConnected: boolean;
+  securityConfig: SecurityConfig | null;
+  protocol?: MeshProtocol;
+  onSignData?: (data: Uint8Array) => Promise<Uint8Array | null>;
+  onExportPrivateKey?: () => Promise<Uint8Array | null>;
+  onImportPrivateKey?: (privateKey: Uint8Array) => Promise<boolean>;
+  localNodeNum?: number | null;
+  localNodeLabel?: string;
+  meshcorePublicKey?: Uint8Array | null;
+  meshcoreNodeId?: number | null;
+}
+
+const MAX_ADMIN_KEYS = 3;
+
+function bytesToBase64(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes));
+}
+
+function base64ToBytes(b64: string): Uint8Array {
+  const binary = atob(b64.trim());
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function isValidBase64Key(b64: string): boolean {
+  try {
+    const bytes = base64ToBytes(b64);
+    return bytes.length === 32;
+  } catch {
+    return false; // catch-no-log-ok: pure validation helper, invalid input is expected
+  }
+}
+
+// ─── Reusable UI components ────────────────────────────────────
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <h3 className="border-b border-gray-700 pb-2 text-sm font-semibold tracking-wide text-gray-200 uppercase">
+      {title}
+    </h3>
+  );
+}
+
+function ConfigToggle({
+  label,
+  checked,
+  onChange,
+  disabled,
+  description,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled: boolean;
+  description?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-gray-300">{label}</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={checked}
+          onClick={() => {
+            onChange(!checked);
+          }}
+          disabled={disabled}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
+            checked ? 'bg-readable-green' : 'bg-gray-600'
+          }`}
+        >
+          <span
+            className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+              checked ? 'translate-x-[18px]' : 'translate-x-[3px]'
+            }`}
+          />
+        </button>
+      </div>
+      {description && <p className="text-muted text-xs">{description}</p>}
+    </div>
+  );
+}
+
+function ApplyButton({
+  label,
+  onClick,
+  applying,
+  disabled,
+}: {
+  label: string;
+  onClick: () => void;
+  applying: boolean;
+  disabled: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || applying}
+      className="bg-readable-green hover:bg-readable-green/90 disabled:text-muted w-full rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:bg-gray-600"
+    >
+      {applying ? t('securityPanel.applying') : label}
+    </button>
+  );
+}
+
+// ─── Main component ─────────────────────────────────────────────
+
+export default function SecurityPanel({
+  configTarget,
+  onSetConfig,
+  onCommit,
+  isConnected,
+  securityConfig,
+  protocol = 'meshtastic',
+  onSignData,
+  onExportPrivateKey,
+  onImportPrivateKey,
+  localNodeNum,
+  localNodeLabel,
+  meshcorePublicKey,
+  meshcoreNodeId,
+}: Props) {
+  const { addToast } = useToast();
+  const { t } = useTranslation();
+  const isMeshcore = protocol === 'meshcore';
+  const isRemoteTarget = configTarget?.mode === 'remote';
+  const disabled = !isConnected || (configTarget?.mode === 'remote' && !configTarget.isReady);
+
+  // ── Admin keys section state
+  const [adminKeys, setAdminKeys] = useState<string[]>([]);
+  const [adminKeyErrors, setAdminKeyErrors] = useState<(string | null)[]>([]);
+  const [applyingAdmin, setApplyingAdmin] = useState(false);
+
+  // ── Administration toggles state
+  const [isManaged, setIsManaged] = useState(false);
+  const [serialEnabled, setSerialEnabled] = useState(false);
+  const [debugLogApiEnabled, setDebugLogApiEnabled] = useState(false);
+  const [adminChannelEnabled, setAdminChannelEnabled] = useState(false);
+  const [applyingToggles, setApplyingToggles] = useState(false);
+
+  // ── Private key reveal
+  const [showPrivateKey, setShowPrivateKey] = useState(false);
+
+  // ── Confirmation modal
+  const [pendingRegenerate, setPendingRegenerate] = useState(false);
+  const [applyingRegen, setApplyingRegen] = useState(false);
+
+  const [safeStorageAvailable, setSafeStorageAvailable] = useState<boolean | null>(null);
+
+  // ── MeshCore crypto state
+  const [signDataInput, setSignDataInput] = useState('');
+  const [signDataResult, setSignDataResult] = useState<string | null>(null);
+  const [signInProgress, setSignInProgress] = useState(false);
+  const [exportedPrivateKey, setExportedPrivateKey] = useState<string | null>(null);
+  const [exportInProgress, setExportInProgress] = useState(false);
+  const [importKeyInput, setImportKeyInput] = useState('');
+  const [importInProgress, setImportInProgress] = useState(false);
+
+  // Sync local state from device config when it arrives
+  useEffect(() => {
+    if (!securityConfig || isMeshcore) return;
+    setAdminKeys(securityConfig.adminKey.map(bytesToBase64));
+    setAdminKeyErrors(securityConfig.adminKey.map(() => null));
+    setIsManaged(securityConfig.isManaged);
+    setSerialEnabled(securityConfig.serialEnabled);
+    setDebugLogApiEnabled(securityConfig.debugLogApiEnabled);
+    setAdminChannelEnabled(securityConfig.adminChannelEnabled);
+  }, [securityConfig, isMeshcore]);
+
+  useEffect(() => {
+    void window.electronAPI.safeStorage
+      .isAvailable()
+      .then((available) => {
+        setSafeStorageAvailable(available);
+      })
+      .catch(() => {
+        setSafeStorageAvailable(false);
+      });
+  }, []);
+
+  const applyConfig = useCallback(
+    async (value: Partial<SecurityConfig>) => {
+      if (!securityConfig) return;
+      clearMeshtasticClientNotification();
+      const merged = mergeMeshtasticConfigApplyValue(
+        securityConfig,
+        value,
+      ) as unknown as SecurityConfig;
+      let payload: SecurityConfig = merged;
+      if (isRemoteTarget && (!merged.privateKey || merged.privateKey.length === 0)) {
+        payload = {
+          publicKey: merged.publicKey,
+          adminKey: merged.adminKey,
+          isManaged: merged.isManaged,
+          serialEnabled: merged.serialEnabled,
+          debugLogApiEnabled: merged.debugLogApiEnabled,
+          adminChannelEnabled: merged.adminChannelEnabled,
+        };
+      }
+      await onSetConfig({
+        payloadVariant: {
+          case: 'security',
+          value: stripMeshtasticProtobufMeta(payload as unknown as Record<string, unknown>),
+        },
+      });
+      await onCommit();
+    },
+    [onSetConfig, onCommit, securityConfig, isRemoteTarget],
+  );
+
+  // ── DM Key regeneration
+  const handleRegenerate = useCallback(async () => {
+    setPendingRegenerate(false);
+    setApplyingRegen(true);
+    try {
+      await applyConfig({
+        publicKey: new Uint8Array(32),
+        privateKey: new Uint8Array(32),
+      });
+      addToast(t('securityPanel.keyRegenRequested'), 'success');
+    } catch (err) {
+      console.warn('[SecurityPanel] handleRegenerate ' + errLikeToLogString(err));
+      addToast(
+        t('securityPanel.failed', {
+          message: formatMeshtasticModuleApplyError(err, t),
+        }),
+        'error',
+      );
+    } finally {
+      setApplyingRegen(false);
+    }
+  }, [applyConfig, addToast, t]);
+
+  // ── Admin keys apply
+  const handleApplyAdminKeys = useCallback(async () => {
+    const errors = adminKeys.map((k) => {
+      if (k.trim() === '') return null;
+      return isValidBase64Key(k) ? null : t('securityPanel.invalidAdminKey');
+    });
+    setAdminKeyErrors(errors);
+    if (errors.some((e) => e !== null)) return;
+
+    setApplyingAdmin(true);
+    try {
+      const parsed = adminKeys.filter((k) => k.trim() !== '').map((k) => base64ToBytes(k.trim()));
+      await applyConfig({ adminKey: parsed });
+      addToast(t('securityPanel.adminKeysApplied'), 'success');
+    } catch (err) {
+      console.warn('[SecurityPanel] handleApplyAdminKeys ' + errLikeToLogString(err));
+      addToast(
+        t('securityPanel.failed', {
+          message: formatMeshtasticModuleApplyError(err, t),
+        }),
+        'error',
+      );
+    } finally {
+      setApplyingAdmin(false);
+    }
+  }, [adminKeys, applyConfig, addToast, t]);
+
+  // ── Administration toggles apply
+  const handleApplyToggles = useCallback(async () => {
+    setApplyingToggles(true);
+    try {
+      await applyConfig({ isManaged, serialEnabled, debugLogApiEnabled, adminChannelEnabled });
+      addToast(t('securityPanel.adminSettingsApplied'), 'success');
+    } catch (err) {
+      console.warn('[SecurityPanel] handleApplyToggles ' + errLikeToLogString(err));
+      addToast(
+        t('securityPanel.failed', {
+          message: formatMeshtasticModuleApplyError(err, t),
+        }),
+        'error',
+      );
+    } finally {
+      setApplyingToggles(false);
+    }
+  }, [isManaged, serialEnabled, debugLogApiEnabled, adminChannelEnabled, applyConfig, addToast, t]);
+
+  const localNodeKey = isMeshcore ? meshcoreNodeId : localNodeNum;
+
+  const onMeshtasticBackup = useCallback((): Promise<{
+    publicKey: Uint8Array;
+    privateKey: Uint8Array;
+  } | null> => {
+    if (!securityConfig?.privateKey?.length) return Promise.resolve(null);
+    if (securityConfig.publicKey.length !== 32 || securityConfig.privateKey.length !== 32) {
+      return Promise.resolve(null);
+    }
+    return Promise.resolve({
+      publicKey: securityConfig.publicKey,
+      privateKey: securityConfig.privateKey,
+    });
+  }, [securityConfig]);
+
+  const onMeshtasticRestore = useCallback(
+    async (publicKey: Uint8Array, privateKey: Uint8Array) => {
+      await applyConfig({ publicKey, privateKey });
+      return true;
+    },
+    [applyConfig],
+  );
+
+  const onMeshcoreBackup = useCallback(async () => {
+    if (!onExportPrivateKey || !meshcorePublicKey?.length) return null;
+    const privateKey = await onExportPrivateKey();
+    if (!privateKey?.length) return null;
+    return { publicKey: meshcorePublicKey, privateKey };
+  }, [onExportPrivateKey, meshcorePublicKey]);
+
+  const onMeshcoreRestore = useCallback(
+    async (publicKey: Uint8Array, privateKey: Uint8Array) => {
+      if (!onImportPrivateKey) return false;
+      const ok = await onImportPrivateKey(privateKey);
+      if (!ok) return false;
+      await syncMeshcoreActiveIdentityFromBackup(publicKey, privateKey);
+      return true;
+    },
+    [onImportPrivateKey],
+  );
+
+  const canBackup = isMeshcore
+    ? meshcorePublicKey?.length === 32 && !!onExportPrivateKey
+    : !!securityConfig?.privateKey?.length &&
+      securityConfig.publicKey.length === 32 &&
+      securityConfig.privateKey.length === 32;
+
+  // ── MeshCore: Sign data
+  const handleSignData = useCallback(async () => {
+    if (!onSignData || !signDataInput.trim()) return;
+    setSignInProgress(true);
+    setSignDataResult(null);
+    try {
+      const dataBytes = new TextEncoder().encode(signDataInput);
+      const signature = await onSignData(dataBytes);
+      if (signature) {
+        setSignDataResult(bytesToBase64(signature));
+        addToast(t('securityPanel.dataSigned'), 'success');
+      } else {
+        addToast(t('securityPanel.signNoResult'), 'error');
+      }
+    } catch (err) {
+      console.warn('[SecurityPanel] handleSignData ' + errLikeToLogString(err));
+      addToast(
+        t('securityPanel.signFailed', {
+          message: err instanceof Error ? err.message : t('common.unknown'),
+        }),
+        'error',
+      );
+    } finally {
+      setSignInProgress(false);
+    }
+  }, [onSignData, signDataInput, addToast, t]);
+
+  // ── MeshCore: Export private key
+  const handleExportPrivateKey = useCallback(async () => {
+    if (!onExportPrivateKey) return;
+    setExportInProgress(true);
+    try {
+      const key = await onExportPrivateKey();
+      if (key) {
+        setExportedPrivateKey(bytesToBase64(key));
+        addToast(t('securityPanel.privateKeyExported'), 'success');
+      } else {
+        addToast(t('securityPanel.exportNoKey'), 'error');
+      }
+    } catch (err) {
+      console.warn('[SecurityPanel] handleExportPrivateKey ' + errLikeToLogString(err));
+      addToast(
+        t('securityPanel.exportFailed', {
+          message: err instanceof Error ? err.message : t('common.unknown'),
+        }),
+        'error',
+      );
+    } finally {
+      setExportInProgress(false);
+    }
+  }, [onExportPrivateKey, addToast, t]);
+
+  // ── MeshCore: Import private key
+  const handleImportPrivateKey = useCallback(async () => {
+    if (!onImportPrivateKey || !importKeyInput.trim()) return;
+    setImportInProgress(true);
+    try {
+      const keyBytes = base64ToBytes(importKeyInput.trim());
+      const success = await onImportPrivateKey(keyBytes);
+      if (success) {
+        addToast(t('securityPanel.privateKeyImported'), 'success');
+        setImportKeyInput('');
+      } else {
+        addToast(t('securityPanel.importFailed'), 'error');
+      }
+    } catch (err) {
+      console.warn('[SecurityPanel] handleImportPrivateKey ' + errLikeToLogString(err));
+      addToast(
+        t('securityPanel.importFailedWithMessage', {
+          message: err instanceof Error ? err.message : t('common.unknown'),
+        }),
+        'error',
+      );
+    } finally {
+      setImportInProgress(false);
+    }
+  }, [onImportPrivateKey, importKeyInput, addToast, t]);
+
+  const publicKeyB64 = isMeshcore
+    ? meshcorePublicKey?.length
+      ? bytesToBase64(meshcorePublicKey)
+      : ''
+    : securityConfig
+      ? bytesToBase64(securityConfig.publicKey)
+      : '';
+  const privateKeyB64 =
+    !isMeshcore && securityConfig?.privateKey?.length
+      ? bytesToBase64(securityConfig.privateKey)
+      : '';
+
+  return (
+    <div className="w-full max-w-5xl space-y-6 p-4">
+      {!isConnected && (
+        <p className="text-muted py-4 text-center text-sm">{t('securityPanel.connectToManage')}</p>
+      )}
+
+      {configTarget?.mode === 'remote' && configTarget.isLoading && (
+        <p className="text-muted text-sm">{t('configureNode.loading')}</p>
+      )}
+
+      {configTarget?.mode === 'remote' && configTarget.error && (
+        <p className="text-sm text-red-400">{t(configTarget.error)}</p>
+      )}
+
+      {!isMeshcore && <ConfigApplyNotice />}
+
+      {/* ── DM Keys ─────────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <SectionHeader title={t('securityPanel.sectionDmKeys')} />
+        <div className="space-y-1">
+          <label htmlFor="security-public-key" className="text-muted text-sm">
+            {t('securityPanel.publicKeyLabel')}
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id="security-public-key"
+              type="text"
+              value={publicKeyB64}
+              readOnly
+              className="bg-secondary-dark flex-1 rounded-lg border border-gray-600 px-3 py-2 font-mono text-xs text-gray-200 disabled:opacity-50"
+            />
+            <button
+              type="button"
+              disabled={disabled || !publicKeyB64}
+              aria-label={t('securityPanel.copyPublicKey')}
+              className="text-muted shrink-0 rounded-lg border border-gray-600 px-3 py-2 text-xs hover:text-gray-200 disabled:opacity-50"
+              onClick={() => {
+                void writeClipboardText(publicKeyB64)
+                  .then(() => {
+                    addToast(t('securityPanel.publicKeyCopied'), 'success');
+                  })
+                  .catch((e: unknown) => {
+                    addToast(
+                      t('securityPanel.failed', { message: errLikeToLogString(e) }),
+                      'error',
+                    );
+                  });
+              }}
+            >
+              {t('securityPanel.copyPublicKey')}
+            </button>
+          </div>
+          {!isRemoteTarget && !isMeshcore && (
+            <p className="text-muted text-xs">{t('securityPanel.remoteAdminSetupHint')}</p>
+          )}
+        </div>
+        {!isRemoteTarget && !isMeshcore && (
+          <>
+            <div className="space-y-1">
+              <label htmlFor="security-private-key" className="text-muted text-sm">
+                {t('securityPanel.privateKeyLabel')}
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="security-private-key"
+                  type={showPrivateKey ? 'text' : 'password'}
+                  value={privateKeyB64}
+                  readOnly
+                  className="bg-secondary-dark flex-1 rounded-lg border border-gray-600 px-3 py-2 font-mono text-xs text-gray-200 disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPrivateKey((s) => !s);
+                  }}
+                  disabled={disabled}
+                  className="text-muted px-3 py-2 text-xs hover:text-gray-300 disabled:opacity-50"
+                >
+                  {showPrivateKey ? t('common.hide') : t('common.show')}
+                </button>
+              </div>
+              <p className="text-muted text-xs">{t('securityPanel.privateKeyHint')}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setPendingRegenerate(true);
+              }}
+              disabled={disabled || applyingRegen || !securityConfig}
+              className="w-full rounded-lg border border-yellow-700/60 bg-yellow-700/40 px-4 py-2 text-sm font-medium text-yellow-300 transition-colors hover:bg-yellow-700/60 disabled:opacity-50"
+            >
+              {applyingRegen
+                ? t('securityPanel.regeneratingKeys')
+                : t('securityPanel.regenerateKeys')}
+            </button>
+          </>
+        )}
+        {isMeshcore && !isRemoteTarget && (
+          <p className="text-muted text-xs">{t('securityPanel.meshcorePrivateKeyHint')}</p>
+        )}
+      </section>
+
+      {!isMeshcore && (
+        <>
+          {/* ── Admin Keys ──────────────────────────────────────────── */}
+          <section className="space-y-4">
+            <SectionHeader title={t('securityPanel.sectionAdminKeys')} />
+            <p className="text-muted text-xs">
+              {t('securityPanel.adminKeysIntro', { max: MAX_ADMIN_KEYS })}
+            </p>
+            <div className="space-y-3">
+              {adminKeys.map((key, i) => (
+                <div key={i} className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={key}
+                      onChange={(e) => {
+                        const updated = [...adminKeys];
+                        updated[i] = e.target.value;
+                        setAdminKeys(updated);
+                        const errs = [...adminKeyErrors];
+                        errs[i] = null;
+                        setAdminKeyErrors(errs);
+                      }}
+                      disabled={disabled}
+                      placeholder={t('securityPanel.adminKeyPlaceholder')}
+                      className="bg-secondary-dark focus:border-brand-green flex-1 rounded-lg border border-gray-600 px-3 py-2 font-mono text-xs text-gray-200 focus:outline-none disabled:opacity-50"
+                      aria-label={t('securityPanel.adminKeyLabel', { number: i + 1 })}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAdminKeys(adminKeys.filter((_, j) => j !== i));
+                        setAdminKeyErrors(adminKeyErrors.filter((_, j) => j !== i));
+                      }}
+                      disabled={disabled}
+                      className="px-2 py-2 text-xs text-red-400 hover:text-red-300 disabled:opacity-50"
+                      aria-label={t('securityPanel.removeAdminKey', { number: i + 1 })}
+                    >
+                      {t('securityPanel.removeAdminKeyButton')}
+                    </button>
+                  </div>
+                  {adminKeyErrors[i] && <p className="text-xs text-red-400">{adminKeyErrors[i]}</p>}
+                </div>
+              ))}
+            </div>
+            {adminKeys.length < MAX_ADMIN_KEYS && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminKeys([...adminKeys, '']);
+                  setAdminKeyErrors([...adminKeyErrors, null]);
+                }}
+                disabled={disabled}
+                className="text-muted w-full rounded-lg border border-dashed border-gray-600 px-4 py-2 text-sm transition-colors hover:border-gray-500 hover:text-gray-300 disabled:opacity-50"
+              >
+                {t('securityPanel.addAdminKey')}
+              </button>
+            )}
+            <ApplyButton
+              label={t('securityPanel.applyAdminKeys')}
+              onClick={() => {
+                void handleApplyAdminKeys();
+              }}
+              applying={applyingAdmin}
+              disabled={disabled || !securityConfig}
+            />
+          </section>
+
+          {/* ── Administration Settings ──────────────────────────────── */}
+          <section className="space-y-4">
+            <SectionHeader title={t('securityPanel.sectionAdminSettings')} />
+            <ConfigToggle
+              label={t('securityPanel.managedDevice')}
+              checked={isManaged}
+              onChange={setIsManaged}
+              disabled={disabled}
+              description={t('securityPanel.managedDeviceDesc')}
+            />
+            <ConfigToggle
+              label={t('securityPanel.serialConsole')}
+              checked={serialEnabled}
+              onChange={setSerialEnabled}
+              disabled={disabled}
+              description={t('securityPanel.serialConsoleDesc')}
+            />
+            <ConfigToggle
+              label={t('securityPanel.debugLogApi')}
+              checked={debugLogApiEnabled}
+              onChange={setDebugLogApiEnabled}
+              disabled={disabled}
+              description={t('securityPanel.debugLogApiDesc')}
+            />
+            <ConfigToggle
+              label={t('securityPanel.adminChannel')}
+              checked={adminChannelEnabled}
+              onChange={setAdminChannelEnabled}
+              disabled={disabled}
+              description={t('securityPanel.adminChannelDesc')}
+            />
+            <ApplyButton
+              label={t('securityPanel.applySettings')}
+              onClick={() => {
+                void handleApplyToggles();
+              }}
+              applying={applyingToggles}
+              disabled={disabled || !securityConfig}
+            />
+          </section>
+        </>
+      )}
+
+      {/* ── Key Backup / Restore ─────────────────────────────────── */}
+      {!isRemoteTarget && (
+        <section className="space-y-4">
+          <SectionHeader title={t('securityPanel.sectionKeyBackup')} />
+          <KeyBackupRestoreSection
+            protocol={isMeshcore ? 'meshcore' : 'meshtastic'}
+            disabled={disabled}
+            safeStorageAvailable={safeStorageAvailable}
+            localNodeKey={localNodeKey}
+            localNodeLabel={localNodeLabel}
+            canBackup={canBackup}
+            onMeshtasticBackup={onMeshtasticBackup}
+            onMeshcoreBackup={onMeshcoreBackup}
+            onMeshtasticRestore={onMeshtasticRestore}
+            onMeshcoreRestore={onMeshcoreRestore}
+            addToast={addToast}
+          />
+        </section>
+      )}
+
+      {/* ── MeshCore Crypto Operations ───────────────────────────────── */}
+      {protocol === 'meshcore' && (onSignData || onExportPrivateKey || onImportPrivateKey) && (
+        <section className="space-y-4">
+          <SectionHeader title={t('securityPanel.sectionMeshcoreCrypto')} />
+          <p className="text-muted text-xs">{t('securityPanel.meshcoreCryptoDesc')}</p>
+
+          {/* Sign Data */}
+          {onSignData && (
+            <div className="space-y-2">
+              <label htmlFor="meshcore-sign-input" className="text-muted text-sm">
+                {t('securityPanel.signDataLabel')}
+              </label>
+              <textarea
+                id="meshcore-sign-input"
+                value={signDataInput}
+                onChange={(e) => {
+                  setSignDataInput(e.target.value);
+                }}
+                placeholder={t('securityPanel.signTextPlaceholder')}
+                disabled={disabled || signInProgress}
+                className="bg-secondary-dark focus:ring-brand-green w-full rounded-lg border border-gray-600 px-3 py-2 font-mono text-xs text-gray-200 focus:ring-1 focus:outline-none disabled:opacity-50"
+                rows={2}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  void handleSignData();
+                }}
+                disabled={disabled || signInProgress || !signDataInput.trim()}
+                className="bg-secondary-dark w-full rounded-lg border border-gray-600 px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-gray-700 disabled:opacity-50"
+              >
+                {signInProgress ? t('securityPanel.signing') : t('securityPanel.signDataButton')}
+              </button>
+              {signDataResult && (
+                <div className="space-y-1">
+                  <span className="text-muted text-xs">
+                    {t('securityPanel.signatureBase64Label')}
+                  </span>
+                  <div className="bg-secondary-dark rounded border border-gray-600 p-2 font-mono text-xs break-all text-gray-200">
+                    {signDataResult}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Export Private Key */}
+          {onExportPrivateKey && (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  void handleExportPrivateKey();
+                }}
+                disabled={disabled || exportInProgress}
+                className="bg-secondary-dark w-full rounded-lg border border-gray-600 px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-gray-700 disabled:opacity-50"
+              >
+                {exportInProgress
+                  ? t('securityPanel.exportingPrivateKey')
+                  : t('securityPanel.exportPrivateKeyButton')}
+              </button>
+              {exportedPrivateKey && (
+                <div className="space-y-1">
+                  <span className="text-muted text-xs">
+                    {t('securityPanel.privateKeyBase64Label')}
+                  </span>
+                  <div className="bg-secondary-dark rounded border border-gray-600 p-2 font-mono text-xs break-all text-gray-200">
+                    {exportedPrivateKey}
+                  </div>
+                  <p className="text-xs text-yellow-400">{t('securityPanel.exportKeyWarning')}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Import Private Key */}
+          {onImportPrivateKey && (
+            <div className="space-y-2">
+              <label htmlFor="meshcore-import-key" className="text-muted text-sm">
+                {t('securityPanel.importPrivateKeyLabel')}
+              </label>
+              <textarea
+                id="meshcore-import-key"
+                value={importKeyInput}
+                onChange={(e) => {
+                  setImportKeyInput(e.target.value);
+                }}
+                placeholder={t('securityPanel.importKeyPlaceholder')}
+                disabled={disabled || importInProgress}
+                className="bg-secondary-dark focus:ring-brand-green w-full rounded-lg border border-gray-600 px-3 py-2 font-mono text-xs text-gray-200 focus:ring-1 focus:outline-none disabled:opacity-50"
+                rows={2}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  void handleImportPrivateKey();
+                }}
+                disabled={disabled || importInProgress || !importKeyInput.trim()}
+                className="bg-secondary-dark w-full rounded-lg border border-gray-600 px-4 py-2 text-sm text-gray-200 transition-colors hover:bg-gray-700 disabled:opacity-50"
+              >
+                {importInProgress
+                  ? t('securityPanel.importingPrivateKey')
+                  : t('securityPanel.importPrivateKeyButton')}
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
+      {pendingRegenerate && (
+        <ConfirmModal
+          title={t('securityPanel.regenerateKeys')}
+          message={t('securityPanel.regenerateKeysConfirm')}
+          confirmLabel={t('common.confirm')}
+          danger
+          onConfirm={() => {
+            void handleRegenerate();
+          }}
+          onCancel={() => {
+            setPendingRegenerate(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}

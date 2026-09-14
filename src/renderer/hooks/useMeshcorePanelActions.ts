@@ -1,0 +1,68 @@
+import { useMemo } from 'react';
+
+import type { MeshcoreRuntime } from '../runtime/runtimeTypes';
+
+/** MeshCore panel callbacks backed by the App-mounted protocol runtime. */
+export function useMeshcorePanelActions(runtime: MeshcoreRuntime) {
+  // Runtime object is stable for the App mount lifetime (context provider); do not
+  // pass inline object literals from child components or memoization is defeated.
+  return useMemo(
+    () => ({
+      setConfig: runtime.setConfig,
+      commitConfig: runtime.commitConfig,
+      setDeviceChannel: runtime.setDeviceChannel,
+      clearChannel: runtime.clearChannel,
+      reboot: runtime.reboot,
+      shutdown: runtime.shutdown,
+      factoryReset: runtime.factoryReset,
+      resetNodeDb: runtime.resetNodeDb,
+      sendPositionToDevice: runtime.sendPositionToDevice,
+      setOwner: runtime.setOwner,
+      traceRoute: runtime.traceRoute,
+      refreshOurPosition: runtime.refreshOurPosition,
+      sendWaypoint: runtime.sendWaypoint,
+      deleteWaypoint: runtime.deleteWaypoint,
+      requestPosition: runtime.requestPosition,
+      importContacts: runtime.importContacts,
+      refreshContacts: runtime.refreshContacts,
+      sendAdvert: runtime.sendAdvert,
+      sendZeroHopAdvert: runtime.sendZeroHopAdvert,
+      applyMeshcoreFloodScopeHashtag: runtime.applyMeshcoreFloodScopeHashtag,
+      applyMeshcorePathHashMode: runtime.applyMeshcorePathHashMode,
+      syncClock: runtime.syncClock,
+      meshcoreSetChannel: runtime.setMeshcoreChannel,
+      meshcoreDeleteChannel: runtime.deleteMeshcoreChannel,
+      applyMeshcoreContactAutoAdd: runtime.applyMeshcoreContactAutoAdd,
+      applyMeshcoreTelemetryPrivacy: runtime.applyMeshcoreTelemetryPrivacyPolicy,
+      getPickerStyleNodeLabel: runtime.getPickerStyleNodeLabel,
+      setRadioParams: runtime.setRadioParams,
+      refreshMeshcoreAutoaddFromDevice: runtime.refreshMeshcoreAutoaddFromDevice,
+      clearAllMeshcoreContacts: runtime.clearAllMeshcoreContacts,
+      offloadContactsFromRadio: runtime.offloadContactsFromRadio,
+      clearAllRepeaters: runtime.clearAllRepeaters,
+      requestRepeaterStatus: runtime.requestRepeaterStatus,
+      requestNeighbors: runtime.requestNeighbors,
+      requestTelemetry: runtime.requestTelemetry,
+      sendRepeaterCliCommand: runtime.sendRepeaterCliCommand,
+      loginRoom: runtime.loginRoom,
+      loginRoomWithSaved: runtime.loginRoomWithSaved,
+      loginAllSavedRooms: runtime.loginAllSavedRooms,
+      cancelRoomLogin: runtime.cancelRoomLogin,
+      leaveRoom: runtime.leaveRoom,
+      sendRoomPost: runtime.sendRoomPost,
+      sendRoomAdminCliCommand: runtime.sendRoomAdminCliCommand,
+      clearCliHistory: runtime.clearCliHistory,
+      deleteNode: runtime.deleteNode,
+      setNodeFavorited: runtime.setNodeFavorited,
+      clearRawPackets: runtime.clearRawPackets,
+      requestRefresh: runtime.requestRefresh,
+      refreshNodesFromDb: runtime.refreshNodesFromDb,
+      refreshMessagesFromDb: runtime.refreshMessagesFromDb,
+      getFullNodeLabel: runtime.getFullNodeLabel,
+      signData: runtime.signData,
+      exportPrivateKey: runtime.exportPrivateKey,
+      importPrivateKey: runtime.importPrivateKey,
+    }),
+    [runtime],
+  );
+}

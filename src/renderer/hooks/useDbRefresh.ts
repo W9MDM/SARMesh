@@ -1,0 +1,44 @@
+import { useCallback, useMemo } from 'react';
+
+import { hydrateIdentityStoresFromDb } from '../lib/hydrateIdentityStoresFromDb';
+import type { IdentityId, MeshProtocol } from '../lib/types';
+
+/**
+ * Re-pulls nodes and messages from SQLite into identity-scoped Zustand stores.
+ * Requires `identityId` after connect (or from `identityStore` via `useActiveMeshIdentity`).
+ */
+export function useProtocolDbRefresh(protocol: MeshProtocol, identityId: IdentityId | null) {
+  const refreshNodesFromDb = useCallback(
+    async (opts?: { nodesMode?: 'upsert' | 'replace' }): Promise<void> => {
+      if (!identityId) return;
+      await hydrateIdentityStoresFromDb(protocol, identityId, {
+        nodes: true,
+        messages: false,
+        nodesMode: opts?.nodesMode ?? 'upsert',
+      });
+    },
+    [protocol, identityId],
+  );
+
+  const refreshMessagesFromDb = useCallback(
+    async (opts?: { messagesMode?: 'upsert' | 'replace' }): Promise<void> => {
+      if (!identityId) return;
+      await hydrateIdentityStoresFromDb(protocol, identityId, {
+        nodes: false,
+        messages: true,
+        messagesMode: opts?.messagesMode ?? 'upsert',
+      });
+    },
+    [protocol, identityId],
+  );
+
+  const refreshAllFromDb = useCallback(async (): Promise<void> => {
+    if (!identityId) return;
+    await hydrateIdentityStoresFromDb(protocol, identityId, { nodes: true, messages: true });
+  }, [protocol, identityId]);
+
+  return useMemo(
+    () => ({ refreshNodesFromDb, refreshMessagesFromDb, refreshAllFromDb }),
+    [refreshNodesFromDb, refreshMessagesFromDb, refreshAllFromDb],
+  );
+}

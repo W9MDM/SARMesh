@@ -1,0 +1,632 @@
+/* eslint-disable react-hooks/incompatible-library */
+import { useVirtualizer } from '@tanstack/react-virtual';
+import {
+  type MouseEvent as ReactMouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { errLikeToLogString } from '@/renderer/lib/errLikeToLogString';
+
+import { formatLogTimeOfDay } from '../../shared/formatLogTimestamp';
+import { parseStoredJson } from '../lib/parseStoredJson';
+import type { MeshProtocol } from '../lib/types';
+import LogAnalyzeModal from './LogAnalyzeModal';
+
+const LOG_LEVEL_FILTERS_KEY = 'mesh-client:logLevelFilters';
+const LOG_PANEL_WIDTH_KEY = 'mesh-client:logPanelWidth';
+const MAX_LINES = 2500;
+const PANEL_WIDTH_MIN = 260;
+const PANEL_WIDTH_MAX = 720;
+const PANEL_WIDTH_DEFAULT = 320;
+
+interface LogEntry {
+  ts: number;
+  level: string;
+  source: string;
+  message: string;
+}
+
+/** Which console levels to show (all are still captured to file). */
+interface LevelFilters {
+  logInfo: boolean; // console.log / console.info
+  warnError: boolean; // console.warn / console.error
+  debug: boolean; // console.debug
+}
+
+const DEFAULT_LEVEL_FILTERS: LevelFilters = {
+  logInfo: true,
+  warnError: true,
+  debug: false,
+};
+
+function readLevelFilters(): LevelFilters {
+  const raw = localStorage.getItem(LOG_LEVEL_FILTERS_KEY);
+  if (!raw) {
+    // Migrate old single debug toggle
+    if (localStorage.getItem('mesh-client:logDebugEnabled') === 'true') {
+      return { logInfo: true, warnError: true, debug: true };
+    }
+    return { ...DEFAULT_LEVEL_FILTERS };
+  }
+  const o = parseStoredJson<Record<string, boolean>>(raw, 'LogPanel readLevelFilters');
+  if (!o) return { ...DEFAULT_LEVEL_FILTERS };
+  return {
+    logInfo: o.logInfo,
+    warnError: o.warnError,
+    debug: o.debug,
+  };
+}
+
+function persistLevelFilters(f: LevelFilters): void {
+  try {
+    localStorage.setItem(LOG_LEVEL_FILTERS_KEY, JSON.stringify(f));
+  } catch {
+    // catch-no-log-ok localStorage quota or private mode — non-critical preference
+  }
+}
+
+function levelVisible(level: string, f: LevelFilters): boolean {
+  if (level === 'log' || level === 'info') return f.logInfo;
+  if (level === 'warn' || level === 'error') return f.warnError;
+  if (level === 'debug') return f.debug;
+  return true;
+}
+
+/** Returns true for log entries that originated from the given protocol's device library or hook. */
+export function isDeviceEntry(entry: LogEntry, protocol?: MeshProtocol): boolean {
+  if (protocol === 'meshtastic') {
+    return (
+      entry.source === 'sdk' ||
+      entry.source.includes('meshtastic') ||
+      entry.message.includes('[useMeshtasticRuntime]') ||
+      entry.message.includes('[iMeshDevice]') ||
+      entry.message.includes('[TransportNobleIpc]') ||
+      entry.message.includes('[NobleBleManager]') ||
+      entry.message.includes('[BLE:') ||
+      entry.message.includes('[BLE:meshcore]') ||
+      entry.message.includes('[IpcNobleConnection:meshtastic]') ||
+      entry.message.includes('[meshtasticSdkRoutingErrorLog]')
+    );
+  }
+  if (protocol === 'meshcore') {
+    return (
+      entry.source.includes('meshcore') ||
+      entry.message.includes('[useMeshcoreRuntime]') ||
+      entry.message.includes('[meshcoreConnSideEffects]') ||
+      entry.message.includes('[MeshCore MQTT]') ||
+      entry.message.includes('[BLE:meshcore]') ||
+      entry.message.includes('[IpcNobleConnection:meshcore]')
+    );
+  }
+  if (protocol === 'reticulum') {
+    return (
+      entry.source.includes('reticulum') ||
+      entry.message.includes('[ReticulumSidecar]') ||
+      entry.message.includes('[ReticulumNetworkPanel]') ||
+      entry.message.includes('[IdentitySlotsSection]') ||
+      entry.message.includes('[useReticulumRuntime]') ||
+      entry.message.includes('[useReticulumSidecarApi]') ||
+      entry.message.includes('[ReticulumIPC]') ||
+      entry.message.includes('[Reticulum]') ||
+      entry.message.includes('[reticulumSidecarReads]') ||
+      entry.message.includes('[IPC] reticulum')
+    );
+  }
+  // No protocol: show all device entries (fallback)
+  return (
+    entry.source === 'sdk' ||
+    entry.source.includes('meshtastic') ||
+    entry.source.includes('meshcore') ||
+    entry.source.includes('reticulum') ||
+    entry.message.includes('[useMeshtasticRuntime]') ||
+    entry.message.includes('[iMeshDevice]') ||
+    entry.message.includes('[useMeshcoreRuntime]') ||
+    entry.message.includes('[meshcoreConnSideEffects]') ||
+    entry.message.includes('[useReticulumRuntime]') ||
+    entry.message.includes('[TransportNobleIpc]') ||
+    entry.message.includes('[MeshCore MQTT]') ||
+    entry.message.includes('[ReticulumSidecar]') ||
+    entry.message.includes('[ReticulumNetworkPanel]') ||
+    entry.message.includes('[IdentitySlotsSection]') ||
+    entry.message.includes('[ReticulumIPC]') ||
+    entry.message.includes('[Reticulum]') ||
+    entry.message.includes('[reticulumSidecarReads]') ||
+    entry.message.includes('[useReticulumSidecarApi]') ||
+    entry.message.includes('[IPC] reticulum') ||
+    entry.message.includes('[NobleBleManager]') ||
+    entry.message.includes('[BLE:') ||
+    entry.message.includes('[BLE:meshcore]') ||
+    entry.message.includes('[IpcNobleConnection:')
+  );
+}
+
+/** App-panel MQTT/infrastructure tags scoped to one protocol tab (not device/SDK traffic). */
+export function isProtocolExclusiveAppEntry(entry: LogEntry, protocol: MeshProtocol): boolean {
+  return protocol === 'meshtastic' && entry.message.includes('[Meshtastic MQTT]');
+}
+
+/** True when the line belongs to a protocol other than the active tab. */
+export function isOwnedByOtherProtocol(entry: LogEntry, activeProtocol: MeshProtocol): boolean {
+  for (const p of ['meshtastic', 'meshcore', 'reticulum'] as MeshProtocol[]) {
+    if (p === activeProtocol) continue;
+    if (isDeviceEntry(entry, p)) return true;
+    if (isProtocolExclusiveAppEntry(entry, p)) return true;
+  }
+  return false;
+}
+
+/** App log lines for the active protocol tab (or dual/triple fallback when unset). */
+export function isAppLogEntry(entry: LogEntry, protocol?: MeshProtocol): boolean {
+  if (protocol) {
+    return !isDeviceEntry(entry, protocol) && !isOwnedByOtherProtocol(entry, protocol);
+  }
+  return (
+    !isDeviceEntry(entry, 'meshtastic') &&
+    !isDeviceEntry(entry, 'meshcore') &&
+    !isDeviceEntry(entry, 'reticulum')
+  );
+}
+
+function formatEntry(entry: LogEntry): string {
+  const ts = formatLogTimeOfDay(entry.ts);
+  return `${ts} [${entry.level}] ${entry.message}`;
+}
+
+function readPanelWidth(): number {
+  try {
+    const n = Math.floor(Number(localStorage.getItem(LOG_PANEL_WIDTH_KEY)));
+    if (!Number.isFinite(n)) return PANEL_WIDTH_DEFAULT;
+    return Math.min(PANEL_WIDTH_MAX, Math.max(PANEL_WIDTH_MIN, n));
+  } catch {
+    // catch-no-log-ok localStorage read error — return default width
+    return PANEL_WIDTH_DEFAULT;
+  }
+}
+
+function persistPanelWidth(w: number): void {
+  try {
+    localStorage.setItem(LOG_PANEL_WIDTH_KEY, String(w));
+  } catch {
+    // catch-no-log-ok localStorage quota or private mode — non-critical preference
+  }
+}
+
+type LogPanelVariant = 'sidebar' | 'overlay';
+
+export default function LogPanel({
+  variant = 'sidebar',
+  onClose,
+  deviceLogs,
+  protocol,
+}: {
+  deviceLogs?: LogEntry[];
+  protocol?: MeshProtocol;
+  variant?: LogPanelVariant;
+  onClose?: () => void;
+}) {
+  const { t } = useTranslation();
+  const [entries, setEntries] = useState<LogEntry[]>([]);
+  const [levelFilters, setLevelFiltersState] = useState<LevelFilters>(readLevelFilters);
+  const [logClearError, setLogClearError] = useState<string | null>(null);
+  const [logSource, setLogSource] = useState<'app' | 'device'>('app');
+  const [panelWidth, setPanelWidth] = useState(readPanelWidth);
+  const [analyzeModalOpen, setAnalyzeModalOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const atBottomRef = useRef(true);
+  const dragStartX = useRef(0);
+  const dragStartWidth = useRef(0);
+
+  useEffect(() => {
+    if (protocol === 'reticulum') {
+      setLogSource('device');
+    }
+  }, [protocol]);
+
+  useEffect(() => {
+    let off: (() => void) | null = null;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const recent = await window.electronAPI.log.getRecentLines();
+        if (cancelled) return;
+        if (recent.length > 0) {
+          setEntries(recent.slice(-MAX_LINES));
+        }
+      } catch (e) {
+        console.debug('[LogPanel] getRecentLines IPC failed: ' + errLikeToLogString(e));
+      }
+      if (cancelled) return;
+      off = window.electronAPI.log.onLine((entry) => {
+        const e = entry;
+        setEntries((prev) => {
+          const next = prev.length >= MAX_LINES ? prev.slice(-MAX_LINES + 1) : prev;
+          return [...next, e];
+        });
+      });
+    })();
+    return () => {
+      cancelled = true;
+      off?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (atBottomRef.current && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [entries, logSource, levelFilters]);
+
+  const onScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const threshold = 48;
+    atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  }, []);
+
+  const setFilter = useCallback((key: keyof LevelFilters, value: boolean) => {
+    setLevelFiltersState((prev) => {
+      const next = { ...prev, [key]: value };
+      persistLevelFilters(next);
+      return next;
+    });
+  }, []);
+
+  const handleExport = useCallback(async () => {
+    try {
+      const path = await window.electronAPI.log.export();
+      if (path) {
+        console.debug('[LogPanel] Log exported to', path);
+      }
+    } catch (e) {
+      console.error('[LogPanel] Log export failed ' + errLikeToLogString(e));
+    }
+  }, []);
+
+  const handleDelete = useCallback(async () => {
+    setLogClearError(null);
+    try {
+      await window.electronAPI.log.clear();
+      setEntries([]);
+    } catch (e) {
+      console.warn('[LogPanel] clear log failed ' + errLikeToLogString(e));
+      setLogClearError(e instanceof Error ? e.message : t('logPanel.clearFailed'));
+    }
+  }, [t]);
+
+  const libraryEntries = useMemo(
+    () => entries.filter((e) => isDeviceEntry(e, protocol)),
+    [entries, protocol],
+  );
+  const appEntries = useMemo(
+    () => entries.filter((e) => isAppLogEntry(e, protocol)),
+    [entries, protocol],
+  );
+  const scopedDeviceLogs = useMemo(
+    () => (deviceLogs ?? []).filter((e) => !protocol || isDeviceEntry(e, protocol)),
+    [deviceLogs, protocol],
+  );
+  const allDeviceLogs: LogEntry[] = useMemo(
+    () => [...scopedDeviceLogs, ...libraryEntries].sort((a, b) => a.ts - b.ts),
+    [scopedDeviceLogs, libraryEntries],
+  );
+
+  const visibleLines: LogEntry[] = useMemo(
+    () =>
+      logSource === 'device'
+        ? allDeviceLogs.filter((e) => levelVisible(e.level, levelFilters))
+        : appEntries.filter((e) => levelVisible(e.level, levelFilters)),
+    [logSource, allDeviceLogs, appEntries, levelFilters],
+  );
+
+  const logVirtualizer = useVirtualizer({
+    count: visibleLines.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 18,
+    overscan: 16,
+  });
+
+  const onResizeMouseDown = useCallback(
+    (e: ReactMouseEvent) => {
+      e.preventDefault();
+      dragStartX.current = e.clientX;
+      dragStartWidth.current = panelWidth;
+      const onMove = (ev: MouseEvent) => {
+        const delta = dragStartX.current - ev.clientX;
+        const next = Math.min(
+          PANEL_WIDTH_MAX,
+          Math.max(PANEL_WIDTH_MIN, dragStartWidth.current + delta),
+        );
+        setPanelWidth(next);
+      };
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        setPanelWidth((w) => {
+          persistPanelWidth(w);
+          return w;
+        });
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    },
+    [panelWidth],
+  );
+
+  const widen = useCallback(() => {
+    setPanelWidth((w) => {
+      const next = Math.min(PANEL_WIDTH_MAX, w + 80);
+      persistPanelWidth(next);
+      return next;
+    });
+  }, []);
+
+  const narrow = useCallback(() => {
+    setPanelWidth((w) => {
+      const next = Math.max(PANEL_WIDTH_MIN, w - 80);
+      persistPanelWidth(next);
+      return next;
+    });
+  }, []);
+
+  const isOverlay = variant === 'overlay';
+  const showResizeControls = !isOverlay;
+
+  const panel = (
+    <aside
+      className="flex min-h-0 min-w-0 flex-1 flex-col"
+      aria-label={t('aria.applicationLog')}
+      aria-labelledby="log-panel-landmark-title"
+    >
+      <h2 id="log-panel-landmark-title" className="sr-only">
+        {t('aria.applicationLog')}
+      </h2>
+      <div className="flex flex-col gap-2 border-b border-gray-700 px-2 py-2">
+        <div className="space-y-1">
+          <span className="text-muted text-[10px] tracking-wide uppercase">
+            {t('logPanel.showLevels')}
+          </span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <input
+                id="log-filter-loginfo"
+                type="checkbox"
+                checked={levelFilters.logInfo}
+                onChange={(e) => {
+                  setFilter('logInfo', e.target.checked);
+                }}
+                aria-label={t('logPanel.logInfo')}
+                className="rounded border-gray-600"
+              />
+              <label htmlFor="log-filter-loginfo" className="text-muted cursor-pointer text-xs">
+                {t('logPanel.logInfo')}
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="log-filter-warn"
+                type="checkbox"
+                checked={levelFilters.warnError}
+                onChange={(e) => {
+                  setFilter('warnError', e.target.checked);
+                }}
+                aria-label={t('logPanel.warnError')}
+                className="rounded border-gray-600"
+              />
+              <label htmlFor="log-filter-warn" className="text-muted cursor-pointer text-xs">
+                {t('logPanel.warnError')}
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="log-filter-debug"
+                type="checkbox"
+                checked={levelFilters.debug}
+                onChange={(e) => {
+                  setFilter('debug', e.target.checked);
+                }}
+                aria-label={t('logPanel.debug')}
+                className="rounded border-gray-600"
+              />
+              <label htmlFor="log-filter-debug" className="text-muted cursor-pointer text-xs">
+                {t('logPanel.debug')}
+              </label>
+            </div>
+          </div>
+          <p className="text-muted text-[10px] leading-snug">{t('logPanel.writtenToFile')}</p>
+        </div>
+        <div className="flex items-center gap-2 border-t border-gray-700 pt-2">
+          <span className="text-muted text-[10px] tracking-wide uppercase">
+            {t('logPanel.source')}
+          </span>
+          <div className="ml-auto flex gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                setLogSource('app');
+              }}
+              aria-label={t('logPanel.appSource', { count: appEntries.length })}
+              className={`rounded px-2 py-0.5 text-[10px] ${logSource === 'app' ? 'bg-brand-green/20 text-brand-green border-brand-green/40 border' : 'border border-gray-700 bg-slate-800 text-gray-400'}`}
+            >
+              {t('logPanel.appSource', { count: appEntries.length })}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLogSource('device');
+              }}
+              aria-label={t('logPanel.deviceSource', { count: allDeviceLogs.length })}
+              className={`rounded px-2 py-0.5 text-[10px] ${logSource === 'device' ? 'bg-brand-green/20 text-brand-green border-brand-green/40 border' : 'border border-gray-700 bg-slate-800 text-gray-400'}`}
+            >
+              {t('logPanel.deviceSource', { count: allDeviceLogs.length })}
+            </button>
+          </div>
+        </div>
+        {showResizeControls && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={narrow}
+              aria-label={t('logPanel.narrowLogPanel')}
+              className="rounded border border-gray-600 bg-slate-800 px-2 py-1 text-xs text-gray-300 hover:bg-slate-700"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              onClick={widen}
+              aria-label={t('logPanel.widenLogPanel')}
+              className="rounded border border-gray-600 bg-slate-800 px-2 py-1 text-xs text-gray-300 hover:bg-slate-700"
+            >
+              +
+            </button>
+            <span className="text-muted flex-1 text-right text-[10px]">{panelWidth}px</span>
+          </div>
+        )}
+        <div className="flex flex-col gap-1">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setAnalyzeModalOpen(true);
+              }}
+              aria-label={t('logPanel.analyzeLog')}
+              className="flex-1 rounded bg-slate-700 px-2 py-1 text-xs text-gray-200 hover:bg-slate-600"
+            >
+              {t('logPanel.analyze')}
+            </button>
+            <button
+              type="button"
+              onClick={handleExport}
+              aria-label={t('logPanel.exportLog')}
+              className="rounded border border-gray-600 bg-slate-800 px-2 py-1 text-xs text-gray-300 hover:bg-slate-700"
+            >
+              {t('logPanel.export')}
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              aria-label={t('logPanel.deleteLog')}
+              className="rounded border border-gray-600 bg-slate-800 px-2 py-1 text-xs text-gray-300 hover:bg-slate-700"
+            >
+              {t('logPanel.delete')}
+            </button>
+          </div>
+          {logClearError && (
+            <div role="alert" className="text-[10px] text-red-400">
+              {logClearError}
+            </div>
+          )}
+        </div>
+      </div>
+      <div
+        ref={scrollRef}
+        onScroll={onScroll}
+        className="min-h-0 flex-1 overflow-auto p-2 font-mono text-[10px] leading-tight text-gray-400"
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+      >
+        {visibleLines.length === 0 ? (
+          <span className="text-muted">
+            {logSource === 'app'
+              ? appEntries.length === 0
+                ? t('logPanel.noAppLines')
+                : !levelFilters.logInfo && !levelFilters.warnError && !levelFilters.debug
+                  ? t('logPanel.allFiltersOff')
+                  : t('logPanel.noAppLinesMatch')
+              : allDeviceLogs.length === 0
+                ? t('logPanel.noDeviceLines')
+                : !levelFilters.logInfo && !levelFilters.warnError && !levelFilters.debug
+                  ? t('logPanel.allFiltersOff')
+                  : t('logPanel.noDeviceLinesMatch')}
+          </span>
+        ) : (
+          <div className="relative w-full" style={{ height: `${logVirtualizer.getTotalSize()}px` }}>
+            {logVirtualizer.getVirtualItems().map((vi) => {
+              const entry = visibleLines[vi.index];
+              const line = formatEntry(entry);
+              return (
+                <div
+                  key={`${vi.index}-${entry.ts}-${line.slice(0, 40)}`}
+                  data-index={vi.index}
+                  ref={logVirtualizer.measureElement}
+                  className="absolute top-0 left-0 w-full break-all whitespace-pre-wrap"
+                  style={{ transform: `translateY(${vi.start}px)` }}
+                >
+                  {line}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </aside>
+  );
+
+  if (isOverlay) {
+    return (
+      <>
+        <div
+          className="bg-deep-black fixed inset-y-0 right-0 z-[1100] flex min-h-0 w-full max-w-md flex-col border-l border-gray-700"
+          role="complementary"
+          aria-label={t('aria.applicationLog')}
+          aria-labelledby="log-panel-landmark-title"
+        >
+          <div className="flex shrink-0 items-center justify-end border-b border-gray-700 px-2 py-1.5">
+            <button
+              type="button"
+              onClick={() => onClose?.()}
+              aria-label={t('logPanel.close')}
+              className="rounded border border-gray-600 bg-slate-800 px-2 py-1 text-xs text-gray-300 hover:bg-slate-700"
+            >
+              {t('logPanel.close')}
+            </button>
+          </div>
+          {panel}
+        </div>
+        {analyzeModalOpen && (
+          <LogAnalyzeModal
+            isOpen={analyzeModalOpen}
+            onClose={() => {
+              setAnalyzeModalOpen(false);
+            }}
+            entries={logSource === 'device' ? allDeviceLogs : appEntries}
+            protocol={protocol ?? 'meshtastic'}
+          />
+        )}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div
+        className="bg-deep-black flex min-h-0 shrink-0 border-l border-gray-700"
+        style={{ width: panelWidth }}
+      >
+        <button
+          type="button"
+          aria-label={t('logPanel.dragToResize')}
+          className="w-1.5 shrink-0 cursor-col-resize self-stretch border-0 bg-gray-800/50 p-0 hover:bg-slate-600"
+          onMouseDown={onResizeMouseDown}
+        />
+        {panel}
+      </div>
+      {analyzeModalOpen && (
+        <LogAnalyzeModal
+          isOpen={analyzeModalOpen}
+          onClose={() => {
+            setAnalyzeModalOpen(false);
+          }}
+          entries={logSource === 'device' ? allDeviceLogs : appEntries}
+          protocol={protocol ?? 'meshtastic'}
+        />
+      )}
+    </>
+  );
+}

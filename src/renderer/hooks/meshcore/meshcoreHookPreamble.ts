@@ -1,0 +1,1272 @@
+import { sanitizeLogMessage } from '@/main/sanitize-log-message';
+
+import { isValidLatLon } from '../../../shared/geoCoords';
+import { meshcoreContactDisplayName } from '../../../shared/meshcoreContactSanitize';
+import { withTimeout } from '../../../shared/withTimeout';
+import { MAX_IN_MEMORY_CHAT_MESSAGES, trimChatMessagesToMax } from '../../lib/chatInMemoryBuffer';
+import { errLikeToLogString } from '../../lib/errLikeToLogString';
+import type {
+  MeshCoreConnection,
+  MeshcoreContactDbRow,
+  MeshCoreContactRaw,
+} from '../../lib/meshcore/meshcoreHookTypes';
+import {
+  getMeshcorePubKey,
+  registerMeshcorePubKey,
+} from '../../lib/meshcore/meshcorePubKeyRegistry';
+import {
+  meshcoreChatMessagesForDisplay,
+  meshcoreMessageMatchesReplyKey,
+  meshcorePayloadIsTapbackEmojiOnly,
+  normalizeMeshcoreIncomingText,
+} from '../../lib/meshcoreChannelText';
+import {
+  isMeshcoreLocallyDeletedContact,
+  shouldApplyMeshcoreContact,
+} from '../../lib/meshcoreLocallyDeletedContacts';
+import {
+  CONTACT_TYPE_LABELS,
+  isMeshcoreTransportStatusChatLine,
+  MESHCORE_COORD_SCALE,
+  MESHCORE_SENDER_RECONCILE_MAX_PAYLOAD_LEN,
+  MESHCORE_UNKNOWN_SENDER_STUB_ID,
+  meshcoreChatStubNodeIdFromDisplayName,
+  meshcoreInferHopsFromOutPath,
+  meshcoreIsChatStubNodeId,
+  meshcoreIsSyntheticPlaceholderPubKeyHex,
+  meshcoreMergeChannelDisplayNameOntoNode,
+  minimalMeshcoreChatNode,
+  pubkeyToNodeId,
+} from '../../lib/meshcoreUtils';
+import {
+  effectiveMessageTimestampMs,
+  mergeMeshcoreLastHeardFromAdvert,
+} from '../../lib/nodeStatus';
+import { normalizeReactionEmoji } from '../../lib/reactions';
+import {
+  MESHCORE_CHANNEL_RF_DEDUP_WINDOW_MS,
+  MESHCORE_CROSS_TRANSPORT_DEDUP_WINDOW_MS,
+  MESHCORE_DM_RF_DEDUP_WINDOW_MS,
+  MESHCORE_ROOM_POST_DEDUP_WINDOW_MS,
+  MESHCORE_TAPBACK_ECHO_DEDUP_WINDOW_MS,
+} from '../../lib/timeConstants';
+
+export {
+  MESHCORE_CHANNEL_RF_DEDUP_WINDOW_MS,
+  MESHCORE_CROSS_TRANSPORT_DEDUP_WINDOW_MS,
+  MESHCORE_DM_RF_DEDUP_WINDOW_MS,
+  MESHCORE_ROOM_POST_DEDUP_WINDOW_MS,
+  MESHCORE_TAPBACK_ECHO_DEDUP_WINDOW_MS,
+} from '../../lib/timeConstants';
+import type { ChatMessage, DeviceState, MeshNode } from '../../lib/types';
+
+/** MeshCore expected ACK CRCs are uint32; meshcore.js / BLE may surface them as signed. Normalize for Map keys, React state, and SQLite packet_id. */
+export function meshcoreDmAckKeyU32(crc: number): number {
+  return crc >>> 0;
+}
+
+/**
+ * Firmware `estTimeout` is sometimes only a few seconds; multi-hop / repeater paths often exceed
+ * that before event 130. Wait at least this long before marking outbound DM as failed.
+ */
+export const MESHCORE_DM_ACK_TIMEOUT_MIN_MS = 45_000;
+
+/** Register pending DM ACK under every JS number the stack might use for the same CRC (signed vs unsigned). */
+export function meshcorePendingDmAckMapKeys(ackCrc: number): number[] {
+  return Array.from(new Set([ackCrc, meshcoreDmAckKeyU32(ackCrc)]));
+}
+
+/** Try device-reported codes in both representations when looking up a pending send. */
+export function meshcoreDeviceAckLookupKeys(codeFromDevice: number): number[] {
+  return Array.from(new Set([codeFromDevice, meshcoreDmAckKeyU32(codeFromDevice)]));
+}
+
+export interface PendingDmAckEntry {
+  timeoutId: ReturnType<typeof setTimeout>;
+  /** Every `pendingAcksRef` key that references this entry. */
+  mapKeys: number[];
+  /** Same as `ChatMessage.packetId` / DB `packet_id` for this send (uint32). */
+  canonicalPacketIdU32: number;
+  /** Destination node for path outcome attribution. */
+  destNodeId?: number;
+  /** Path hash of the route used for this send (empty string = flood). */
+  pathHash?: string;
+}
+
+export function meshcoreContactRawFromDevice(c: MeshCoreContactRaw): MeshCoreContactRaw {
+  const f = (c as { flags?: number }).flags;
+  const flags = typeof f === 'number' && Number.isFinite(f) ? f & 0xff : 0;
+  return { ...c, flags };
+}
+
+export function contactToDbRow(
+  contact: MeshCoreContactRaw,
+  nickname?: string | null,
+  onRadio = 0,
+  lastSyncedFromRadio?: string | null,
+  mergedHopsAway?: number,
+) {
+  return {
+    node_id: pubkeyToNodeId(contact.publicKey),
+    public_key: Array.from(contact.publicKey)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join(''),
+    adv_name: contact.advName ?? null,
+    contact_type: contact.type,
+    last_advert: contact.lastAdvert ?? null,
+    adv_lat: contact.advLat !== 0 ? contact.advLat / MESHCORE_COORD_SCALE : null,
+    adv_lon: contact.advLon !== 0 ? contact.advLon / MESHCORE_COORD_SCALE : null,
+    nickname: nickname ?? null,
+    contact_flags: contact.flags & 0xff,
+    hops_away: mergedHopsAway ?? meshcoreInferHopsFromOutPath(contact) ?? null,
+    on_radio: onRadio ?? 0,
+    last_synced_from_radio: lastSyncedFromRadio ?? null,
+  };
+}
+
+function meshcoreReceivedViaFromDb(raw: unknown): NonNullable<ChatMessage['receivedVia']> {
+  if (raw === 'mqtt' || raw === 'both') return raw;
+  return 'rf';
+}
+
+/** MeshCore chat channel index for room server BBS posts (not DMs at -1). */
+export const MESHCORE_ROOM_MESSAGE_CHANNEL = -2;
+
+/** Room BBS posts use `roomServerId` / channel -2; they must not appear in Chat DM tabs. */
+export function isMeshcoreRoomChatMessage(msg: {
+  roomServerId?: number;
+  channel?: number;
+}): boolean {
+  return msg.roomServerId != null || msg.channel === MESHCORE_ROOM_MESSAGE_CHANNEL;
+}
+
+export function messageToDbRow(
+  msg: ChatMessage,
+): Parameters<typeof window.electronAPI.db.saveMeshcoreMessage>[0] {
+  const received_via =
+    msg.receivedVia === 'rf' || msg.receivedVia === 'mqtt' || msg.receivedVia === 'both'
+      ? msg.receivedVia
+      : null;
+  let sender_id: number | null = msg.sender_id !== 0 ? msg.sender_id : null;
+  if (sender_id == null) {
+    const name = msg.sender_name?.trim();
+    if (name && name !== 'Unknown') {
+      sender_id = meshcoreChatStubNodeIdFromDisplayName(name);
+    }
+  }
+  return {
+    sender_id,
+    sender_name: msg.sender_name ?? null,
+    payload: msg.payload,
+    channel_idx: msg.channel,
+    timestamp: effectiveMessageTimestampMs(msg.timestamp),
+    status: msg.status ?? 'acked',
+    packet_id: msg.packetId ?? null,
+    emoji: msg.emoji ?? null,
+    reply_id: msg.replyId ?? null,
+    to_node: msg.to ?? null,
+    received_via,
+    rx_packet_fingerprint: msg.rxPacketFingerprintHex ?? null,
+    reply_preview_text: msg.replyPreviewText ?? null,
+    reply_preview_sender: msg.replyPreviewSender ?? null,
+    rx_hops: msg.rxHops != null && Number.isFinite(msg.rxHops) ? Math.trunc(msg.rxHops) : null,
+    room_server_id: msg.roomServerId ?? null,
+  };
+}
+
+// Contact list streaming is O(N contacts) — use a generous timeout across all platforms.
+export const MESHCORE_INIT_TIMEOUT_MS = 60_000;
+/** Companion Ok/Err for `sendFloodAdvert` — meshcore.js has no internal timeout. */
+export const MESHCORE_SEND_FLOOD_ADVERT_TIMEOUT_MS = 25_000;
+/** Companion Ok/Err for `removeContact` — meshcore.js has no internal timeout. */
+export const MESHCORE_REMOVE_CONTACT_TIMEOUT_MS = 25_000;
+/** Base wait for PathUpdated (129) after a flood advert when priming trace route. */
+export const MESHCORE_TRACE_PRIME_WAIT_BASE_MS = 15_000;
+/** Per-hop add-on for {@link computeMeshcoreTracePrimeWaitMs}. */
+export const MESHCORE_TRACE_PRIME_WAIT_PER_HOP_MS = 5_000;
+/** Cap for a single PathUpdated wait during trace route priming. */
+export const MESHCORE_TRACE_PRIME_WAIT_CAP_MS = 45_000;
+/** Max flood-advert priming rounds before trace/ping or no-route fast-fail. */
+export const MESHCORE_TRACE_PRIME_MAX_ROUNDS = 2;
+/** Post-prime `getContacts` slack for passive strategy aggregate timeout (BLE can be slow). */
+export const MESHCORE_TRACE_PRIME_CONTACT_REFRESH_MS = 20_000;
+
+/** Worst-case aggregate timeout for {@link primeMeshcoreTraceRoute} (all rounds). */
+export function computeMeshcoreTracePrimeAggregateTimeoutMs(
+  hopsAway?: number | null,
+  maxRounds = MESHCORE_TRACE_PRIME_MAX_ROUNDS,
+  strategy: 'none' | 'passive' | 'flood' = 'flood',
+): number {
+  const waitMs = computeMeshcoreTracePrimeWaitMs(hopsAway);
+  if (strategy === 'none') return 0;
+  if (strategy === 'passive') {
+    // Pre-round getContacts + PathUpdated wait + post-round getContacts (each contact refresh may use full slack).
+    return 2 * MESHCORE_TRACE_PRIME_CONTACT_REFRESH_MS + waitMs;
+  }
+  return maxRounds * (MESHCORE_SEND_FLOOD_ADVERT_TIMEOUT_MS + waitMs) + 5_000;
+}
+
+/** Hop-scaled PathUpdated wait after flood advert when priming multi-hop trace routes. */
+export function computeMeshcoreTracePrimeWaitMs(hopsAway?: number | null): number {
+  const hops =
+    hopsAway != null && Number.isFinite(hopsAway) ? Math.max(0, Math.trunc(hopsAway)) : 0;
+  return Math.min(
+    MESHCORE_TRACE_PRIME_WAIT_CAP_MS,
+    MESHCORE_TRACE_PRIME_WAIT_BASE_MS + hops * MESHCORE_TRACE_PRIME_WAIT_PER_HOP_MS,
+  );
+}
+
+/** Shown when multi-hop trace cannot run until the radio reports a route; cleared on the next ping attempt. */
+export const MESHCORE_PING_NO_ROUTE_ERROR_MSG = 'meshcore.errors.pingNoRoute';
+export const MESHCORE_PING_NO_ROUTE_ERROR_DISPLAY_MS = 20_000;
+
+/** Clears {@link MESHCORE_PING_NO_ROUTE_ERROR_MSG} for `nodeId` if unchanged (traceRoute expiry). */
+export function meshcorePingNoRouteErrorExpiryUpdate(
+  prev: Map<number, string>,
+  nodeId: number,
+): Map<number, string> {
+  const next = new Map(prev);
+  if (next.get(nodeId) === MESHCORE_PING_NO_ROUTE_ERROR_MSG) {
+    next.delete(nodeId);
+  }
+  return next;
+}
+
+export function serializeErrorLike(value: unknown): string {
+  if (value instanceof Error) return value.message;
+  if (typeof value === 'string') return value;
+  if (value == null) return '';
+  if (typeof (value as Record<string, unknown>).message === 'string')
+    return (value as Record<string, unknown>).message as string;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    // catch-no-log-ok stringify fallback for arbitrary error payloads
+    return '[unserializable]';
+  }
+}
+
+/** One string for Electron's renderer console forwarder (avoids "[object Object]" in disk logs). */
+export function formatStructuredLogDetail(detail: Record<string, unknown>): string {
+  try {
+    return sanitizeLogMessage(JSON.stringify(detail));
+  } catch {
+    // catch-no-log-ok stringify fallback for circular / non-serializable log payloads
+    return sanitizeLogMessage('{}');
+  }
+}
+
+/** Wait for companion push 0x81 (129 PathUpdated) for a specific node's pubkey. */
+export interface MeshcorePath129WaitHandle {
+  promise: Promise<boolean>;
+  cancel: () => void;
+}
+
+export function waitForMeshcorePath129ForNode(
+  conn: Pick<MeshCoreConnection, 'on' | 'off'>,
+  nodeId: number,
+  timeoutMs: number,
+): MeshcorePath129WaitHandle {
+  let settled = false;
+  let resolvePromise: (ok: boolean) => void = () => {};
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const on129 = (data: unknown) => {
+    const d = data as { publicKey?: Uint8Array };
+    if (d.publicKey?.length !== 32) return;
+    if (pubkeyToNodeId(d.publicKey) !== nodeId) return;
+    finish(true);
+  };
+  const finish = (ok: boolean) => {
+    if (settled) return;
+    settled = true;
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+    conn.off(129, on129);
+    resolvePromise(ok);
+  };
+  const promise = new Promise<boolean>((resolve) => {
+    resolvePromise = resolve;
+    timeoutId = setTimeout(() => {
+      finish(false);
+    }, timeoutMs);
+    conn.on(129, on129);
+  });
+  return {
+    promise,
+    cancel: () => {
+      finish(false);
+    },
+  };
+}
+export const MANUAL_CONTACTS_KEY = 'mesh-client:meshcoreManualContacts';
+
+export const INITIAL_STATE: DeviceState = {
+  status: 'disconnected',
+  myNodeNum: 0,
+  connectionType: null,
+};
+
+export const MAX_DEVICE_LOGS = 500;
+
+/** Repeater RPCs (tracePath, getStatus, getTelemetry, sendBinaryRequest neighbours). */
+const MESHCORE_REPEATER_RPC_TIMEOUT_MS = 120_000;
+export const MESHCORE_STATUS_TIMEOUT_MS = MESHCORE_REPEATER_RPC_TIMEOUT_MS;
+export const MESHCORE_TELEMETRY_TIMEOUT_MS = MESHCORE_REPEATER_RPC_TIMEOUT_MS;
+export const MESHCORE_NEIGHBORS_TIMEOUT_MS = MESHCORE_REPEATER_RPC_TIMEOUT_MS;
+export const MESHCORE_TRACE_TIMEOUT_MS = MESHCORE_REPEATER_RPC_TIMEOUT_MS;
+/** Neighbors RPC is unlikely to succeed beyond this hop count on USB serial; UI disables the action. */
+export const MESHCORE_NEIGHBORS_MAX_RECOMMENDED_HOPS = 8;
+/** Request page size for GetNeighbours; firmware reply buffers often return fewer rows (~11 at 6-byte prefixes). */
+export const MESHCORE_NEIGHBORS_PAGE_SIZE = 50;
+export { MAX_TELEMETRY_POINTS } from '../../lib/sessionMemoryCaps';
+
+export const MAX_ENV_TELEMETRY_POINTS = 50;
+
+/** @see @liamcottle/meshcore.js Constants.ResponseCodes.DeviceInfo */
+export const MESHCORE_RESPONSE_DEVICE_INFO = 13;
+
+/** Companion protocol version byte sent with CMD DeviceQuery; must match meshcore.js onConnected. */
+export const MESHCORE_DEVICE_QUERY_APP_VER = 1;
+
+/**
+ * Normalizes an error from a MeshCore RPC call into a proper Error object.
+ * Handles edge cases like undefined errors, errors without messages, and non-Error objects.
+ */
+export function normalizeMeshCoreError(e: unknown, fallbackMessage: string): Error {
+  if (e === undefined || (e instanceof Error && !e.message)) {
+    return new Error(fallbackMessage);
+  }
+  if (e instanceof Error) {
+    return e;
+  }
+  return new Error(typeof e === 'string' ? e : 'Unknown error');
+}
+
+/** meshcore.js `tracePath` may reject with `undefined`; avoid `String(object)` pitfalls. */
+export function meshcoreTraceRouteRejectReason(e: unknown): string {
+  if (e instanceof Error && e.message) return e.message;
+  if (e === undefined || e === null) return 'radio rejected trace (no detail)';
+  if (typeof e === 'string') return e;
+  if (typeof e === 'number' || typeof e === 'boolean' || typeof e === 'bigint') return String(e);
+  try {
+    return JSON.stringify(e);
+  } catch {
+    // catch-no-log-ok JSON.stringify throws on circular/non-serializable values
+    return 'unknown error';
+  }
+}
+
+export function meshcoreMessageDedupeKey(msg: ChatMessage): string {
+  const body = msg.meshcoreDedupeKey ?? msg.payload;
+  return [
+    msg.sender_id,
+    msg.to ?? '',
+    msg.channel,
+    msg.timestamp,
+    body,
+    msg.emoji ?? '',
+    msg.replyId ?? '',
+  ].join('|');
+}
+
+const MESHCORE_CROSS_TRANSPORT_SCAN_LIMIT = 200;
+
+function normalizeMeshcoreSenderNameForDedup(name: string | undefined): string {
+  return (name ?? '').trim().toLowerCase();
+}
+
+function meshcoreSenderMatchesForDedup(a: ChatMessage, b: ChatMessage): boolean {
+  if (a.sender_id === b.sender_id) return true;
+  const aStub = meshcoreIsChatStubNodeId(a.sender_id);
+  const bStub = meshcoreIsChatStubNodeId(b.sender_id);
+  if (!aStub && !bStub) return false;
+  const aName = normalizeMeshcoreSenderNameForDedup(a.sender_name);
+  const bName = normalizeMeshcoreSenderNameForDedup(b.sender_name);
+  return aName.length > 0 && aName === bName;
+}
+
+function meshcoreTransportsAreCross(existing: ChatMessage, incoming: ChatMessage): boolean {
+  const existingVia = existing.receivedVia;
+  const incomingVia = incoming.receivedVia;
+  if (!existingVia || !incomingVia) return false;
+  if (existingVia === incomingVia || existingVia === 'both' || incomingVia === 'both') return false;
+  return true;
+}
+
+function meshcoreReceivedViaMerged(
+  existing: ChatMessage['receivedVia'],
+  incoming: ChatMessage['receivedVia'],
+): ChatMessage['receivedVia'] {
+  if (existing === 'both' || incoming === 'both') return 'both';
+  if (!existing) return incoming;
+  if (!incoming) return existing;
+  if (existing !== incoming) return 'both';
+  return existing;
+}
+
+function meshcoreIsTapbackShapedRow(msg: ChatMessage): boolean {
+  return (
+    (msg.emoji != null && msg.replyId != null) ||
+    (msg.replyId != null && meshcorePayloadIsTapbackEmojiOnly(msg.payload))
+  );
+}
+
+/** True when two tapback `replyId` values refer to the same parent (packetId / sec / ms). */
+export function meshcoreTapbackReplyIdsMatch(
+  a: number | undefined,
+  b: number | undefined,
+): boolean {
+  if (a == null && b == null) return true;
+  if (a == null || b == null) return false;
+  if (a === b) return true;
+  const synthA = { packetId: a, timestamp: a } as ChatMessage;
+  const synthB = { packetId: b, timestamp: b } as ChatMessage;
+  return meshcoreMessageMatchesReplyKey(synthA, b) || meshcoreMessageMatchesReplyKey(synthB, a);
+}
+
+function meshcoreTapbackEmojiScalar(msg: ChatMessage): number | undefined {
+  if (msg.emoji != null) return msg.emoji;
+  return normalizeReactionEmoji(undefined, msg.payload.trim());
+}
+
+function meshcoreTapbackEmojisMatch(existing: ChatMessage, incoming: ChatMessage): boolean {
+  const existingScalar = meshcoreTapbackEmojiScalar(existing);
+  const incomingScalar = meshcoreTapbackEmojiScalar(incoming);
+  if (existingScalar == null || incomingScalar == null) return false;
+  return existingScalar === incomingScalar;
+}
+
+export function meshcoreCrossTransportMatch(
+  existing: ChatMessage,
+  incoming: ChatMessage,
+  windowMs: number = MESHCORE_CROSS_TRANSPORT_DEDUP_WINDOW_MS,
+): boolean {
+  if (!meshcoreTransportsAreCross(existing, incoming)) return false;
+  if (!meshcoreSenderMatchesForDedup(existing, incoming)) return false;
+  if (existing.channel !== incoming.channel) return false;
+  if ((existing.to ?? undefined) !== (incoming.to ?? undefined)) return false;
+  if (meshcoreIsTapbackShapedRow(existing) || meshcoreIsTapbackShapedRow(incoming)) {
+    if (!meshcoreTapbackReplyIdsMatch(existing.replyId, incoming.replyId)) return false;
+    if (!meshcoreTapbackEmojisMatch(existing, incoming)) return false;
+  } else {
+    if ((existing.emoji ?? undefined) !== (incoming.emoji ?? undefined)) return false;
+    if ((existing.replyId ?? undefined) !== (incoming.replyId ?? undefined)) return false;
+    const existingBody = existing.meshcoreDedupeKey ?? existing.payload;
+    const incomingBody = incoming.meshcoreDedupeKey ?? incoming.payload;
+    if (existingBody !== incomingBody && existing.payload !== incoming.payload) return false;
+  }
+  if (Math.abs(existing.timestamp - incoming.timestamp) > windowMs) return false;
+  return true;
+}
+
+function meshcoreIsBroadcastChannelMessage(msg: ChatMessage): boolean {
+  return msg.channel != null && msg.channel >= 0 && msg.roomServerId == null;
+}
+
+function meshcoreReceivedViaIncludesRf(via: ChatMessage['receivedVia']): boolean {
+  return via === 'rf' || via === 'both';
+}
+
+/** Same broadcast channel text heard again on RF (repeater re-hear), not RF/MQTT cross-path. */
+export function meshcoreChannelRfMatch(
+  existing: ChatMessage,
+  incoming: ChatMessage,
+  windowMs: number = MESHCORE_CHANNEL_RF_DEDUP_WINDOW_MS,
+): boolean {
+  if (
+    !meshcoreIsBroadcastChannelMessage(existing) ||
+    !meshcoreIsBroadcastChannelMessage(incoming)
+  ) {
+    return false;
+  }
+  if (existing.emoji != null || incoming.emoji != null) return false;
+  if (!meshcoreReceivedViaIncludesRf(existing.receivedVia)) return false;
+  if (incoming.receivedVia !== 'rf') return false;
+  if (meshcoreTransportsAreCross(existing, incoming)) return false;
+  if (!meshcoreSenderMatchesForDedup(existing, incoming)) return false;
+  if (existing.channel !== incoming.channel) return false;
+  if ((existing.to ?? undefined) !== (incoming.to ?? undefined)) return false;
+  if ((existing.replyId ?? undefined) !== (incoming.replyId ?? undefined)) return false;
+  const existingBody = existing.meshcoreDedupeKey ?? existing.payload;
+  const incomingBody = incoming.meshcoreDedupeKey ?? incoming.payload;
+  if (existingBody !== incomingBody && existing.payload !== incoming.payload) return false;
+  if (Math.abs(existing.timestamp - incoming.timestamp) > windowMs) return false;
+  return true;
+}
+
+export function findMeshcoreChannelRfDuplicate(
+  messages: readonly ChatMessage[],
+  incoming: ChatMessage,
+  windowMs: number = MESHCORE_CHANNEL_RF_DEDUP_WINDOW_MS,
+): ChatMessage | undefined {
+  const start = Math.max(0, messages.length - MESHCORE_CROSS_TRANSPORT_SCAN_LIMIT);
+  for (let i = messages.length - 1; i >= start; i--) {
+    const existing = messages[i];
+    if (meshcoreChannelRfMatch(existing, incoming, windowMs)) {
+      return existing;
+    }
+  }
+  return undefined;
+}
+
+function meshcoreIsDmMessage(msg: ChatMessage): boolean {
+  return msg.channel === -1 && msg.to != null;
+}
+
+/** Same DM text heard again on RF (repeater / multi-path echo), not RF/MQTT cross-path. */
+export function meshcoreDmRfMatch(
+  existing: ChatMessage,
+  incoming: ChatMessage,
+  windowMs: number = MESHCORE_DM_RF_DEDUP_WINDOW_MS,
+): boolean {
+  if (!meshcoreIsDmMessage(existing) || !meshcoreIsDmMessage(incoming)) return false;
+  if (existing.emoji != null || incoming.emoji != null) return false;
+  if (existing.receivedVia !== 'rf' || incoming.receivedVia !== 'rf') return false;
+  if (meshcoreTransportsAreCross(existing, incoming)) return false;
+  if (!meshcoreSenderMatchesForDedup(existing, incoming)) return false;
+  if ((existing.to ?? undefined) !== (incoming.to ?? undefined)) return false;
+  if ((existing.replyId ?? undefined) !== (incoming.replyId ?? undefined)) return false;
+  const existingBody = existing.meshcoreDedupeKey ?? existing.payload;
+  const incomingBody = incoming.meshcoreDedupeKey ?? incoming.payload;
+  if (existingBody !== incomingBody && existing.payload !== incoming.payload) return false;
+  if (Math.abs(existing.timestamp - incoming.timestamp) > windowMs) return false;
+  return true;
+}
+
+export function findMeshcoreDmRfDuplicate(
+  messages: readonly ChatMessage[],
+  incoming: ChatMessage,
+  windowMs: number = MESHCORE_DM_RF_DEDUP_WINDOW_MS,
+): ChatMessage | undefined {
+  const start = Math.max(0, messages.length - MESHCORE_CROSS_TRANSPORT_SCAN_LIMIT);
+  for (let i = messages.length - 1; i >= start; i--) {
+    const existing = messages[i];
+    if (meshcoreDmRfMatch(existing, incoming, windowMs)) {
+      return existing;
+    }
+  }
+  return undefined;
+}
+
+function meshcoreRoomServerIdForDedup(msg: ChatMessage): number | undefined {
+  if (msg.roomServerId != null) return msg.roomServerId;
+  if (msg.channel === MESHCORE_ROOM_MESSAGE_CHANNEL && msg.to != null) return msg.to;
+  return undefined;
+}
+
+/**
+ * Same room and body within a clock-skew window (no sender check).
+ * Used to gather candidates before deciding whether an Unknown row may safely
+ * attach to a uniquely resolved twin.
+ */
+function meshcoreRoomPostContentMatch(
+  existing: ChatMessage,
+  incoming: ChatMessage,
+  windowMs: number = MESHCORE_ROOM_POST_DEDUP_WINDOW_MS,
+): boolean {
+  const existingRoom = meshcoreRoomServerIdForDedup(existing);
+  const incomingRoom = meshcoreRoomServerIdForDedup(incoming);
+  if (existingRoom == null || incomingRoom == null) return false;
+  if (existingRoom !== incomingRoom) return false;
+  const existingBody = existing.meshcoreDedupeKey ?? existing.payload;
+  const incomingBody = incoming.meshcoreDedupeKey ?? incoming.payload;
+  if (existingBody !== incomingBody && existing.payload !== incoming.payload) return false;
+  if (Math.abs(existing.timestamp - incoming.timestamp) > windowMs) return false;
+  return true;
+}
+
+/**
+ * Same room, author, and body within a clock-skew window (RF echo / dual ingress).
+ * Separate from chat tapback echo and cross-transport dedup; when tuning skew windows,
+ * keep `MESHCORE_ROOM_POST_DEDUP_WINDOW_MS` aligned with chat tapback/optimistic constants
+ * where behavior should match (see `timeConstants.ts`).
+ * Strict sender match only — Unknown↔named bridging is handled by
+ * {@link findMeshcoreRoomPostDuplicate} when exactly one resolved candidate exists.
+ */
+export function meshcoreRoomPostMatch(
+  existing: ChatMessage,
+  incoming: ChatMessage,
+  windowMs: number = MESHCORE_ROOM_POST_DEDUP_WINDOW_MS,
+): boolean {
+  if (!meshcoreRoomPostContentMatch(existing, incoming, windowMs)) return false;
+  return meshcoreSenderMatchesForDedup(existing, incoming);
+}
+
+/**
+ * Find a room post duplicate to merge with `incoming`.
+ * Ambiguous Unknown/`sender_id` 0 may attach to a resolved twin only when content
+ * matches and there is exactly one unique resolved sender among candidates —
+ * never pick an arbitrary latest row when multiple speakers share room/body/time.
+ */
+export function findMeshcoreRoomPostDuplicate(
+  messages: readonly ChatMessage[],
+  incoming: ChatMessage,
+  windowMs: number = MESHCORE_ROOM_POST_DEDUP_WINDOW_MS,
+): ChatMessage | undefined {
+  const start = Math.max(0, messages.length - MESHCORE_CROSS_TRANSPORT_SCAN_LIMIT);
+  const contentMatches: ChatMessage[] = [];
+  for (let i = start; i < messages.length; i++) {
+    const existing = messages[i];
+    if (existing && meshcoreRoomPostContentMatch(existing, incoming, windowMs)) {
+      contentMatches.push(existing);
+    }
+  }
+  if (contentMatches.length === 0) return undefined;
+
+  for (let i = contentMatches.length - 1; i >= 0; i--) {
+    const existing = contentMatches[i];
+    if (meshcoreSenderMatchesForDedup(existing, incoming)) return existing;
+  }
+
+  const incomingAmbiguous = isAmbiguousMeshcoreSender(incoming);
+  const resolvedById = new Map<number, ChatMessage>();
+  for (const m of contentMatches) {
+    if (isAmbiguousMeshcoreSender(m) || m.sender_id <= 0) continue;
+    if (!resolvedById.has(m.sender_id)) resolvedById.set(m.sender_id, m);
+  }
+
+  if (incomingAmbiguous) {
+    if (resolvedById.size !== 1) return undefined;
+    for (const candidate of resolvedById.values()) return candidate;
+    return undefined;
+  }
+
+  if (incoming.sender_id <= 0) return undefined;
+  for (const id of resolvedById.keys()) {
+    if (id !== incoming.sender_id) return undefined;
+  }
+  for (let i = contentMatches.length - 1; i >= 0; i--) {
+    const existing = contentMatches[i];
+    if (isAmbiguousMeshcoreSender(existing)) return existing;
+  }
+  return undefined;
+}
+
+/** Outbound tapback (local optimistic) vs RF/MQTT echo of `@[Name] emoji` — same transport allowed. */
+export function meshcoreTapbackEchoMatch(
+  existing: ChatMessage,
+  incoming: ChatMessage,
+  windowMs: number = MESHCORE_TAPBACK_ECHO_DEDUP_WINDOW_MS,
+): boolean {
+  if (!meshcoreIsTapbackShapedRow(existing) && !meshcoreIsTapbackShapedRow(incoming)) {
+    return false;
+  }
+  if (!meshcoreTapbackReplyIdsMatch(existing.replyId, incoming.replyId)) return false;
+  if (existing.channel !== incoming.channel) return false;
+  if ((existing.to ?? undefined) !== (incoming.to ?? undefined)) return false;
+  if (!meshcoreTapbackEmojisMatch(existing, incoming)) return false;
+  if (!meshcoreSenderMatchesForDedup(existing, incoming)) return false;
+  if (Math.abs(existing.timestamp - incoming.timestamp) > windowMs) return false;
+  return true;
+}
+
+export function findMeshcoreTapbackEchoDuplicate(
+  messages: readonly ChatMessage[],
+  incoming: ChatMessage,
+  windowMs: number = MESHCORE_TAPBACK_ECHO_DEDUP_WINDOW_MS,
+): ChatMessage | undefined {
+  const start = Math.max(0, messages.length - MESHCORE_CROSS_TRANSPORT_SCAN_LIMIT);
+  for (let i = messages.length - 1; i >= start; i--) {
+    const existing = messages[i];
+    if (meshcoreTapbackEchoMatch(existing, incoming, windowMs)) {
+      return existing;
+    }
+  }
+  return undefined;
+}
+
+/** Same tapback heard again on RF (multi-hop / repeater re-hear), not RF/MQTT cross-path. */
+export function meshcoreTapbackRfReplayMatch(
+  existing: ChatMessage,
+  incoming: ChatMessage,
+  windowMs: number = MESHCORE_CHANNEL_RF_DEDUP_WINDOW_MS,
+): boolean {
+  if (!meshcoreIsTapbackShapedRow(existing) || !meshcoreIsTapbackShapedRow(incoming)) {
+    return false;
+  }
+  if (!meshcoreReceivedViaIncludesRf(existing.receivedVia)) return false;
+  if (incoming.receivedVia !== 'rf') return false;
+  if (meshcoreTransportsAreCross(existing, incoming)) return false;
+  if (!meshcoreSenderMatchesForDedup(existing, incoming)) return false;
+  if (existing.channel !== incoming.channel) return false;
+  if ((existing.to ?? undefined) !== (incoming.to ?? undefined)) return false;
+  if (!meshcoreTapbackReplyIdsMatch(existing.replyId, incoming.replyId)) return false;
+  if (!meshcoreTapbackEmojisMatch(existing, incoming)) return false;
+  if (Math.abs(existing.timestamp - incoming.timestamp) > windowMs) return false;
+  return true;
+}
+
+export function findMeshcoreTapbackRfReplayDuplicate(
+  messages: readonly ChatMessage[],
+  incoming: ChatMessage,
+  windowMs: number = MESHCORE_CHANNEL_RF_DEDUP_WINDOW_MS,
+): ChatMessage | undefined {
+  const start = Math.max(0, messages.length - MESHCORE_CROSS_TRANSPORT_SCAN_LIMIT);
+  for (let i = messages.length - 1; i >= start; i--) {
+    const existing = messages[i];
+    if (meshcoreTapbackRfReplayMatch(existing, incoming, windowMs)) {
+      return existing;
+    }
+  }
+  return undefined;
+}
+
+export function findMeshcoreCrossTransportDuplicate(
+  messages: readonly ChatMessage[],
+  incoming: ChatMessage,
+  windowMs: number = MESHCORE_CROSS_TRANSPORT_DEDUP_WINDOW_MS,
+): ChatMessage | undefined {
+  const start = Math.max(0, messages.length - MESHCORE_CROSS_TRANSPORT_SCAN_LIMIT);
+  for (let i = messages.length - 1; i >= start; i--) {
+    const existing = messages[i];
+    if (meshcoreCrossTransportMatch(existing, incoming, windowMs)) {
+      return existing;
+    }
+  }
+  return undefined;
+}
+
+export function upgradeMeshcoreCrossTransportMessage(
+  messages: readonly ChatMessage[],
+  incoming: ChatMessage,
+  windowMs: number = MESHCORE_CROSS_TRANSPORT_DEDUP_WINDOW_MS,
+): { messages: ChatMessage[]; matched: boolean } {
+  let matched = false;
+  const next = messages.map((m) => {
+    if (!meshcoreCrossTransportMatch(m, incoming, windowMs)) return m;
+    matched = true;
+    return {
+      ...m,
+      receivedVia: meshcoreReceivedViaMerged(m.receivedVia, incoming.receivedVia),
+    };
+  });
+  return { messages: matched ? next : [...messages], matched };
+}
+
+/** Match DB vs live without `meshcoreDedupeKey` (DB rows only have normalized payload). */
+function meshcoreLoosePersistenceMatchKey(msg: ChatMessage): string {
+  const roomKey =
+    msg.roomServerId != null
+      ? String(msg.roomServerId)
+      : msg.channel === MESHCORE_ROOM_MESSAGE_CHANNEL && msg.to != null
+        ? String(msg.to)
+        : '';
+  return [
+    msg.sender_id,
+    msg.channel,
+    msg.timestamp,
+    msg.payload,
+    msg.to ?? '',
+    roomKey,
+    msg.emoji ?? '',
+    msg.replyId ?? '',
+  ].join('|');
+}
+
+/** RF/MQTT can deliver lines before `getMeshcoreMessages` resolves; replacing state would drop them. */
+export function mergeMeshcoreDbHydrationWithLive(
+  prev: ChatMessage[],
+  fromDb: ChatMessage[],
+  opts?: { replaceFromDb?: boolean },
+): ChatMessage[] {
+  if (opts?.replaceFromDb) {
+    const sorted = [...fromDb];
+    sorted.sort((a, b) => {
+      if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+      return (a.id ?? 0) - (b.id ?? 0);
+    });
+    return trimChatMessagesToMax(sorted, MAX_IN_MEMORY_CHAT_MESSAGES);
+  }
+  const dbLoose = new Set(fromDb.map(meshcoreLoosePersistenceMatchKey));
+  const inFlight = prev.filter((m) => {
+    if (m.id != null) return !fromDb.some((d) => d.id === m.id);
+    return !dbLoose.has(meshcoreLoosePersistenceMatchKey(m));
+  });
+  const merged = [...fromDb, ...inFlight];
+  merged.sort((a, b) => {
+    if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+    return (a.id ?? 0) - (b.id ?? 0);
+  });
+  return trimChatMessagesToMax(merged, MAX_IN_MEMORY_CHAT_MESSAGES);
+}
+
+/** Hop metadata row from shared `nodes` table. */
+export interface MeshcoreSavedNodeHopRow {
+  node_id: number;
+  hops_away: number | null;
+  hops: number | null;
+}
+
+/**
+ * Build a MeshNode map from persisted MeshCore contacts + hop counts (+ optional message stubs).
+ * Mirrors mount hydration in `useMeshcoreRuntime.reloadMeshcoreNodesFromDb`.
+ */
+export function buildMeshcoreNodeMapFromDb(
+  dbContacts: MeshcoreContactDbRow[],
+  savedNodes: MeshcoreSavedNodeHopRow[],
+  messages: ChatMessage[] = [],
+): Map<number, MeshNode> {
+  const initial = new Map<number, MeshNode>();
+  for (const row of dbContacts) {
+    const coords = isValidLatLon(row.adv_lat, row.adv_lon)
+      ? { latitude: row.adv_lat!, longitude: row.adv_lon! }
+      : { latitude: null as number | null, longitude: null as number | null };
+    const node: MeshNode = {
+      node_id: row.node_id,
+      long_name: meshcoreContactDisplayName(row.node_id, row.adv_name, row.nickname),
+      short_name: '',
+      hw_model: CONTACT_TYPE_LABELS[row.contact_type] ?? 'Unknown',
+      battery: 0,
+      snr: row.last_snr ?? 0,
+      rssi: row.last_rssi ?? 0,
+      last_heard: mergeMeshcoreLastHeardFromAdvert(row.last_advert, undefined),
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      favorited: row.favorited === 1,
+      hops_away: row.hops_away ?? undefined,
+    };
+    initial.set(row.node_id, node);
+  }
+  for (const n of savedNodes) {
+    const hopCount = n.hops ?? n.hops_away;
+    if (hopCount != null) {
+      const existing = initial.get(n.node_id);
+      if (existing && existing.hops_away === undefined) {
+        initial.set(n.node_id, { ...existing, hops_away: hopCount });
+      }
+    }
+  }
+  const mergedInitial = mergeStubNodesFromMeshcoreMessages(initial, messages);
+  for (const n of savedNodes) {
+    const hopCount = n.hops ?? n.hops_away;
+    if (hopCount == null) continue;
+    const existing = mergedInitial.get(n.node_id);
+    if (existing && existing.hops_away === undefined) {
+      mergedInitial.set(n.node_id, { ...existing, hops_away: hopCount });
+    }
+  }
+  return mergedInitial;
+}
+
+/** Row shape from `db:getMeshcoreMessages` — shared by initConn, mount load, refreshMessagesFromDb. */
+export interface MeshcoreMessageDbRow {
+  id: number;
+  sender_id: number | null;
+  sender_name: string | null;
+  payload: string;
+  channel_idx: number;
+  timestamp: number;
+  status: string;
+  packet_id: number | null;
+  emoji: number | null;
+  reply_id: number | null;
+  to_node: number | null;
+  received_via?: string | null;
+  rx_packet_fingerprint?: string | null;
+  reply_preview_text?: string | null;
+  reply_preview_sender?: string | null;
+  rx_hops?: number | null;
+  room_server_id?: number | null;
+}
+
+/**
+ * Legacy DB rows may store the full RF line `DisplayName: body` with no usable sender_name.
+ * Only then run wire-style normalize; otherwise persisted payload is already display text
+ * (re-applying normalize breaks any body containing `:` e.g. `Re: …`, `12:30 …`).
+ */
+function shouldLegacyNormalizeMeshcoreDbPayload(
+  senderName: string | null | undefined,
+  payload: string,
+): boolean {
+  if (senderName && senderName !== 'Unknown') return false;
+  const t = payload.trim();
+  const ci = t.indexOf(':');
+  if (ci <= 0 || t[ci + 1] !== ' ' || ci >= t.length - 1) return false;
+  const left = t.slice(0, ci).trim();
+  const right = t.slice(ci + 1).trim();
+  if (left.length < 6 || right.length < 1) return false;
+  if (left.includes('\n')) return false;
+  return true;
+}
+
+function coerceOptionalDbInt(v: number | string | null | undefined): number | undefined {
+  if (v == null) return undefined;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function safeEmojiCodepoint(v: number | string | null | undefined): number | undefined {
+  const n = coerceOptionalDbInt(v);
+  if (n != null && n >= 1 && n <= 0x10ffff) return n;
+  return undefined;
+}
+
+/** 32-byte pubkey from `meshcore_contacts.public_key` hex, or null if synthetic / invalid length. */
+export function meshcoreFullPubKeyBytesFromContactDbHex(raw: string): Uint8Array | null {
+  const hex = raw.replace(/\s/g, '');
+  if (meshcoreIsSyntheticPlaceholderPubKeyHex(hex)) return null;
+  if (hex.length !== 64) return null;
+  const pairs = hex.match(/.{2}/g);
+  if (pairs?.length !== 32) return null;
+  return new Uint8Array(pairs.map((b) => parseInt(b, 16)));
+}
+
+/**
+ * Resolve a 32-byte MeshCore contact pubkey for export/share/DM paths.
+ * Order: runtime map → global registry → live store slice → SQLite contact row.
+ */
+function meshcorePubKeyMatchesNodeId(pubKey: Uint8Array, nodeId: number): boolean {
+  return pubKey.length === 32 && pubkeyToNodeId(pubKey) === nodeId;
+}
+
+export async function resolveMeshcoreNodePubKey(
+  nodeId: number,
+  pubKeyByNodeId: ReadonlyMap<number, Uint8Array>,
+  storePublicKey?: Uint8Array,
+): Promise<Uint8Array | null> {
+  const fromMap = pubKeyByNodeId.get(nodeId);
+  if (fromMap && meshcorePubKeyMatchesNodeId(fromMap, nodeId)) return fromMap;
+
+  const fromRegistry = getMeshcorePubKey(nodeId);
+  if (fromRegistry && meshcorePubKeyMatchesNodeId(fromRegistry, nodeId)) return fromRegistry;
+
+  if (storePublicKey && meshcorePubKeyMatchesNodeId(storePublicKey, nodeId)) return storePublicKey;
+
+  try {
+    const contact = (await window.electronAPI.db.getMeshcoreContactById(nodeId)) as
+      Pick<MeshcoreContactDbRow, 'public_key'> | null | undefined;
+    if (contact?.public_key) {
+      const fromDb = meshcoreFullPubKeyBytesFromContactDbHex(contact.public_key);
+      if (fromDb && meshcorePubKeyMatchesNodeId(fromDb, nodeId)) return fromDb;
+    }
+  } catch (e: unknown) {
+    console.warn(
+      '[resolveMeshcoreNodePubKey] getMeshcoreContactById failed ' +
+        (e instanceof Error ? e.message : String(e)),
+    );
+  }
+  return null;
+}
+
+/**
+ * When the runtime map's 32-byte key does not hash to `nodeId`, reload from registry/DB
+ * and update the map. Throws if the key is still mismatched.
+ */
+export async function reloadMeshcorePubKeyIfNodeIdMismatch(
+  nodeId: number,
+  pubKey: Uint8Array,
+  pubKeyMap: Map<number, Uint8Array>,
+  logTag: string,
+): Promise<Uint8Array> {
+  if (meshcorePubKeyMatchesNodeId(pubKey, nodeId)) return pubKey;
+  try {
+    const resolved = await resolveMeshcoreNodePubKey(nodeId, pubKeyMap);
+    if (resolved && meshcorePubKeyMatchesNodeId(resolved, nodeId)) {
+      pubKeyMap.set(nodeId, resolved);
+      return resolved;
+    }
+  } catch (e: unknown) {
+    console.warn(`[${logTag}] pubkey reload failed ` + errLikeToLogString(e));
+  }
+  throw new Error('Room key out of sync — reconnect or refresh contacts.');
+}
+
+/** Pre-seed global pubkey registry from SQLite before PacketRouter subscribe (DM prefix decode). */
+export function registerMeshcorePubKeysFromContactDbRows(
+  rows: readonly Pick<MeshcoreContactDbRow, 'node_id' | 'public_key'>[],
+): void {
+  for (const row of rows) {
+    const bytes = meshcoreFullPubKeyBytesFromContactDbHex(row.public_key);
+    if (!bytes) continue;
+    registerMeshcorePubKey(row.node_id, bytes);
+  }
+}
+
+export interface MergeMeshcoreDbContactsRefs {
+  pubKeyByNodeId: Map<number, Uint8Array>;
+  pubKeyPrefixByHex: Map<string, number>;
+  nicknameByNodeId: Map<number, string>;
+}
+
+/** Merge persisted SQLite contacts into an in-memory node map (off-radio imports, favorited flags). */
+export async function mergeMeshcoreContactsFromDbIntoNodeMap(
+  nextNodes: Map<number, MeshNode>,
+  prevSnap: Map<number, MeshNode>,
+  refs: MergeMeshcoreDbContactsRefs,
+): Promise<void> {
+  const dbContacts = (await window.electronAPI.db.getMeshcoreContacts()) as MeshcoreContactDbRow[];
+  for (const row of dbContacts) {
+    if (refs.pubKeyByNodeId.has(row.node_id)) continue;
+    const bytes = meshcoreFullPubKeyBytesFromContactDbHex(row.public_key);
+    if (!bytes) continue;
+    refs.pubKeyByNodeId.set(row.node_id, bytes);
+    const prefix = Array.from(bytes.slice(0, 6))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    refs.pubKeyPrefixByHex.set(prefix, row.node_id);
+  }
+  for (const row of dbContacts) {
+    if (!nextNodes.has(row.node_id)) {
+      const last_heard = mergeMeshcoreLastHeardFromAdvert(
+        row.last_advert,
+        prevSnap.get(row.node_id)?.last_heard,
+      );
+      const newHwModel = CONTACT_TYPE_LABELS[row.contact_type] ?? 'Unknown';
+      const prevNode = prevSnap.get(row.node_id);
+      const prevHwModel = prevNode?.hw_model;
+      const mergedHwModel =
+        prevHwModel && prevHwModel !== 'None' && prevHwModel !== 'Unknown'
+          ? prevHwModel
+          : newHwModel;
+      nextNodes.set(row.node_id, {
+        node_id: row.node_id,
+        long_name: meshcoreContactDisplayName(row.node_id, row.adv_name, row.nickname),
+        short_name: '',
+        hw_model: mergedHwModel,
+        battery: 0,
+        snr: row.last_snr ?? 0,
+        rssi: row.last_rssi ?? 0,
+        last_heard,
+        latitude: row.adv_lat ?? null,
+        longitude: row.adv_lon ?? null,
+        favorited: row.favorited === 1,
+        hops_away: row.hops_away ?? prevSnap.get(row.node_id)?.hops_away,
+      });
+    }
+  }
+  for (const row of dbContacts as (MeshcoreContactDbRow & { hops?: number | null })[]) {
+    const existing = nextNodes.get(row.node_id);
+    if (!existing) continue;
+    if (existing.hops_away === undefined) {
+      const hopCount = row.hops_away ?? row.hops;
+      if (hopCount != null) {
+        nextNodes.set(row.node_id, { ...existing, hops_away: hopCount });
+      }
+    }
+  }
+  for (const row of dbContacts) {
+    const existing = nextNodes.get(row.node_id);
+    if (existing) {
+      const fallbackSnr =
+        typeof row.last_snr === 'number' && Number.isFinite(row.last_snr) && row.last_snr !== 0
+          ? row.last_snr
+          : null;
+      const fallbackRssi =
+        typeof row.last_rssi === 'number' && Number.isFinite(row.last_rssi) && row.last_rssi !== 0
+          ? row.last_rssi
+          : null;
+      const nextSnr =
+        typeof existing.snr === 'number' && Number.isFinite(existing.snr) && existing.snr !== 0
+          ? existing.snr
+          : (fallbackSnr ?? existing.snr);
+      const nextRssi =
+        typeof existing.rssi === 'number' && Number.isFinite(existing.rssi) && existing.rssi !== 0
+          ? existing.rssi
+          : (fallbackRssi ?? existing.rssi);
+      nextNodes.set(row.node_id, {
+        ...existing,
+        favorited: row.favorited === 1,
+        snr: nextSnr,
+        rssi: nextRssi,
+      });
+    }
+  }
+  for (const row of dbContacts) {
+    if (row.nickname) refs.nicknameByNodeId.set(row.node_id, row.nickname);
+  }
+}
+
+function isAmbiguousMeshcoreSender(msg: Pick<ChatMessage, 'sender_id' | 'sender_name'>): boolean {
+  return (
+    msg.sender_id === 0 ||
+    msg.sender_id === MESHCORE_UNKNOWN_SENDER_STUB_ID ||
+    msg.sender_name === 'Unknown'
+  );
+}
+
+/**
+ * When the same channel+payload was stored under the global Unknown stub (or sender_id 0)
+ * but a later row has a resolved display name, re-link the ambiguous rows to that sender.
+ */
+export function meshcoreReconcileChannelSenderIds(messages: ChatMessage[]): ChatMessage[] {
+  const canonicalByKey = new Map<string, { senderId: number; senderName: string }>();
+  for (const m of messages) {
+    if (m.channel < 0) continue;
+    if (isAmbiguousMeshcoreSender(m)) continue;
+    canonicalByKey.set(`${m.channel}\0${m.payload}`, {
+      senderId: m.sender_id,
+      senderName: m.sender_name,
+    });
+  }
+  return messages.map((m) => {
+    if (m.channel < 0 || !isAmbiguousMeshcoreSender(m)) return m;
+    if (m.payload.length > MESHCORE_SENDER_RECONCILE_MAX_PAYLOAD_LEN) return m;
+    const canon = canonicalByKey.get(`${m.channel}\0${m.payload}`);
+    if (!canon) return m;
+    return { ...m, sender_id: canon.senderId, sender_name: canon.senderName };
+  });
+}
+
+/**
+ * Relink room BBS Unknown/sender_id 0 rows to a named twin in the same room with the same
+ * body within {@link MESHCORE_ROOM_POST_DEDUP_WINDOW_MS} (optimistic send + unresolved RF echo).
+ * Uses {@link findMeshcoreRoomPostDuplicate} so attribution requires exactly one resolved sender.
+ */
+export function meshcoreReconcileRoomSenderIds(messages: ChatMessage[]): ChatMessage[] {
+  return messages.map((m, index) => {
+    if (!isMeshcoreRoomChatMessage(m) || !isAmbiguousMeshcoreSender(m)) return m;
+    const others: ChatMessage[] = [];
+    for (let i = 0; i < messages.length; i++) {
+      if (i === index) continue;
+      const other = messages[i];
+      if (other) others.push(other);
+    }
+    const twin = findMeshcoreRoomPostDuplicate(others, m);
+    if (!twin || isAmbiguousMeshcoreSender(twin) || twin.sender_id <= 0) return m;
+    return { ...m, sender_id: twin.sender_id, sender_name: twin.sender_name };
+  });
+}
+
+/** Map persisted MeshCore message rows to chat messages (stub sender id; trust stored payload). */
+export function mapMeshcoreDbRowsToChatMessages(rows: MeshcoreMessageDbRow[]): ChatMessage[] {
+  const mapped: ChatMessage[] = [];
+  for (const r of rows) {
+    if (isMeshcoreTransportStatusChatLine(r.payload)) continue;
+    let displayPayload = r.payload;
+    const normalized = normalizeMeshcoreIncomingText(r.payload);
+    let displayName = r.sender_name && r.sender_name !== 'Unknown' ? r.sender_name : 'Unknown';
+    if (normalized.senderName) {
+      const storedName = r.sender_name?.trim();
+      if (!storedName || storedName === 'Unknown') {
+        displayPayload = normalized.payload;
+        displayName = normalized.senderName;
+      } else if (normalized.senderName === storedName) {
+        displayPayload = normalized.payload;
+      }
+    } else if (shouldLegacyNormalizeMeshcoreDbPayload(r.sender_name, r.payload)) {
+      displayPayload = normalized.payload;
+      displayName = normalized.senderName ?? displayName;
+    }
+    let senderId = r.sender_id ?? 0;
+    if (senderId === 0 && displayName && displayName !== 'Unknown') {
+      senderId = meshcoreChatStubNodeIdFromDisplayName(displayName);
+    }
+    mapped.push({
+      id: r.id,
+      sender_id: senderId,
+      sender_name: displayName,
+      payload: displayPayload,
+      channel: r.channel_idx,
+      timestamp: effectiveMessageTimestampMs(r.timestamp),
+      status: (r.status as ChatMessage['status']) ?? 'acked',
+      packetId: r.packet_id ?? undefined,
+      emoji: safeEmojiCodepoint(r.emoji),
+      replyId: coerceOptionalDbInt(r.reply_id),
+      to: r.to_node ?? undefined,
+      receivedVia: meshcoreReceivedViaFromDb(r.received_via),
+      rxPacketFingerprintHex:
+        typeof r.rx_packet_fingerprint === 'string' &&
+        /^[0-9A-Fa-f]{8}$/.test(r.rx_packet_fingerprint)
+          ? r.rx_packet_fingerprint.toUpperCase()
+          : undefined,
+      replyPreviewText: typeof r.reply_preview_text === 'string' ? r.reply_preview_text : undefined,
+      replyPreviewSender:
+        typeof r.reply_preview_sender === 'string' ? r.reply_preview_sender : undefined,
+      rxHops: coerceOptionalDbInt(r.rx_hops),
+      roomServerId: coerceOptionalDbInt(r.room_server_id),
+    });
+  }
+  return meshcoreChatMessagesForDisplay(
+    meshcoreReconcileRoomSenderIds(meshcoreReconcileChannelSenderIds(mapped)),
+  );
+}
+
+/** Persist sender_id/name repairs after {@link mapMeshcoreDbRowsToChatMessages} reconciliation. */
+export async function persistMeshcoreMessageSenderRepairs(
+  rows: MeshcoreMessageDbRow[],
+  mapped: ChatMessage[],
+): Promise<void> {
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  for (const m of mapped) {
+    if (m.id == null) continue;
+    const row = byId.get(m.id);
+    if (!row) continue;
+    const prevId = row.sender_id ?? 0;
+    const prevName = row.sender_name ?? 'Unknown';
+    if (prevId === m.sender_id && prevName === m.sender_name) continue;
+    if (m.sender_id === 0 || m.sender_id === MESHCORE_UNKNOWN_SENDER_STUB_ID) continue;
+    try {
+      await window.electronAPI.db.updateMeshcoreMessageSender(m.id, m.sender_id, m.sender_name);
+    } catch (e: unknown) {
+      console.warn(
+        '[meshcoreHookPreamble] updateMeshcoreMessageSender failed ' +
+          (e instanceof Error ? e.message : String(e)),
+      );
+    }
+  }
+}
+
+/** Ensure minimal chat nodes exist for message senders (RF/MQTT stubs before device connect). */
+export function mergeStubNodesFromMeshcoreMessages(
+  prev: Map<number, MeshNode>,
+  mapped: ChatMessage[],
+): Map<number, MeshNode> {
+  const next = new Map(prev);
+  for (const msg of mapped) {
+    if (msg.sender_id === 0) continue;
+    if (!shouldApplyMeshcoreContact(msg.sender_id)) continue;
+    if (msg.sender_name === 'Unknown' && msg.sender_id === MESHCORE_UNKNOWN_SENDER_STUB_ID)
+      continue;
+    if (next.has(msg.sender_id)) {
+      const existing = next.get(msg.sender_id)!;
+      const merged = meshcoreMergeChannelDisplayNameOntoNode(existing, msg.sender_name);
+      if (merged !== existing) next.set(msg.sender_id, merged);
+      continue;
+    }
+    next.set(
+      msg.sender_id,
+      minimalMeshcoreChatNode(
+        msg.sender_id,
+        msg.sender_name,
+        Math.floor(msg.timestamp / 1000),
+        msg.receivedVia === 'mqtt' ? 'mqtt' : 'rf',
+      ),
+    );
+  }
+  return next;
+}
+
+/**
+ * Prune contacts that the user deleted locally but the radio still holds: re-request
+ * `conn.removeContact(pubkey)` so an offline delete propagates on the next sync.
+ * Returns the contacts minus ids whose radio removal succeeded; failed removals are kept
+ * so the radio (authority) can revive them via the `fromRadio` apply path.
+ */
+export async function retryRadioRemoveDeletedContacts(
+  conn: Pick<MeshCoreConnection, 'removeContact'>,
+  contacts: MeshCoreContactRaw[],
+): Promise<MeshCoreContactRaw[]> {
+  const kept: MeshCoreContactRaw[] = [];
+  for (const c of contacts) {
+    const id = pubkeyToNodeId(c.publicKey);
+    if (id !== 0 && isMeshcoreLocallyDeletedContact(id)) {
+      try {
+        await withTimeout(
+          conn.removeContact(c.publicKey),
+          MESHCORE_REMOVE_CONTACT_TIMEOUT_MS,
+          'removeContact',
+        );
+        console.debug(
+          `[meshcore] retry removeContact: dropped tombstoned contact 0x${id.toString(16)}`,
+        );
+        continue;
+      } catch (e) {
+        console.warn(
+          '[meshcore] retry removeContact (tombstoned contact) failed ' + errLikeToLogString(e),
+        );
+      }
+    }
+    kept.push(c);
+  }
+  return kept;
+}
