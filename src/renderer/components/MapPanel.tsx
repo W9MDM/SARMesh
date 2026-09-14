@@ -61,6 +61,11 @@ const WAYPOINT_MARKER_ICON = L.divIcon({
 
 // ─── Map styles (anomaly halos + dark popup) — see ensureLoRaMapPanelStyles in leafletMapControls ─
 
+import { getTrackerType, type TrackerIconName, type TrackerTypeId } from '@/shared/tracker-types';
+
+import { useTrackerTypes } from '../hooks/useTrackerTypes';
+import { TRACKER_ICON_SVG } from '../lib/trackerIconSvg';
+
 // ─── Marker icon helpers ──────────────────────────────────────────────────────
 
 function getCUColor(cu: number): string {
@@ -86,6 +91,7 @@ function createMarkerIcon(
   markerOpacity = 1,
   isMqttOnly = false,
   nodeBadge: NodeBadgeType = null,
+  trackerIcon: TrackerIconName | null = null,
 ): L.Icon {
   const haloPx = cu <= 0 ? 0 : Math.round((cu / 100) * 14);
   const haloColor = getCUColor(cu);
@@ -97,6 +103,25 @@ function createMarkerIcon(
     isMqttOnly
       ? `<circle cx="${c + 7}" cy="${c - 7}" r="4" fill="#3b82f6" stroke="#ffffff" stroke-width="1.5"/>`
       : '';
+  /**
+   * Tracker glyph for a radio on the APRS roster: a ground team shows a person,
+   * a K9 team a dog, and so on. The geometry is the same lucide artwork used in
+   * the roster (see trackerIconSvg.ts), scaled into the marker and stroked in
+   * white so it reads against every marker colour.
+   */
+  const trackerGlyphSvg = (c: number) => {
+    if (!trackerIcon) return '';
+    const glyph = TRACKER_ICON_SVG[trackerIcon];
+    if (!glyph) return '';
+    const size = isSelf ? 18 : 14;
+    const scale = size / 24;
+    return (
+      `<g transform="translate(${c - size / 2},${c - size / 2}) scale(${scale})" ` +
+      `fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" ` +
+      `stroke-linejoin="round">${glyph}</g>`
+    );
+  };
+
   const nodeBadgeSvg = (c: number) => {
     const path = nodeBadge ? NODE_BADGE_PATHS[nodeBadge] : null;
     if (!path) return '';
@@ -106,7 +131,7 @@ function createMarkerIcon(
   if (isSelf) {
     const total = 32 + 2 * haloPx;
     const c = total / 2;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${total}" height="${total}" opacity="${markerOpacity}">${halo(c)}<g transform="translate(${haloPx},${haloPx}) scale(${32 / 24})"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="${escapeSvgAttr(color)}" stroke="#ffffff" stroke-width="0.5"/></g>${mqttBadge(c)}${nodeBadgeSvg(c)}</svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${total}" height="${total}" opacity="${markerOpacity}">${halo(c)}<g transform="translate(${haloPx},${haloPx}) scale(${32 / 24})"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="${escapeSvgAttr(color)}" stroke="#ffffff" stroke-width="0.5"/></g>${trackerGlyphSvg(c)}${mqttBadge(c)}${nodeBadgeSvg(c)}</svg>`;
     return L.icon({
       iconUrl: `data:image/svg+xml,${encodeURIComponent(svg)}`,
       iconSize: [total, total],
@@ -117,7 +142,7 @@ function createMarkerIcon(
 
   const total = 25 + 2 * haloPx;
   const c = total / 2;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${total}" height="${total}" opacity="${markerOpacity}">${halo(c)}<circle cx="${c}" cy="${c}" r="10.4" fill="${escapeSvgAttr(color)}" stroke="#ffffff" stroke-width="1" opacity="0.9"/><circle cx="${c}" cy="${c}" r="4.2" fill="#ffffff" opacity="0.8"/>${mqttBadge(c)}${nodeBadgeSvg(c)}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${total}" height="${total}" opacity="${markerOpacity}">${halo(c)}<circle cx="${c}" cy="${c}" r="10.4" fill="${escapeSvgAttr(color)}" stroke="#ffffff" stroke-width="1" opacity="0.9"/>${trackerIcon ? trackerGlyphSvg(c) : `<circle cx="${c}" cy="${c}" r="4.2" fill="#ffffff" opacity="0.8"/>`}${mqttBadge(c)}${nodeBadgeSvg(c)}</svg>`;
   return L.icon({
     iconUrl: `data:image/svg+xml,${encodeURIComponent(svg)}`,
     iconSize: [total, total],
@@ -133,11 +158,12 @@ function getMarkerIcon(
   isMqttOnly = false,
   nodeBadge: 'repeater' | 'room' | 'sensor' | 'home' | 'clock' | null = null,
   isDarkBasemap = true,
+  trackerIcon: TrackerIconName | null = null,
 ): L.Icon {
   const colors = getMapOverlayColors(isDarkBasemap);
   const color = colors[status];
   const opacity = status === 'online' ? 1 : status === 'stale' ? 0.65 : 0.45;
-  return createMarkerIcon(color, isSelf, cu, opacity, isMqttOnly, nodeBadge);
+  return createMarkerIcon(color, isSelf, cu, opacity, isMqttOnly, nodeBadge, trackerIcon);
 }
 
 const MAX_PATH_POINTS_RENDER = 500; // Avoid huge polyline arrays in renderer memory
@@ -189,6 +215,8 @@ interface MapMarkerProps {
   onNodeClick?: (nodeId: number) => void;
   congestionHalosEnabled: boolean;
   isDarkBasemap: boolean;
+  /** Set when this radio is on the APRS roster; drives the marker glyph. */
+  trackerType?: TrackerTypeId;
 }
 
 interface HaloMarkerProps {
@@ -291,6 +319,7 @@ const MapMarker = memo(
     congestionHalosEnabled,
     protocol,
     isDarkBasemap,
+    trackerType,
   }: MapMarkerProps) {
     const { nodeStaleThresholdMs, nodeOfflineThresholdMs } = useRadioProvider(protocol);
     const status = getNodeStatus(node.last_heard, nodeStaleThresholdMs, nodeOfflineThresholdMs);
@@ -306,6 +335,9 @@ const MapMarker = memo(
     })();
 
     const cuForIcon = congestionHalosEnabled ? (node.channel_utilization ?? 0) : 0;
+    const trackerIcon: TrackerIconName | null = trackerType
+      ? getTrackerType(trackerType).icon
+      : null;
     const icon = useMemo(
       () =>
         getMarkerIcon(
@@ -315,8 +347,9 @@ const MapMarker = memo(
           node.heard_via_mqtt_only,
           nodeBadge,
           isDarkBasemap,
+          trackerIcon,
         ),
-      [status, isSelf, cuForIcon, node.heard_via_mqtt_only, nodeBadge, isDarkBasemap],
+      [status, isSelf, cuForIcon, node.heard_via_mqtt_only, nodeBadge, isDarkBasemap, trackerIcon],
     );
 
     return (
@@ -340,6 +373,7 @@ const MapMarker = memo(
       prev.protocol !== next.protocol ||
       prev.congestionHalosEnabled !== next.congestionHalosEnabled ||
       prev.isDarkBasemap !== next.isDarkBasemap ||
+      prev.trackerType !== next.trackerType ||
       prev.onNodeClick !== next.onNodeClick ||
       prev.nodeRenderSignature !== next.nodeRenderSignature ||
       prev.homeNodeRenderSignature !== next.homeNodeRenderSignature ||
@@ -578,6 +612,9 @@ export default function MapPanel({
   protocol = 'meshtastic',
 }: Props) {
   const { t } = useTranslation();
+  // Radios on the APRS roster draw their tracker icon (person, dog, UTV, ...)
+  // instead of the default dot.
+  const trackerTypes = useTrackerTypes();
   const toNodeRenderSignature = useCallback((node: MeshNode): string => {
     return [
       node.node_id,
@@ -1122,6 +1159,7 @@ export default function MapPanel({
                 onNodeClick={onNodeClick}
                 congestionHalosEnabled={congestionHalosEnabled}
                 isDarkBasemap={basemap.isDark}
+                trackerType={trackerTypes.get(node.node_id)}
               />
             ))}
           </MarkerClusterGroup>
