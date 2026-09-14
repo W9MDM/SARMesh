@@ -1,9 +1,16 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: Mesh-client
-Source: https://github.com/Colorado-Mesh/mesh-client
+Upstream-Name: SARMesh
+Source: https://github.com/w9mdm/sarmesh
+
+Comment:
+ SARMesh is a fork of Mesh-Client (https://github.com/Colorado-Mesh/mesh-client)
+ taken at v5.36.0. The copyright of the Mesh-Client Contributors below is
+ retained; the SARMesh entry covers only the changes made in this fork.
+ See FORK.md.
 
 Files: *
 Copyright: 2026 Mesh-Client Contributors
+           2026 SARMesh Contributors
 License: GPL-3.0-or-later
 
 Files: reticulum-sidecar/*
