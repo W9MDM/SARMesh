@@ -743,20 +743,24 @@ describe('App accessibility', () => {
   it('footer shows tagline and Discord, GitHub, Website links', () => {
     renderApp();
 
-    expect(screen.getByText(/For everyone, everywhere/)).toBeInTheDocument();
-    expect(screen.getByText(/Join us:/)).toBeInTheDocument();
+    expect(screen.getByText(/Search and rescue mesh operations/)).toBeInTheDocument();
 
+    expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute(
+      'href',
+      'https://nwimesh.net/',
+    );
     expect(screen.getByRole('link', { name: 'Discord' })).toHaveAttribute(
       'href',
-      'https://discord.com/invite/McChKR5NpS',
+      'https://discord.gg/4wQ5SWPBfQ',
     );
     expect(screen.getByRole('link', { name: 'GitHub' })).toHaveAttribute(
       'href',
-      'https://github.com/Colorado-Mesh/mesh-client',
+      'https://github.com/W9MDM/SARMesh',
     );
-    expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute(
+    // Upstream is credited in the footer as well as in FORK.md.
+    expect(screen.getByRole('link', { name: /Mesh-Client/ })).toHaveAttribute(
       'href',
-      'https://coloradomesh.org/',
+      'https://github.com/Colorado-Mesh/mesh-client',
     );
   });
 
