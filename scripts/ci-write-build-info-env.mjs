@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Write MESH_CLIENT_BUILD_INFO JSON to GITHUB_ENV for packaging jobs.
+ * Write SARMESH_BUILD_INFO JSON to GITHUB_ENV for packaging jobs.
  *
  * Required env:
- *   MESH_CLIENT_BUILD_CHANNEL — `test` | `release`
+ *   SARMESH_BUILD_CHANNEL — `test` | `release`
  *
  * Optional:
- *   MESH_CLIENT_BUILD_WORKFLOW — workflow display name
- *   MESH_CLIENT_BUILD_TAG — release tag (e.g. v5.26.0); default from package.json when channel=release
+ *   SARMESH_BUILD_WORKFLOW — workflow display name
+ *   SARMESH_BUILD_TAG — release tag (e.g. v5.26.0); default from package.json when channel=release
  *
  * Uses standard Actions env: GITHUB_ENV, GITHUB_RUN_ID, GITHUB_RUN_NUMBER,
  * GITHUB_SHA, GITHUB_SERVER_URL, GITHUB_REPOSITORY.
@@ -43,10 +43,10 @@ export function shortSha(sha) {
  *   tag?: string
  * }} opts
  */
-export function buildMeshClientBuildInfoPayload(opts) {
+export function buildSARMeshBuildInfoPayload(opts) {
   const channel = opts.channel;
   if (channel !== 'test' && channel !== 'release') {
-    throw new Error(`MESH_CLIENT_BUILD_CHANNEL must be test|release, got: ${String(channel)}`);
+    throw new Error(`SARMESH_BUILD_CHANNEL must be test|release, got: ${String(channel)}`);
   }
 
   /** @type {Record<string, string | number>} */
@@ -91,7 +91,7 @@ export function buildMeshClientBuildInfoPayload(opts) {
 export function formatGithubEnvAssignment(payload) {
   const json = JSON.stringify(payload);
   // Heredoc form keeps JSON special characters safe on all runners (including Windows).
-  return `MESH_CLIENT_BUILD_INFO<<MESH_BUILD_INFO_EOF\n${json}\nMESH_BUILD_INFO_EOF\n`;
+  return `SARMESH_BUILD_INFO<<MESH_BUILD_INFO_EOF\n${json}\nMESH_BUILD_INFO_EOF\n`;
 }
 
 /**
@@ -112,21 +112,21 @@ export function readReleaseTagFromPackageJson(packageJsonPath = path.join(ROOT, 
  * @param {{ writeEnvFile?: boolean, packageJsonPath?: string }} [opts]
  */
 export function writeBuildInfoEnv(env = process.env, opts = {}) {
-  const channel = env.MESH_CLIENT_BUILD_CHANNEL?.trim();
+  const channel = env.SARMESH_BUILD_CHANNEL?.trim();
   if (channel !== 'test' && channel !== 'release') {
     throw new Error(
-      `MESH_CLIENT_BUILD_CHANNEL must be test|release, got: ${String(env.MESH_CLIENT_BUILD_CHANNEL)}`,
+      `SARMESH_BUILD_CHANNEL must be test|release, got: ${String(env.SARMESH_BUILD_CHANNEL)}`,
     );
   }
 
-  let tag = env.MESH_CLIENT_BUILD_TAG?.trim();
+  let tag = env.SARMESH_BUILD_TAG?.trim();
   if (channel === 'release' && !tag) {
     tag = readReleaseTagFromPackageJson(opts.packageJsonPath);
   }
 
-  const payload = buildMeshClientBuildInfoPayload({
+  const payload = buildSARMeshBuildInfoPayload({
     channel,
-    workflow: env.MESH_CLIENT_BUILD_WORKFLOW,
+    workflow: env.SARMESH_BUILD_WORKFLOW,
     runId: env.GITHUB_RUN_ID,
     runNumber: env.GITHUB_RUN_NUMBER,
     sha: env.GITHUB_SHA,
@@ -150,7 +150,7 @@ export function writeBuildInfoEnv(env = process.env, opts = {}) {
 function main() {
   const { payload } = writeBuildInfoEnv();
   process.stdout.write(
-    `Wrote MESH_CLIENT_BUILD_INFO channel=${payload.channel}` +
+    `Wrote SARMESH_BUILD_INFO channel=${payload.channel}` +
       (payload.runId ? ` runId=${payload.runId}` : '') +
       (payload.tag ? ` tag=${payload.tag}` : '') +
       '\n',

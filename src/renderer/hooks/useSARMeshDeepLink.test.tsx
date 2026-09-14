@@ -26,14 +26,14 @@ vi.mock('@/renderer/stores/reticulumPeerStore', () => ({
 
 import { registerReticulumKnownIdentity } from '@/renderer/lib/reticulum/reticulumSidecarReads';
 
-import { MeshClientDeepLinkHost } from './useMeshClientDeepLink';
+import { SARMeshDeepLinkHost } from './useSARMeshDeepLink';
 
 const LXMA_DEST = 'a'.repeat(32);
 const LXMA_PUB = 'b'.repeat(128);
 const MC_PUB = 'c'.repeat(64);
 const MC_SECRET = 'd'.repeat(32);
 
-describe('MeshClientDeepLinkHost', () => {
+describe('SARMeshDeepLinkHost', () => {
   beforeEach(() => {
     addToast.mockReset();
     onOpenUrl.mockReset();
@@ -55,7 +55,7 @@ describe('MeshClientDeepLinkHost', () => {
 
   it('requires confirmation before upserting lxm contact deep links', async () => {
     const user = userEvent.setup();
-    render(<MeshClientDeepLinkHost />);
+    render(<SARMeshDeepLinkHost />);
     expect(openUrlHandler).toBeTruthy();
     await act(async () => {
       openUrlHandler?.('lxm://contact/0123456789abcdef0123456789abcdef?name=Alice');
@@ -82,7 +82,7 @@ describe('MeshClientDeepLinkHost', () => {
 
   it('imports lxma contact after confirm (register-known + is_contact)', async () => {
     const user = userEvent.setup();
-    render(<MeshClientDeepLinkHost />);
+    render(<SARMeshDeepLinkHost />);
     await act(async () => {
       openUrlHandler?.(`lxma://${LXMA_DEST}:${LXMA_PUB}`);
       await Promise.resolve();
@@ -107,7 +107,7 @@ describe('MeshClientDeepLinkHost', () => {
       ok: false,
       error: 'sidecar_not_running',
     });
-    render(<MeshClientDeepLinkHost />);
+    render(<SARMeshDeepLinkHost />);
     await act(async () => {
       openUrlHandler?.(`lxma://${LXMA_DEST}:${LXMA_PUB}`);
       await Promise.resolve();
@@ -121,7 +121,7 @@ describe('MeshClientDeepLinkHost', () => {
 
   it('imports meshcore contact after confirm', async () => {
     const user = userEvent.setup();
-    render(<MeshClientDeepLinkHost />);
+    render(<SARMeshDeepLinkHost />);
     const uri = `meshcore://contact/add?name=Bob&public_key=${MC_PUB}&type=1`;
     await act(async () => {
       openUrlHandler?.(uri);
@@ -149,7 +149,7 @@ describe('MeshClientDeepLinkHost', () => {
     const spy = vi.fn();
     window.addEventListener('mesh-client:meshcoreChannelFromQr', spy as EventListener);
     try {
-      render(<MeshClientDeepLinkHost />);
+      render(<SARMeshDeepLinkHost />);
       const uri = `meshcore://channel/add?name=Public&secret=${MC_SECRET}`;
       await act(async () => {
         openUrlHandler?.(uri);
@@ -173,7 +173,7 @@ describe('MeshClientDeepLinkHost', () => {
 
   it('cancel does not import', async () => {
     const user = userEvent.setup();
-    render(<MeshClientDeepLinkHost />);
+    render(<SARMeshDeepLinkHost />);
     await act(async () => {
       openUrlHandler?.(`lxma://${LXMA_DEST}:${LXMA_PUB}`);
       await Promise.resolve();
@@ -191,7 +191,7 @@ describe('MeshClientDeepLinkHost', () => {
       ...window.electronAPI.reticulum,
       proxyPost,
     };
-    render(<MeshClientDeepLinkHost />);
+    render(<SARMeshDeepLinkHost />);
     await act(async () => {
       openUrlHandler?.(paperUri);
       await Promise.resolve();
@@ -209,7 +209,7 @@ describe('MeshClientDeepLinkHost', () => {
       ...window.electronAPI.reticulum,
       proxyPost,
     };
-    render(<MeshClientDeepLinkHost />);
+    render(<SARMeshDeepLinkHost />);
     await act(async () => {
       openUrlHandler?.(paperUri);
       await Promise.resolve();
@@ -220,7 +220,7 @@ describe('MeshClientDeepLinkHost', () => {
   });
 
   it('treats non-paper short lxm:// blobs as unknown', async () => {
-    render(<MeshClientDeepLinkHost />);
+    render(<SARMeshDeepLinkHost />);
     await act(async () => {
       openUrlHandler?.('lxm://paper/not-a-supported-form');
       await Promise.resolve();
@@ -231,7 +231,7 @@ describe('MeshClientDeepLinkHost', () => {
   it('dispatches meshtastic channel URLs for RadioPanel', async () => {
     const spy = vi.fn();
     window.addEventListener('mesh-client:meshtasticChannelUrl', spy as EventListener);
-    render(<MeshClientDeepLinkHost />);
+    render(<SARMeshDeepLinkHost />);
     await act(async () => {
       openUrlHandler?.('https://meshtastic.org/e/#abc');
       await Promise.resolve();
@@ -245,7 +245,7 @@ describe('MeshClientDeepLinkHost', () => {
     const sessionId = 'a'.repeat(16);
     const spy = vi.fn();
     window.addEventListener('mesh-client:openGamesSession', spy as EventListener);
-    render(<MeshClientDeepLinkHost />);
+    render(<SARMeshDeepLinkHost />);
     await act(async () => {
       openUrlHandler?.(`lrgp:${sessionId}`);
       await Promise.resolve();

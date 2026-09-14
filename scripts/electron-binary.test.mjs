@@ -10,7 +10,7 @@ import {
 
 describe('electron-binary helpers', () => {
   it('resolveLocalElectronBin returns platform-specific default when missing', () => {
-    const root = '/tmp/mesh-client-test';
+    const root = '/tmp/sarmesh-test';
     expect(resolveLocalElectronBin('darwin', () => false, root)).toContain(
       'Electron.app/Contents/MacOS/Electron',
     );

@@ -8,24 +8,24 @@ import {
 
 const WIN_YML = `version: 5.36.0
 files:
-  - url: Mesh-client-Setup-5.36.0.exe
-  - url: Mesh-client-Setup-5.36.0-arm64.exe
-path: Mesh-client-Setup-5.36.0.exe
+  - url: SARMesh-Setup-5.36.0.exe
+  - url: SARMesh-Setup-5.36.0-arm64.exe
+path: SARMesh-Setup-5.36.0.exe
 `;
 
 const MAC_YML = `files:
-  - url: Mesh-client-5.36.0-mac.zip
-path: Mesh-client-5.36.0-mac.zip
+  - url: SARMesh-5.36.0-mac.zip
+path: SARMesh-5.36.0-mac.zip
 `;
 
 const LINUX_YML = `files:
-  - url: Mesh-client-5.36.0.AppImage
-path: Mesh-client-5.36.0.AppImage
+  - url: SARMesh-5.36.0.AppImage
+path: SARMesh-5.36.0.AppImage
 `;
 
 const LINUX_ARM_YML = `files:
-  - url: Mesh-client-5.36.0-arm64.AppImage
-path: Mesh-client-5.36.0-arm64.AppImage
+  - url: SARMesh-5.36.0-arm64.AppImage
+path: SARMesh-5.36.0-arm64.AppImage
 `;
 
 describe('collectReleaseAssetNames', () => {
@@ -41,12 +41,12 @@ describe('assertYmlUrlsAreReleaseAssets', () => {
     expect(
       assertYmlUrlsAreReleaseAssets('latest.yml', WIN_YML, [
         'latest.yml',
-        'Mesh-client-Setup-5.36.0.exe',
-        'Mesh-client-Setup-5.36.0-arm64.exe',
+        'SARMesh-Setup-5.36.0.exe',
+        'SARMesh-Setup-5.36.0-arm64.exe',
       ]),
     ).toEqual({
       yml: 'latest.yml',
-      urls: ['Mesh-client-Setup-5.36.0.exe', 'Mesh-client-Setup-5.36.0-arm64.exe'],
+      urls: ['SARMesh-Setup-5.36.0.exe', 'SARMesh-Setup-5.36.0-arm64.exe'],
     });
   });
 
@@ -54,8 +54,8 @@ describe('assertYmlUrlsAreReleaseAssets', () => {
     expect(() =>
       assertYmlUrlsAreReleaseAssets('latest.yml', WIN_YML, [
         'latest.yml',
-        'Mesh-client.Setup.5.36.0.exe',
-        'Mesh-client.Setup.5.36.0-arm64.exe',
+        'SARMesh.Setup.5.36.0.exe',
+        'SARMesh.Setup.5.36.0-arm64.exe',
       ]),
     ).toThrow(/urls not present as release assets/);
   });
@@ -75,11 +75,11 @@ describe('assertAllChannelYmlUrlsAreReleaseAssets', () => {
         'latest-mac.yml',
         'latest-linux.yml',
         'latest-linux-arm64.yml',
-        'Mesh-client-Setup-5.36.0.exe',
-        'Mesh-client-Setup-5.36.0-arm64.exe',
-        'Mesh-client-5.36.0-mac.zip',
-        'Mesh-client-5.36.0.AppImage',
-        'Mesh-client-5.36.0-arm64.AppImage',
+        'SARMesh-Setup-5.36.0.exe',
+        'SARMesh-Setup-5.36.0-arm64.exe',
+        'SARMesh-5.36.0-mac.zip',
+        'SARMesh-5.36.0.AppImage',
+        'SARMesh-5.36.0-arm64.AppImage',
       ],
     );
     expect(result.checked).toEqual([

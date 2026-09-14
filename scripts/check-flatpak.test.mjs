@@ -14,9 +14,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 describe('manifestCiBuildInfoExportViolations', () => {
   it('accepts the real Flatpak manifest', () => {
-    const doc = yaml.load(
-      fs.readFileSync(path.join(ROOT, 'org.coloradomesh.MeshClient.yml'), 'utf8'),
-    );
+    const doc = yaml.load(fs.readFileSync(path.join(ROOT, 'io.github.w9mdm.SARMesh.yml'), 'utf8'));
     expect(manifestCiBuildInfoExportViolations(doc, 'manifest')).toEqual([]);
   });
 
@@ -24,10 +22,10 @@ describe('manifestCiBuildInfoExportViolations', () => {
     const doc = {
       modules: [
         {
-          name: 'mesh-client',
+          name: 'sarmesh',
           'build-commands': [
-            // Unrelated decoy that a raw-text search for MESH_CLIENT_BUILD_INFO might hit
-            'echo "see docs: MESH_CLIENT_BUILD_INFO / flatpak/ci-build-info.json"',
+            // Unrelated decoy that a raw-text search for SARMESH_BUILD_INFO might hit
+            'echo "see docs: SARMESH_BUILD_INFO / flatpak/ci-build-info.json"',
             'pnpm run build',
           ],
         },
@@ -35,14 +33,14 @@ describe('manifestCiBuildInfoExportViolations', () => {
     };
     const violations = manifestCiBuildInfoExportViolations(doc, 'fake.yml');
     expect(violations.length).toBeGreaterThan(0);
-    expect(violations[0].message).toMatch(/MESH_CLIENT_BUILD_INFO/);
+    expect(violations[0].message).toMatch(/SARMESH_BUILD_INFO/);
   });
 
-  it('rejects missing mesh-client module', () => {
+  it('rejects missing sarmesh module', () => {
     expect(manifestCiBuildInfoExportViolations({ modules: [] }, 'fake.yml')).toEqual([
       {
         file: 'fake.yml',
-        message: 'manifest must include a mesh-client module',
+        message: 'manifest must include a sarmesh module',
       },
     ]);
   });
@@ -89,7 +87,7 @@ describe('flatpakWorkflowTestBuildContractViolations', () => {
 
 describe('Electron archive sources', () => {
   it('keep strip-components: 0 in the real manifest', () => {
-    const manifest = fs.readFileSync(path.join(ROOT, 'org.coloradomesh.MeshClient.yml'), 'utf8');
+    const manifest = fs.readFileSync(path.join(ROOT, 'io.github.w9mdm.SARMesh.yml'), 'utf8');
     const blocks = manifest
       .split(/^\s*- type: archive\s*$/m)
       .filter((block) => /electron-v[\d.]+-linux-(?:x64|arm64)\.zip/.test(block));

@@ -2,7 +2,7 @@
  * Shared Flatpak manifest contract for offline pnpm 11 install.
  *
  * Failure point: loose YAML regex can match commented or quoted keys outside the
- * mesh-client module env map. Fallback: parse only that scoped env block.
+ * sarmesh module env map. Fallback: parse only that scoped env block.
  *
  * Failure point: flatpak-builder deserializes `env` as GStrv (string values only).
  * Unquoted YAML `true`/`false` become JSON booleans → entire env map is dropped
@@ -14,8 +14,8 @@
  * @param {string} yaml
  * @returns {Record<string, boolean | string> | null}
  */
-export function parseMeshClientModuleBuildEnv(yaml) {
-  const moduleMatch = yaml.match(/^ {2}- name: mesh-client\s*$/m);
+export function parseSARMeshModuleBuildEnv(yaml) {
+  const moduleMatch = yaml.match(/^ {2}- name: sarmesh\s*$/m);
   if (!moduleMatch || moduleMatch.index == null) return null;
 
   const fromModule = yaml.slice(moduleMatch.index);
@@ -65,18 +65,15 @@ export function parseMeshClientModuleBuildEnv(yaml) {
  * @param {string} [fileRel]
  * @returns {{ file: string, message: string }[]}
  */
-export function offlinePnpmEnvContractViolations(
-  yaml,
-  fileRel = 'org.coloradomesh.MeshClient.yml',
-) {
-  const env = parseMeshClientModuleBuildEnv(yaml);
+export function offlinePnpmEnvContractViolations(yaml, fileRel = 'io.github.w9mdm.SARMesh.yml') {
+  const env = parseSARMeshModuleBuildEnv(yaml);
   /** @type {{ file: string, message: string }[]} */
   const violations = [];
 
   if (!env) {
     violations.push({
       file: fileRel,
-      message: 'manifest mesh-client module build-options.env is missing',
+      message: 'manifest sarmesh module build-options.env is missing',
     });
     return violations;
   }
@@ -86,7 +83,7 @@ export function offlinePnpmEnvContractViolations(
     violations.push({
       file: fileRel,
       message:
-        "manifest mesh-client build-options.env must set PNPM_CONFIG_TRUST_LOCKFILE: 'true' " +
+        "manifest sarmesh build-options.env must set PNPM_CONFIG_TRUST_LOCKFILE: 'true' " +
         '(quoted string for flatpak-builder GStrv; unquoted true drops the whole env map)',
     });
   }
@@ -95,7 +92,7 @@ export function offlinePnpmEnvContractViolations(
     violations.push({
       file: fileRel,
       message:
-        "manifest mesh-client build-options.env must set PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: 'false' " +
+        "manifest sarmesh build-options.env must set PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: 'false' " +
         '(quoted string for flatpak-builder GStrv; unquoted false drops the whole env map)',
     });
   }

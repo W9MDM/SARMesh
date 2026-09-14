@@ -622,7 +622,7 @@ describe('NobleBleManager long-session maintenance (regression)', () => {
    * used to call the throwing getSession() unconditionally, so once the hourly main-process
    * health-log timer's 24h uptime gate opened, the very first tick threw an uncaught
    * "Unknown noble session: meshtastic" in the main process — surfaced to the user as the
-   * "Mesh-Client — Unexpected Error" dialog on Linux after ~1 day of uptime.
+   * "SARMesh — Unexpected Error" dialog on Linux after ~1 day of uptime.
    */
   it('reports a benign not-initialized snapshot on Linux instead of throwing from getSession()', () => {
     expect(SOURCE).toMatch(

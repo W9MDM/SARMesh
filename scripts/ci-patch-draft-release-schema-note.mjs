@@ -26,7 +26,7 @@ import {
   resolveTargetCommitish,
 } from './github-release-api.mjs';
 
-const SCHEMA_MARKER = '<!-- mesh-client-schema-compare -->';
+const SCHEMA_MARKER = '<!-- sarmesh-schema-compare -->';
 
 /**
  * @param {string} existingBody
@@ -60,13 +60,13 @@ export function requireDraftReleaseForSchemaPatch(releases, tag) {
  * @param {NodeJS.ProcessEnv} [env]
  */
 export function schemaMarkdownFromCompareOutputs(env = process.env) {
-  const currSchema = trustedSchemaVersion(env.MESH_CLIENT_SCHEMA_CURR);
-  const prevRaw = env.MESH_CLIENT_SCHEMA_PREV;
+  const currSchema = trustedSchemaVersion(env.SARMESH_SCHEMA_CURR);
+  const prevRaw = env.SARMESH_SCHEMA_PREV;
   const prevSchema =
     typeof prevRaw === 'string' && prevRaw !== '' && /^\d+$/.test(prevRaw)
       ? trustedSchemaVersion(prevRaw)
       : null;
-  const prevTagRaw = env.MESH_CLIENT_SCHEMA_PREV_TAG;
+  const prevTagRaw = env.SARMESH_SCHEMA_PREV_TAG;
   const prevTag =
     typeof prevTagRaw === 'string' && prevTagRaw !== '' ? trustedReleaseTag(prevTagRaw) : null;
   return formatSchemaCompareMarkdown({
@@ -145,7 +145,7 @@ async function main() {
   const argv = process.argv.slice(2);
   if (argv.includes('--markdown-file')) {
     throw new Error(
-      'Usage: ci-patch-draft-release-schema-note.mjs (pass MESH_CLIENT_SCHEMA_* env from schema-release-compare; --markdown-file removed for CodeQL)',
+      'Usage: ci-patch-draft-release-schema-note.mjs (pass SARMESH_SCHEMA_* env from schema-release-compare; --markdown-file removed for CodeQL)',
     );
   }
 

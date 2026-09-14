@@ -21,7 +21,7 @@ describe('reticulum LinkDeliveryManager has_pending_to contracts', () => {
     expect(source).toMatch(/\.has_pending_to\s*\(/);
   });
 
-  it('mesh-client ships has_pending_to overlay wiring', () => {
+  it('sarmesh ships has_pending_to overlay wiring', () => {
     expect(existsSync(HAS_PENDING_PATCH)).toBe(true);
     expect(existsSync(APPLY_SCRIPT)).toBe(true);
     const patch = readFileSync(HAS_PENDING_PATCH, 'utf8');

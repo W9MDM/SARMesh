@@ -7,7 +7,7 @@ import {
   stagedSidecarPath,
 } from './reticulum-sidecar-staging.mjs';
 
-const projectRoot = '/repo/mesh-client';
+const projectRoot = '/repo/sarmesh';
 
 describe('reticulum-sidecar-staging', () => {
   it('maps electron-builder Arch enum to staging keys', () => {

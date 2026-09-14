@@ -260,7 +260,7 @@ export default function TelemetryPanel({
     const csv = [headers.map(escapeCsvCell).join(','), ...rows.map((r) => r.join(','))].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    downloadBlob(blob, `mesh-client-telemetry-${new Date().toISOString().slice(0, 10)}.csv`);
+    downloadBlob(blob, `sarmesh-telemetry-${new Date().toISOString().slice(0, 10)}.csv`);
   }, [telemetry, signalTelemetry, environmentTelemetry]);
 
   return (

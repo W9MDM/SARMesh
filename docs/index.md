@@ -1,4 +1,4 @@
-# Mesh-Client
+# SARMesh
 
 Cross-platform **Electron** desktop client for **Meshtastic**, **MeshCore**, and **Reticulum (LXMF)** on **macOS**, **Linux**, and **Windows** with **BLE**, **USB serial**, **Wi-Fi/TCP**, **MQTT**, local **SQLite** history, **routing diagnostics**, and **16-language UI**.
 
@@ -8,7 +8,7 @@ This page is the docs landing view. The full repository README (badges, feature 
 
 ## Why
 
-Mesh-Client provides one desktop workflow for **Meshtastic**, **MeshCore**, and **Reticulum** (LXMF via AGPL sidecar) with persistent local storage and protocol-specific diagnostic tooling.
+SARMesh provides one desktop workflow for **Meshtastic**, **MeshCore**, and **Reticulum** (LXMF via AGPL sidecar) with persistent local storage and protocol-specific diagnostic tooling.
 
 Key outcomes:
 
@@ -18,7 +18,7 @@ Key outcomes:
 - Multi-language support (16 languages) with offline static bundles.
 - Cross-platform desktop support for macOS, Linux, and Windows.
 
-**Protocol scope:** Mesh-Client focuses on RF mesh (LoRa and related). Additional protocols are in scope when they support that RF mesh path. Internet-only stacks are out of scope; ham protocols are fine when they meet the RF-mesh bar. Mesh-Client is for everyone, everywhere—not gated or targeted specifically at licensed amateurs. Protocols that already ship may still use internet transports _alongside_ RF. See [README — Why](https://github.com/Colorado-Mesh/mesh-client/blob/main/README.md#why).
+**Protocol scope:** SARMesh focuses on RF mesh (LoRa and related). Additional protocols are in scope when they support that RF mesh path. Internet-only stacks are out of scope; ham protocols are fine when they meet the RF-mesh bar. SARMesh is for everyone, everywhere—not gated or targeted specifically at licensed amateurs. Protocols that already ship may still use internet transports _alongside_ RF. See [README — Why](https://github.com/Colorado-Mesh/mesh-client/blob/main/README.md#why).
 
 ---
 
@@ -49,7 +49,7 @@ Pre-built binaries are available in [GitHub Releases](https://github.com/Colorad
 
 **macOS:** prefer the **`.dmg`**. If you use the **`.zip`**, extract with **[Keka](https://www.keka.io/en/)** or `ditto -xk` — not **7-Zip** (can break framework symlinks and crash at launch). See [Troubleshooting — Squirrel.framework](troubleshooting.md#macos-library-not-loaded-squirrelframework-after-zip-extract).
 
-Arch Linux users may also find a **third-party** AUR package ([`mesh-client`](https://aur.archlinux.org/packages/mesh-client)) — not maintained by Colorado Mesh; prefer GitHub Releases for official builds.
+Arch Linux users may also find a **third-party** AUR package ([`sarmesh`](https://aur.archlinux.org/packages/sarmesh)) — not maintained by Colorado Mesh; prefer GitHub Releases for official builds.
 
 For development setup, scripts, test harness, and git hooks, see [Development Guide](development-environment.md).
 
@@ -58,7 +58,7 @@ Also useful:
 - [Troubleshooting](troubleshooting.md)
 - [Contributing](contributing.md)
 
-**Reticulum tab:** packaged builds include the `mesh-client-reticulum` sidecar. Dev builds need Rust and `pnpm run reticulum:sidecar:build` — see [Reticulum in mesh-client](reticulum.md) and [Reticulum sidecar (optional)](development-environment.md#reticulum-sidecar-optional).
+**Reticulum tab:** packaged builds include the `mesh-client-reticulum` sidecar. Dev builds need Rust and `pnpm run reticulum:sidecar:build` — see [Reticulum in sarmesh](reticulum.md) and [Reticulum sidecar (optional)](development-environment.md#reticulum-sidecar-optional).
 
 ---
 
@@ -75,7 +75,7 @@ Also useful:
   - [MQTT Auth](letsmesh-mqtt-auth.md)
   - Room login/posts — [Troubleshooting](troubleshooting.md#meshcore-room-server-login-posts-and-windows-10)
 - **Reticulum**
-  - [Reticulum in mesh-client](reticulum.md) (sidecar, interfaces, LXMF chat, **RRC**, **Remote** rnsh/rncp, **Nomad My Pages**, propagation)
+  - [Reticulum in sarmesh](reticulum.md) (sidecar, interfaces, LXMF chat, **RRC**, **Remote** rnsh/rncp, **Nomad My Pages**, propagation)
   - [Sidecar IPC contract](reticulum-sidecar-ipc.md)
   - [Reticulum troubleshooting](troubleshooting.md#reticulum) (sidecar, interfaces, Nomad, Remote transfer, RNode Wi‑Fi)
   - Noble BLE coexistence when a Reticulum BLE RNode is connected — [Troubleshooting](troubleshooting.md#reticulum-ble-rnode-blocks-meshtasticmeshcore-noble-ble)

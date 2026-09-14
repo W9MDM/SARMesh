@@ -121,7 +121,7 @@ export function tryPersistMeshcorePublicKeyFromRadio(
     const pubkeyChanged = existingPub !== null && existingPub !== pubHex;
 
     if (existingPub === pubHex && existing?.public_key) {
-      window.dispatchEvent(new Event('meshclient:meshcoreIdentityUpdated'));
+      window.dispatchEvent(new Event('sarmesh:meshcoreIdentityUpdated'));
       return true;
     }
 
@@ -133,7 +133,7 @@ export function tryPersistMeshcorePublicKeyFromRadio(
       MESHCORE_IDENTITY_STORAGE_KEY,
       JSON.stringify({ public_key: Array.from(publicKey) }),
     );
-    window.dispatchEvent(new Event('meshclient:meshcoreIdentityUpdated'));
+    window.dispatchEvent(new Event('sarmesh:meshcoreIdentityUpdated'));
     return true;
   } catch (err) {
     console.warn(
@@ -194,7 +194,7 @@ export async function tryPersistMeshcoreIdentityFromRadioExport(
         JSON.stringify({ public_key: Array.from(publicKey), private_key: privArray }),
       );
     }
-    window.dispatchEvent(new Event('meshclient:meshcoreIdentityUpdated'));
+    window.dispatchEvent(new Event('sarmesh:meshcoreIdentityUpdated'));
     return true;
   } catch (err) {
     // Still return false (no partial identity write); log for safeStorage / quota / private mode.

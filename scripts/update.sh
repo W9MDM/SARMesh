@@ -190,7 +190,7 @@ github_pr_state() {
     json="$(
       curl -fsSL \
         -H 'Accept: application/vnd.github+json' \
-        -H 'User-Agent: mesh-client-update' \
+        -H 'User-Agent: sarmesh-update' \
         "https://api.github.com/repos/${repo}/pulls/${pr}" 2> /dev/null || true
     )"
   else
@@ -399,7 +399,7 @@ github_api_get() {
     resp="$(
       curl -sSL \
         -H 'Accept: application/vnd.github+json' \
-        -H 'User-Agent: mesh-client-update' \
+        -H 'User-Agent: sarmesh-update' \
         -w $'\n%{http_code}' \
         "https://api.github.com/${api_path}" 2> /dev/null || true
     )"
@@ -564,7 +564,7 @@ process.exit(a === b || a.startsWith(b) || b.startsWith(a) ? 0 : 1);
 # reviewed-ref: last published GitHub Release tag we reviewed, or
 #   file:<path>@<sha> for repos without releases (vendored file commit).
 #   Empty = no published release expected yet; tags/main/RCs are ignored.
-# stub-kind: games → warn while mesh-client still has sidecar stubs only.
+# stub-kind: games → warn while sarmesh still has sidecar stubs only.
 # stub-kind: games-parity → warn only when a published release is newer than reviewed-ref.
 # (voice/games stubs cleared after lxst-telephony / lrgp-rs integration; empty stub = informational.)
 RATSPEAK_RELEASE_WATCH_ENTRIES=(
@@ -668,7 +668,7 @@ check_ratspeak_upstream() {
     echo "  ${label}: ${tag} (${published}) — ${first}"
     warn_box "${label}" "${reviewed:-none}" "${tag}" "${url}"
     if [ "${stub}" = 'voice' ] || [ "${stub}" = 'games' ]; then
-      echo "  Reason tracked: mesh-client still stubs this feature; review integrating ${repo} @ ${tag}"
+      echo "  Reason tracked: sarmesh still stubs this feature; review integrating ${repo} @ ${tag}"
     elif [ "${stub}" = 'games-parity' ]; then
       echo "  Reason tracked: compare Ratspeak Games tab with mesh-client:"
       echo "    crates/ratspeak-tauri/src/commands/games.rs"
@@ -726,7 +726,7 @@ process.stdin.on("end", () => {
       while IFS=$'\t' read -r name created url; do
         [ -n "${name}" ] || continue
         warn_box "ratspeak/${name} (new org repo)" "unknown" "created ${created}" "${url}"
-        echo "  Reason tracked: created within ~90 days and not in RATSPEAK_KNOWN_ORG_REPOS — review for mesh-client use"
+        echo "  Reason tracked: created within ~90 days and not in RATSPEAK_KNOWN_ORG_REPOS — review for sarmesh use"
         has_upstream_warning=1
         HAS_WARNING=1
       done <<< "${new_repos}"

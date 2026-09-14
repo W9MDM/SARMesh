@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Post-dist:win guard — fail CI if Windows packaging omits Mesh-client.exe or ships a
+ * Post-dist:win guard — fail CI if Windows packaging omits SARMesh.exe or ships a
  * universal NSIS installer instead of per-arch Setup exes.
  *
  * Failure point: electron-builder universal NSIS on Windows 11 ARM can extract support
@@ -19,7 +19,7 @@ const projectRoot = path.resolve(__dirname, '..');
 const releaseDir = path.join(projectRoot, 'release');
 
 const MIN_EXE_BYTES = 50 * 1024 * 1024;
-const APP_EXE = 'Mesh-client.exe';
+const APP_EXE = 'SARMesh.exe';
 
 /** @param {string} label @param {string} filePath */
 function assertExe(label, filePath) {

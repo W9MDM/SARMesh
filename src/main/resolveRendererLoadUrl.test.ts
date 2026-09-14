@@ -24,13 +24,13 @@ describe('resolveRendererLoadUrl', () => {
   });
 
   it.each([
-    ['linux', 'file:///home/runner/mesh-client/dist/renderer/index.html'],
-    ['darwin', 'file:///Users/runner/mesh-client/dist/renderer/index.html'],
-    ['win32', 'file:///D:/a/mesh-client/dist/renderer/index.html'],
-    ['linux', 'FILE:///home/runner/mesh-client/dist/renderer/index.html'],
-    ['darwin', 'FILE:///Users/runner/mesh-client/dist/renderer/index.html'],
-    ['win32', 'FILE:///D:/a/mesh-client/dist/renderer/index.html'],
-    ['linux', 'FiLe:///home/runner/mesh-client/dist/renderer/index.html'],
+    ['linux', 'file:///home/runner/sarmesh/dist/renderer/index.html'],
+    ['darwin', 'file:///Users/runner/sarmesh/dist/renderer/index.html'],
+    ['win32', 'file:///D:/a/sarmesh/dist/renderer/index.html'],
+    ['linux', 'FILE:///home/runner/sarmesh/dist/renderer/index.html'],
+    ['darwin', 'FILE:///Users/runner/sarmesh/dist/renderer/index.html'],
+    ['win32', 'FILE:///D:/a/sarmesh/dist/renderer/index.html'],
+    ['linux', 'FiLe:///home/runner/sarmesh/dist/renderer/index.html'],
   ])('loads an explicit production file without DevTools on %s', async (_platform, url) => {
     const probe = vi.fn().mockResolvedValue(true);
     const resolved = await resolveRendererLoadUrl({

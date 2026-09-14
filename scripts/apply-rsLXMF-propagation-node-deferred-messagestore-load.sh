@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsLXMF deferred messagestore load for rns-stack builds.
+# Apply sarmesh rsLXMF deferred messagestore load for rns-stack builds.
 # Adds PropagationNode::with_storage_unloaded + load_messagestore_from_disk so
 # live attach / RRC can become ready before scanning a large PN store.
 set -euo pipefail

@@ -106,10 +106,10 @@ describe('release.sh full-suite gate', () => {
     expect(helperBody).not.toMatch(/git rebase --abort 2>\s*\/dev\/null/);
   });
 
-  it('supports --yes / MESH_CLIENT_RELEASE_YES to skip confirmation prompts', () => {
+  it('supports --yes / SARMESH_RELEASE_YES to skip confirmation prompts', () => {
     expect(script).toMatch(/confirm_or_yes/);
     expect(script).toMatch(/--yes \| -y\)/);
-    expect(script).toMatch(/MESH_CLIENT_RELEASE_YES/);
+    expect(script).toMatch(/SARMESH_RELEASE_YES/);
     expect(script).toMatch(/RELEASE_YES=true/);
     // All interactive confirms go through confirm_or_yes (no bare read -r for y/N).
     expect(script).not.toMatch(/Continue with pre-flight validation\?\$\{NC\} \[y\/N\]/);
@@ -163,8 +163,8 @@ describe('release.sh argv subprocess', () => {
       encoding: 'utf8',
       env: {
         ...process.env,
-        MESH_CLIENT_RELEASE_PARSE_ONLY: '1',
-        MESH_CLIENT_ALLOW_PARSE_ONLY_IN_CI: '1',
+        SARMESH_RELEASE_PARSE_ONLY: '1',
+        SARMESH_ALLOW_PARSE_ONLY_IN_CI: '1',
       },
     });
     expect(r.error).toBeUndefined();
@@ -178,8 +178,8 @@ describe('release.sh argv subprocess', () => {
       encoding: 'utf8',
       env: {
         ...process.env,
-        MESH_CLIENT_RELEASE_PARSE_ONLY: '1',
-        MESH_CLIENT_ALLOW_PARSE_ONLY_IN_CI: '1',
+        SARMESH_RELEASE_PARSE_ONLY: '1',
+        SARMESH_ALLOW_PARSE_ONLY_IN_CI: '1',
       },
     });
     expect(r.error).toBeUndefined();
@@ -195,9 +195,9 @@ describe('release.sh argv subprocess', () => {
       encoding: 'utf8',
       env: {
         ...process.env,
-        MESH_CLIENT_RELEASE_PARSE_ONLY: '1',
-        MESH_CLIENT_ALLOW_PARSE_ONLY_IN_CI: '1',
-        MESH_CLIENT_RELEASE_YES: '1',
+        SARMESH_RELEASE_PARSE_ONLY: '1',
+        SARMESH_ALLOW_PARSE_ONLY_IN_CI: '1',
+        SARMESH_RELEASE_YES: '1',
       },
     });
     expect(r.error).toBeUndefined();
@@ -213,9 +213,9 @@ describe('release.sh argv subprocess', () => {
       encoding: 'utf8',
       env: {
         ...process.env,
-        MESH_CLIENT_RELEASE_PARSE_ONLY: '1',
-        MESH_CLIENT_ALLOW_PARSE_ONLY_IN_CI: '1',
-        MESH_CLIENT_RELEASE_YES: '1',
+        SARMESH_RELEASE_PARSE_ONLY: '1',
+        SARMESH_ALLOW_PARSE_ONLY_IN_CI: '1',
+        SARMESH_RELEASE_YES: '1',
       },
     });
     expect(r.error).toBeUndefined();
@@ -229,9 +229,9 @@ describe('release.sh argv subprocess', () => {
       encoding: 'utf8',
       env: {
         ...process.env,
-        MESH_CLIENT_RELEASE_PARSE_ONLY: '1',
+        SARMESH_RELEASE_PARSE_ONLY: '1',
         GITHUB_ACTIONS: 'true',
-        MESH_CLIENT_ALLOW_PARSE_ONLY_IN_CI: '',
+        SARMESH_ALLOW_PARSE_ONLY_IN_CI: '',
       },
     });
     expect(r.error).toBeUndefined();
@@ -239,14 +239,14 @@ describe('release.sh argv subprocess', () => {
     expect(`${r.stdout}${r.stderr}`).toMatch(/cannot run under GitHub Actions/);
   });
 
-  it('PARSE_ONLY: MESH_CLIENT_RELEASE_YES without --yes', () => {
+  it('PARSE_ONLY: SARMESH_RELEASE_YES without --yes', () => {
     const r = spawnSync('bash', [RELEASE_SH, '--auto'], {
       encoding: 'utf8',
       env: {
         ...process.env,
-        MESH_CLIENT_RELEASE_PARSE_ONLY: '1',
-        MESH_CLIENT_ALLOW_PARSE_ONLY_IN_CI: '1',
-        MESH_CLIENT_RELEASE_YES: '1',
+        SARMESH_RELEASE_PARSE_ONLY: '1',
+        SARMESH_ALLOW_PARSE_ONLY_IN_CI: '1',
+        SARMESH_RELEASE_YES: '1',
       },
     });
     expect(r.error).toBeUndefined();
@@ -315,7 +315,7 @@ exit 1
         env: {
           ...process.env,
           PATH: `${bin}${path.delimiter}${process.env.PATH ?? ''}`,
-          MESH_CLIENT_RELEASE_YES: '1',
+          SARMESH_RELEASE_YES: '1',
         },
       });
       expect(r.error).toBeUndefined();

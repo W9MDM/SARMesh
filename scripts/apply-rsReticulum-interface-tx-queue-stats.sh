@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsReticulum interface TX queue stats overlay.
+# Apply sarmesh rsReticulum interface TX queue stats overlay.
 # Exposes host outbound mpsc fill (tx_queue_used / tx_queue_max) on GetInterfaceStats.
 set -euo pipefail
 

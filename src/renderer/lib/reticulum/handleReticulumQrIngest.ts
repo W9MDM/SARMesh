@@ -8,8 +8,8 @@ import {
   applyLxmaContactImport,
   applyLxmContactImport,
   applyLxmPaperIngest,
-} from '@/renderer/lib/meshClientDeepLinkApply';
-import { classifyMeshClientDeepLink } from '@/shared/meshClientDeepLink';
+} from '@/renderer/lib/sarMeshDeepLinkApply';
+import { classifySARMeshDeepLink } from '@/shared/sarMeshDeepLink';
 
 export interface ReticulumQrIngestToast {
   key: string;
@@ -26,7 +26,7 @@ export type ReticulumQrIngestOutcome =
  * Paper ingest calls the sidecar; OS deep-link host may still confirm contacts separately.
  */
 export async function handleReticulumQrIngest(text: string): Promise<ReticulumQrIngestOutcome> {
-  const parsed = classifyMeshClientDeepLink(text);
+  const parsed = classifySARMeshDeepLink(text);
   try {
     if (parsed.kind === 'lxmPaperMessage') {
       const result = await applyLxmPaperIngest({ uri: parsed.uri });

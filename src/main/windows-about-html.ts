@@ -7,7 +7,7 @@ import { APP_ABOUT_TAGLINE } from '../shared/appTagline';
 import { escapeXmlAttr } from '../shared/xmlEscape';
 
 const ABOUT_URL_WEBSITE = 'https://coloradomesh.org/';
-const ABOUT_URL_GITHUB = 'https://github.com/Colorado-Mesh/mesh-client';
+const ABOUT_URL_GITHUB = 'https://github.com/W9MDM/SARMesh';
 const ABOUT_URL_DISCORD = 'https://discord.com/invite/McChKR5NpS';
 
 export function escapeHtmlText(s: string): string {

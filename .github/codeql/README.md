@@ -45,7 +45,7 @@ Do not run both default setup and a CodeQL workflow that uploads SARIF for the s
 
 [Default setup](https://docs.github.com/en/code-security/code-scanning/managing-your-code-scanning-configuration/editing-your-configuration-of-default-setup#extending-codeql-coverage-with-codeql-model-packs-in-default-setup) loads **CodeQL model packs** from `.github/codeql/extensions/`.
 
-This repo ships **`mesh-client-models`**: data extensions that mark `sanitizeForLogSink`, `sanitizeLogMessage`, `sanitizeForConsoleEcho`, and `sanitizeLogPayloadForDisk` as **barriers** where applicable. Main-process **terminal echo** uses `sanitizeForConsoleEcho`, which applies CodeQL’s built-in newline sanitizer pattern (empty replacement) before whitespace normalization (see [Log injection query help](https://codeql.github.com/codeql-query-help/javascript/js-log-injection/)).
+This repo ships **`sarmesh-models`**: data extensions that mark `sanitizeForLogSink`, `sanitizeLogMessage`, `sanitizeForConsoleEcho`, and `sanitizeLogPayloadForDisk` as **barriers** where applicable. Main-process **terminal echo** uses `sanitizeForConsoleEcho`, which applies CodeQL’s built-in newline sanitizer pattern (empty replacement) before whitespace normalization (see [Log injection query help](https://codeql.github.com/codeql-query-help/javascript/js-log-injection/)).
 
 **Log injection (`js/log-injection`):** `barrierModel` rows with kind **`log-injection`** attach to that query because the library defines `SanitizerFromModel` via `ModelOutput::barrierNode(_, "log-injection")` (see [`LogInjectionQuery.qll`](https://github.com/github/codeql/blob/main/javascript/ql/lib/semmle/javascript/security/dataflow/LogInjectionQuery.qll) on `github/codeql`).
 
@@ -53,4 +53,4 @@ This repo ships **`mesh-client-models`**: data extensions that mark `sanitizeFor
 
 Each pack directory includes **`qlpack.yml`** and a duplicate **`codeql-pack.yml`** so default setup resolves metadata reliably; `extensionTargets` must use a real semver range (not `*`), or GitHub may skip loading the pack.
 
-Layout is enforced locally by `pnpm run check:codeql-extensions`. If alerts persist after changing imports or package name, adjust the first column of the `barrierModel` rows in [`extensions/mesh-client-models/models/log-sanitizer-barriers.yml`](./extensions/mesh-client-models/models/log-sanitizer-barriers.yml) to match how CodeQL labels the module (often `package.json` `name` or the relative `src/main/...` path).
+Layout is enforced locally by `pnpm run check:codeql-extensions`. If alerts persist after changing imports or package name, adjust the first column of the `barrierModel` rows in [`extensions/sarmesh-models/models/log-sanitizer-barriers.yml`](./extensions/sarmesh-models/models/log-sanitizer-barriers.yml) to match how CodeQL labels the module (often `package.json` `name` or the relative `src/main/...` path).

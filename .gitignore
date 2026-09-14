@@ -49,3 +49,6 @@ READ-ME-FIRST-flatpak.md
 # Local runtime state (identities, path tables, caches) from running the sidecar
 # directly (e.g. `pnpm run reticulum:sidecar:dev`) with no --reticulum-config-dir override
 reticulum-sidecar/reticulum-config/
+
+# Scratch commit message file
+.commitmsg.tmp

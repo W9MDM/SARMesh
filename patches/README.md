@@ -24,7 +24,7 @@ Protocol / companion-radio fixes. Upstreamed as focused PRs (npm package name re
 | [#32](https://github.com/meshcore-dev/meshcore.js/pull/32) | `LoginFail` (0x86) push handler | **Closed** — not carried; stock room/repeater firmware does not reply on bad credentials (client timeout). Hunk removed from this patch. |
 | [#33](https://github.com/meshcore-dev/meshcore.js/pull/33) | `readString` stops at embedded NUL | Open — still in this patch |
 
-**Kept local-only (not upstreamed):** silence companion push codes `25` / `0x8E` (CONTROL_DATA), emit `0x8F` (CONTACT_DELETED) and `0x90` (CONTACTS_FULL) for mesh-client capacity/sync, downgrade unhandled-frame `console.log` → `console.debug`, and extended `LoginSuccess` parsing (`serverTimestamp` / `permissions` / `firmwareVerLevel`).
+**Kept local-only (not upstreamed):** silence companion push codes `25` / `0x8E` (CONTROL_DATA), emit `0x8F` (CONTACT_DELETED) and `0x90` (CONTACTS_FULL) for sarmesh capacity/sync, downgrade unhandled-frame `console.log` → `console.debug`, and extended `LoginSuccess` parsing (`serverTimestamp` / `permissions` / `firmwareVerLevel`).
 
 ### Sunset
 
@@ -36,7 +36,7 @@ Abort `fromDevice.pipeTo(decodePacket)` on disconnect so serial/BLE ports are no
 
 | Field | Value |
 | ----- | ----- |
-| **Upstream PR** | https://github.com/meshtastic/web/pull/1312 (ported to `MeshClient` in the monorepo; JSR `@meshtastic/core` 2.6.6 still ships legacy `MeshDevice`) |
+| **Upstream PR** | https://github.com/meshtastic/web/pull/1312 (ported to `SARMesh` in the monorepo; JSR `@meshtastic/core` 2.6.6 still ships legacy `MeshDevice`) |
 
 ### Sunset
 
@@ -82,7 +82,7 @@ When the PR merges and a release (or a version bump past `2.18.0` that includes 
 
 Replace `require('process/')` with `require('process')` in stream internals.
 
-**Intentionally local.** Upstream deliberately uses the `process/` package path for browser bundler compatibility; changing that would break browser consumers. mesh-client needs the Node built-in under Electron packaging (see also `docs/troubleshooting.md` Linux asar notes).
+**Intentionally local.** Upstream deliberately uses the `process/` package path for browser bundler compatibility; changing that would break browser consumers. sarmesh needs the Node built-in under Electron packaging (see also `docs/troubleshooting.md` Linux asar notes).
 
 ### Sunset
 

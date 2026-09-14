@@ -345,8 +345,8 @@ html[data-reduce-motion='true'] .cm-watermark-mesh-tube--flicker-off .cm-waterma
    Fit width (--fit-width) constrains to the viewer so prose wraps without horizontal scrolling.
    Preserve padding spaces so Unicode/ASCII box borders stay aligned (HTML defaults collapse them). */
 @font-face {
-  font-family: MeshClientNomadMono;
-  src: url('./assets/fonts/MeshClientNomadMono.woff2') format('woff2');
+  font-family: SARMeshNomadMono;
+  src: url('./assets/fonts/SARMeshNomadMono.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -355,8 +355,7 @@ html[data-reduce-motion='true'] .cm-watermark-mesh-tube--flicker-off .cm-waterma
   width: max-content;
   min-width: 100%;
   white-space: pre;
-  font-family:
-    MeshClientNomadMono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: SARMeshNomadMono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 .nomad-micron-page--fit-width {
   width: 100%;

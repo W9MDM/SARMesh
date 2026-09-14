@@ -41,58 +41,58 @@ describe('buildRunStampSuffix', () => {
 
 describe('stampedInstallerName', () => {
   it('stamps AppImage x64 and arm64', () => {
-    expect(stampedInstallerName('Mesh-client-5.26.0.AppImage', 214)).toBe(
-      'Mesh-client-5.26.0-run214.AppImage',
+    expect(stampedInstallerName('SARMesh-5.26.0.AppImage', 214)).toBe(
+      'SARMesh-5.26.0-run214.AppImage',
     );
-    expect(stampedInstallerName('Mesh-client-5.26.0-arm64.AppImage', 214)).toBe(
-      'Mesh-client-5.26.0-run214-arm64.AppImage',
+    expect(stampedInstallerName('SARMesh-5.26.0-arm64.AppImage', 214)).toBe(
+      'SARMesh-5.26.0-run214-arm64.AppImage',
     );
   });
 
   it('stamps deb/rpm arch markers', () => {
-    expect(stampedInstallerName('mesh-client_5.26.0_amd64.deb', 7)).toBe(
-      'mesh-client_5.26.0-run7_amd64.deb',
+    expect(stampedInstallerName('sarmesh_5.26.0_amd64.deb', 7)).toBe(
+      'sarmesh_5.26.0-run7_amd64.deb',
     );
-    expect(stampedInstallerName('mesh-client-5.26.0.x86_64.rpm', 7)).toBe(
-      'mesh-client-5.26.0-run7.x86_64.rpm',
+    expect(stampedInstallerName('sarmesh-5.26.0.x86_64.rpm', 7)).toBe(
+      'sarmesh-5.26.0-run7.x86_64.rpm',
     );
   });
 
   it('stamps Windows Setup installers', () => {
-    expect(stampedInstallerName('Mesh-client Setup 5.26.0.exe', 214)).toBe(
-      'Mesh-client Setup 5.26.0-run214.exe',
+    expect(stampedInstallerName('SARMesh Setup 5.26.0.exe', 214)).toBe(
+      'SARMesh Setup 5.26.0-run214.exe',
     );
-    expect(stampedInstallerName('Mesh-client Setup 5.26.0-arm64.exe', 214)).toBe(
-      'Mesh-client Setup 5.26.0-run214-arm64.exe',
+    expect(stampedInstallerName('SARMesh Setup 5.26.0-arm64.exe', 214)).toBe(
+      'SARMesh Setup 5.26.0-run214-arm64.exe',
     );
-    expect(stampedInstallerName('Mesh-client-Setup-5.26.0.exe', 214)).toBe(
-      'Mesh-client-Setup-5.26.0-run214.exe',
+    expect(stampedInstallerName('SARMesh-Setup-5.26.0.exe', 214)).toBe(
+      'SARMesh-Setup-5.26.0-run214.exe',
     );
-    expect(stampedInstallerName('Mesh-client-Setup-5.26.0-arm64.exe', 214)).toBe(
-      'Mesh-client-Setup-5.26.0-run214-arm64.exe',
+    expect(stampedInstallerName('SARMesh-Setup-5.26.0-arm64.exe', 214)).toBe(
+      'SARMesh-Setup-5.26.0-run214-arm64.exe',
     );
   });
 
   it('stamps Flatpak and is idempotent', () => {
-    expect(stampedInstallerName('org.coloradomesh.MeshClient.flatpak', 214)).toBe(
-      'org.coloradomesh.MeshClient-run214.flatpak',
+    expect(stampedInstallerName('io.github.w9mdm.SARMesh.flatpak', 214)).toBe(
+      'io.github.w9mdm.SARMesh-run214.flatpak',
     );
-    expect(stampedInstallerName('org.coloradomesh.MeshClient-run214.flatpak', 214)).toBe(
-      'org.coloradomesh.MeshClient-run214.flatpak',
+    expect(stampedInstallerName('io.github.w9mdm.SARMesh-run214.flatpak', 214)).toBe(
+      'io.github.w9mdm.SARMesh-run214.flatpak',
     );
-    expect(hasRunStamp('org.coloradomesh.MeshClient-run214.flatpak')).toBe(true);
+    expect(hasRunStamp('io.github.w9mdm.SARMesh-run214.flatpak')).toBe(true);
   });
 });
 
 describe('shouldRenameInstaller', () => {
   it('accepts installers and skips non-installers', () => {
-    expect(shouldRenameInstaller('Mesh-client-5.26.0.AppImage')).toBe(true);
-    expect(shouldRenameInstaller('Mesh-client Setup 5.26.0.exe')).toBe(true);
-    expect(shouldRenameInstaller('Mesh-client-Setup-5.26.0.exe')).toBe(true);
-    expect(shouldRenameInstaller('org.coloradomesh.MeshClient.flatpak')).toBe(true);
+    expect(shouldRenameInstaller('SARMesh-5.26.0.AppImage')).toBe(true);
+    expect(shouldRenameInstaller('SARMesh Setup 5.26.0.exe')).toBe(true);
+    expect(shouldRenameInstaller('SARMesh-Setup-5.26.0.exe')).toBe(true);
+    expect(shouldRenameInstaller('io.github.w9mdm.SARMesh.flatpak')).toBe(true);
     expect(shouldRenameInstaller('READ-ME-FIRST-test-build.md')).toBe(false);
-    expect(shouldRenameInstaller('Mesh-client.exe')).toBe(false);
-    expect(shouldRenameInstaller('Mesh-client-5.26.0.AppImage.blockmap')).toBe(false);
+    expect(shouldRenameInstaller('SARMesh.exe')).toBe(false);
+    expect(shouldRenameInstaller('SARMesh-5.26.0.AppImage.blockmap')).toBe(false);
   });
 });
 
@@ -110,7 +110,7 @@ describe('resolveTestRenameStamp', () => {
     expect(() => resolveTestRenameStamp({ channel: 'test' })).toThrow(/runNumber/);
   });
 
-  it('parses MESH_CLIENT_BUILD_INFO', () => {
+  it('parses SARMESH_BUILD_INFO', () => {
     expect(parseBuildInfoEnv(JSON.stringify({ channel: 'test', runNumber: 214 }))).toEqual({
       channel: 'test',
       runNumber: 214,
@@ -141,14 +141,14 @@ describe('renameTestBuildArtifacts', () => {
     const root = makeTempDir();
     const mac = path.join(root, 'mac');
     fs.mkdirSync(mac, { recursive: true });
-    fs.writeFileSync(path.join(root, 'Mesh-client-5.26.0.AppImage'), 'x');
-    fs.writeFileSync(path.join(root, 'Mesh-client-5.26.0-arm64.AppImage'), 'x');
-    fs.writeFileSync(path.join(root, 'mesh-client_5.26.0_amd64.deb'), 'x');
-    fs.writeFileSync(path.join(root, 'Mesh-client-Setup-5.26.0.exe'), 'x');
-    fs.writeFileSync(path.join(root, 'Mesh-client-Setup-5.26.0-arm64.exe'), 'x');
-    fs.writeFileSync(path.join(mac, 'Mesh-client-5.26.0.dmg'), 'x');
+    fs.writeFileSync(path.join(root, 'SARMesh-5.26.0.AppImage'), 'x');
+    fs.writeFileSync(path.join(root, 'SARMesh-5.26.0-arm64.AppImage'), 'x');
+    fs.writeFileSync(path.join(root, 'sarmesh_5.26.0_amd64.deb'), 'x');
+    fs.writeFileSync(path.join(root, 'SARMesh-Setup-5.26.0.exe'), 'x');
+    fs.writeFileSync(path.join(root, 'SARMesh-Setup-5.26.0-arm64.exe'), 'x');
+    fs.writeFileSync(path.join(mac, 'SARMesh-5.26.0.dmg'), 'x');
     fs.writeFileSync(path.join(root, 'READ-ME-FIRST-test-build.md'), 'note');
-    fs.writeFileSync(path.join(root, 'Mesh-client.exe'), 'exe');
+    fs.writeFileSync(path.join(root, 'SARMesh.exe'), 'exe');
 
     const result = renameTestBuildArtifacts({
       rootDir: root,
@@ -157,12 +157,12 @@ describe('renameTestBuildArtifacts', () => {
     });
     expect(result.skipped).toBe(false);
     expect(result.renamed).toHaveLength(6);
-    expect(fs.existsSync(path.join(root, 'Mesh-client-5.26.0-run214.AppImage'))).toBe(true);
-    expect(fs.existsSync(path.join(root, 'Mesh-client-5.26.0-run214-arm64.AppImage'))).toBe(true);
-    expect(fs.existsSync(path.join(root, 'Mesh-client-Setup-5.26.0-run214.exe'))).toBe(true);
-    expect(fs.existsSync(path.join(mac, 'Mesh-client-5.26.0-run214.dmg'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'SARMesh-5.26.0-run214.AppImage'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'SARMesh-5.26.0-run214-arm64.AppImage'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'SARMesh-Setup-5.26.0-run214.exe'))).toBe(true);
+    expect(fs.existsSync(path.join(mac, 'SARMesh-5.26.0-run214.dmg'))).toBe(true);
     expect(fs.existsSync(path.join(root, 'READ-ME-FIRST-test-build.md'))).toBe(true);
-    expect(fs.existsSync(path.join(root, 'Mesh-client.exe'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'SARMesh.exe'))).toBe(true);
 
     const again = renameTestBuildArtifacts({
       rootDir: root,
@@ -174,13 +174,13 @@ describe('renameTestBuildArtifacts', () => {
 
   it('skips when channel is not test', () => {
     const root = makeTempDir();
-    fs.writeFileSync(path.join(root, 'Mesh-client-5.26.0.AppImage'), 'x');
+    fs.writeFileSync(path.join(root, 'SARMesh-5.26.0.AppImage'), 'x');
     const result = renameTestBuildArtifacts({
       rootDir: root,
       buildInfoRaw: JSON.stringify({ channel: 'release', runNumber: 9 }),
     });
     expect(result).toMatchObject({ skipped: true, reason: 'channel-not-test' });
-    expect(fs.existsSync(path.join(root, 'Mesh-client-5.26.0.AppImage'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'SARMesh-5.26.0.AppImage'))).toBe(true);
   });
 
   it('lists only installer files', () => {

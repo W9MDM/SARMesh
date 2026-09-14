@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsLXMF PropagationClient::abort_transfer for rns-stack builds.
+# Apply sarmesh rsLXMF PropagationClient::abort_transfer for rns-stack builds.
 # Lets cancelled Sync tear down mid-transfer /get so the next Sync is not RETRIEVE_BUSY.
 set -euo pipefail
 

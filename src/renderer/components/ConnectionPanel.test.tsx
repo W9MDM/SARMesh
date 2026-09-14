@@ -2106,9 +2106,9 @@ describe('ConnectionPanel LetsMesh username sync', () => {
       ).length;
 
       act(() => {
-        window.dispatchEvent(new Event('meshclient:meshcoreIdentityUpdated'));
-        window.dispatchEvent(new Event('meshclient:meshcoreIdentityUpdated'));
-        window.dispatchEvent(new Event('meshclient:meshcoreIdentityUpdated'));
+        window.dispatchEvent(new Event('sarmesh:meshcoreIdentityUpdated'));
+        window.dispatchEvent(new Event('sarmesh:meshcoreIdentityUpdated'));
+        window.dispatchEvent(new Event('sarmesh:meshcoreIdentityUpdated'));
       });
 
       await waitFor(

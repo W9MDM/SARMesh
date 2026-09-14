@@ -23,7 +23,7 @@ export const MACOS_DMG_NOTICE_NAME = 'IMPORTANT-Read-Me.txt';
 /** GitHub Releases companion asset (sorts near macOS ZIP downloads). */
 export const MACOS_RELEASE_ASSET_NAME = '00-READ-ME-BEFORE-EXTRACTING-macOS-ZIP.txt';
 
-export const MACOS_INSTALL_NOTE_MARKER = '<!-- mesh-client-macos-install -->';
+export const MACOS_INSTALL_NOTE_MARKER = '<!-- sarmesh-macos-install -->';
 
 const TROUBLESHOOTING_ANCHOR =
   'https://github.com/Colorado-Mesh/mesh-client/blob/main/docs/troubleshooting.md#macos-library-not-loaded-squirrelframework-after-zip-extract';
@@ -43,7 +43,7 @@ export function formatMacosInstallReleaseMarkdown() {
   return (
     '### macOS install\n\n' +
     '- Requires **macOS 13 Ventura** or later (Electron 44).\n' +
-    '- **Recommended:** open the **`.dmg`** and drag **Mesh-client** to **Applications**.\n' +
+    '- **Recommended:** open the **`.dmg`** and drag **SARMesh** to **Applications**.\n' +
     '- If you use the **`.zip`**: extract with **[Keka](https://www.keka.io/en/)** or `ditto -xk` — **do not use 7-Zip** (or Finder Archive Utility); they break framework symlinks and can crash at launch with `Library not loaded: Squirrel.framework`.\n' +
     `- See [troubleshooting](${TROUBLESHOOTING_ANCHOR}) if the app will not open after a ZIP extract.`
   );

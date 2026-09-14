@@ -12,7 +12,7 @@ import {
 
 vi.mock('electron', () => ({
   app: {
-    getPath: () => path.join('/tmp', 'mesh-client-test-userdata'),
+    getPath: () => path.join('/tmp', 'sarmesh-test-userdata'),
   },
 }));
 

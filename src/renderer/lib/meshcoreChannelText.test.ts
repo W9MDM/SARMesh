@@ -918,7 +918,7 @@ describe('parseMeshcoreBracketPrefix', () => {
     });
   });
 
-  it('parses mesh-client wire reply key suffix after #', () => {
+  it('parses sarmesh wire reply key suffix after #', () => {
     expect(parseMeshcoreBracketPrefix('@[NV0N 01#1780235760847] thanks')).toEqual({
       hadBracketPrefix: true,
       targetName: 'NV0N 01',

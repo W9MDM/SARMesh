@@ -35,7 +35,7 @@ jobs:
       - name: Start renderer dev server
         run: |
           nohup pnpm exec vite --host 127.0.0.1 --port 4173 --strictPort \
-            > "$RUNNER_TEMP/mesh-client-vite.log" 2>&1 &
+            > "$RUNNER_TEMP/sarmesh-vite.log" 2>&1 &
           echo "VITE_PID=$!" >> "$GITHUB_ENV"
 
       - name: Wait for renderer
@@ -47,7 +47,7 @@ jobs:
             sleep 2
           done
           echo 'Renderer dev server did not become ready in time.' >&2
-          tail -n 100 "$RUNNER_TEMP/mesh-client-vite.log" >&2 || true
+          tail -n 100 "$RUNNER_TEMP/sarmesh-vite.log" >&2 || true
           exit 1
 
       - name: Run Buttonmash
@@ -67,7 +67,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: buttonmash-renderer-log
-          path: ${{ runner.temp }}/mesh-client-vite.log
+          path: ${{ runner.temp }}/sarmesh-vite.log
           if-no-files-found: ignore
           retention-days: 7
 

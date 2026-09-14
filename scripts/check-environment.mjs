@@ -838,7 +838,7 @@ function printSummary(checks) {
 function main() {
   const platformLabel = PLATFORM_LABELS[process.platform] ?? process.platform;
   const args = parseCheckEnvironmentArgs();
-  console.log(`Mesh Client environment check (platform: ${platformLabel})\n`);
+  console.log(`SARMesh environment check (platform: ${platformLabel})\n`);
   if (args.skipNodeModules) {
     console.log('(skipping node_modules check — pre-install mode)\n');
   }

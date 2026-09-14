@@ -2,7 +2,7 @@
  * RRC room name helpers.
  *
  * rrcd treats `lobby` and `#lobby` as distinct wire names, but users (and older
- * mesh-client prefs) treat the leading `#` as optional IRC chrome. Soft match
+ * sarmesh prefs) treat the leading `#` as optional IRC chrome. Soft match
  * keys collapse those spellings for favourites, sidebar dedupe, and join resolve.
  */
 

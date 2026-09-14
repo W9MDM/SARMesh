@@ -17,7 +17,7 @@ export const PINNED_ACTIONLINT_VERSION = '1.7.12';
 
 export function githubApiHeaders(env = process.env) {
   const headers = {
-    'User-Agent': 'mesh-client',
+    'User-Agent': 'sarmesh',
     Accept: 'application/vnd.github+json',
   };
   const token = env.GITHUB_TOKEN || env.GH_TOKEN;
@@ -218,7 +218,7 @@ async function main() {
   console.log(`Downloading ${asset.name}...`);
   // Release asset CDN does not require auth; omit Authorization to avoid token leakage in logs.
   await downloadToFile(asset.browser_download_url, archivePath, {
-    'User-Agent': 'mesh-client',
+    'User-Agent': 'sarmesh',
   });
 
   console.log('Extracting...');

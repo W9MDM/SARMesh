@@ -704,7 +704,7 @@ describe('fetchLinkPreview', () => {
 
   it('proxies GitHub opengraph images as data URLs in main', async () => {
     const pageHtml = [
-      `<meta property="og:title" content="mesh-client">`,
+      `<meta property="og:title" content="sarmesh">`,
       `<meta property="og:image" content="https://opengraph.githubassets.com/abc/Colorado-Mesh/mesh-client">`,
     ].join('\n');
     const pngBytes = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -729,14 +729,14 @@ describe('fetchLinkPreview', () => {
     }) as typeof undiciFetch);
 
     const result = await fetchLinkPreview('https://github.com/Colorado-Mesh/mesh-client');
-    expect(result?.title).toBe('mesh-client');
+    expect(result?.title).toBe('sarmesh');
     expect(result?.image).toMatch(/^data:image\/png;base64,/);
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 
   it('omits image when GitHub opengraph CDN returns 429', async () => {
     const pageHtml = [
-      `<meta property="og:title" content="mesh-client">`,
+      `<meta property="og:title" content="sarmesh">`,
       `<meta property="og:image" content="https://opengraph.githubassets.com/abc/Colorado-Mesh/mesh-client">`,
     ].join('\n');
     mockFetch.mockImplementation(((input: string | URL | Request) => {
@@ -747,7 +747,7 @@ describe('fetchLinkPreview', () => {
     }) as typeof undiciFetch);
 
     const result = await fetchLinkPreview('https://github.com/Colorado-Mesh/mesh-client');
-    expect(result).toEqual({ title: 'mesh-client', description: undefined, image: undefined });
+    expect(result).toEqual({ title: 'sarmesh', description: undefined, image: undefined });
 
     const cached = await fetchLinkPreview('https://github.com/Colorado-Mesh/mesh-client');
     expect(cached).toEqual(result);
@@ -888,7 +888,7 @@ describe('fetchLinkPreview', () => {
     process.on('unhandledRejection', onUnhandled);
 
     const pageHtml = [
-      `<meta property="og:title" content="mesh-client">`,
+      `<meta property="og:title" content="sarmesh">`,
       `<meta property="og:image" content="https://opengraph.githubassets.com/abc/Colorado-Mesh/mesh-client">`,
     ].join('\n');
     const cancelErr = new DOMException('The operation was aborted due to timeout', 'TimeoutError');
@@ -910,7 +910,7 @@ describe('fetchLinkPreview', () => {
     }) as typeof undiciFetch);
 
     const result = await fetchLinkPreview('https://github.com/Colorado-Mesh/mesh-client');
-    expect(result?.title).toBe('mesh-client');
+    expect(result?.title).toBe('sarmesh');
     expect(result?.image).toBeUndefined();
     expect(unhandled).toHaveLength(0);
     process.off('unhandledRejection', onUnhandled);

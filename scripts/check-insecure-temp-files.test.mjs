@@ -57,7 +57,7 @@ fs.writeFileSync(binary, '');
     const result = runCheckOnSnippet(`
 import os from 'os';
 import path from 'path';
-export const mock = () => path.join(os.tmpdir(), 'mesh-client-support-test-userdata');
+export const mock = () => path.join(os.tmpdir(), 'sarmesh-support-test-userdata');
 `);
     expect(result.status).toBe(0);
   });
@@ -67,7 +67,7 @@ export const mock = () => path.join(os.tmpdir(), 'mesh-client-support-test-userd
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-const dir = path.join(os.tmpdir(), 'mesh-client-appimage-x64-1');
+const dir = path.join(os.tmpdir(), 'sarmesh-appimage-x64-1');
 fs.mkdirSync(dir, { recursive: true });
 `);
     expect(result.status).toBe(1);
@@ -79,7 +79,7 @@ fs.mkdirSync(dir, { recursive: true });
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-const dir = path.join(os.tmpdir(), 'mesh-client-appimage-x64-async');
+const dir = path.join(os.tmpdir(), 'sarmesh-appimage-x64-async');
 await fs.promises.mkdir(dir, { recursive: true });
 `);
     expect(result.status).toBe(1);

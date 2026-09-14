@@ -82,7 +82,7 @@ pub async fn identity_register_known(
 }
 
 /// Generate a new identity. The response includes the mnemonic **once** so the
-/// UI can show it for backup; it is not written to disk (`mesh_client_stack.json`
+/// UI can show it for backup; it is not written to disk (`sarmesh_stack.json`
 /// strips `mnemonic` on save).
 pub async fn identity_generate(
     State(stack): State<Arc<StackHandle>>,

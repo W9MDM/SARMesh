@@ -8,12 +8,12 @@
 !include "${BUILD_RESOURCES_DIR}\schema-upgrade-notice.nsh"
 
 !macro customInstall
-  IfFileExists "$INSTDIR\Mesh-client.exe" finish_ok 0
+  IfFileExists "$INSTDIR\SARMesh.exe" finish_ok 0
     SetErrorLevel 2
-    MessageBox MB_ICONSTOP|MB_OK "Installation incomplete: Mesh-client.exe is missing from $INSTDIR.$\r$\nPlease report this at github.com/Colorado-Mesh/mesh-client/issues." /SD IDOK
+    MessageBox MB_ICONSTOP|MB_OK "Installation incomplete: SARMesh.exe is missing from $INSTDIR.$\r$\nPlease report this at github.com/W9MDM/SARMesh/issues." /SD IDOK
     Abort
   finish_ok:
-  !ifdef MESH_CLIENT_SCHEMA_UPGRADE_NOTICE
-    MessageBox MB_ICONEXCLAMATION|MB_OK "${MESH_CLIENT_SCHEMA_UPGRADE_NOTICE}" /SD IDOK
+  !ifdef SARMESH_SCHEMA_UPGRADE_NOTICE
+    MessageBox MB_ICONEXCLAMATION|MB_OK "${SARMESH_SCHEMA_UPGRADE_NOTICE}" /SD IDOK
   !endif
 !macroend

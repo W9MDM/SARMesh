@@ -2,17 +2,17 @@
 /**
  * Write flatpak/ci-build-info.json for the Flatpak sandbox build.
  *
- * The Flatpak manifest exports MESH_CLIENT_BUILD_INFO from this file before
+ * The Flatpak manifest exports SARMESH_BUILD_INFO from this file before
  * `pnpm run build` so esbuild embeds the same stamp as electron-builder CI.
  *
- * Prefer MESH_CLIENT_BUILD_INFO already in the environment (after
+ * Prefer SARMESH_BUILD_INFO already in the environment (after
  * ci-write-build-info-env.mjs). Otherwise builds the payload from Actions env.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
-  buildMeshClientBuildInfoPayload,
+  buildSARMeshBuildInfoPayload,
   readReleaseTagFromPackageJson,
 } from './ci-write-build-info-env.mjs';
 
@@ -27,7 +27,7 @@ export const FLATPAK_CI_BUILD_INFO_REL = path.join('flatpak', 'ci-build-info.jso
 export function parseBuildInfoJsonObject(raw) {
   const parsed = JSON.parse(raw);
   if (parsed == null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('MESH_CLIENT_BUILD_INFO must be a JSON object');
+    throw new Error('SARMESH_BUILD_INFO must be a JSON object');
   }
   return /** @type {Record<string, string | number>} */ (parsed);
 }
@@ -39,25 +39,25 @@ export function parseBuildInfoJsonObject(raw) {
  */
 export function writeFlatpakCiBuildInfoFile(env = process.env, opts = {}) {
   const outPath = opts.outPath ?? path.join(ROOT, FLATPAK_CI_BUILD_INFO_REL);
-  const existing = env.MESH_CLIENT_BUILD_INFO?.trim();
+  const existing = env.SARMESH_BUILD_INFO?.trim();
   /** @type {Record<string, string | number>} */
   let payload;
   if (existing) {
     payload = parseBuildInfoJsonObject(existing);
   } else {
-    const channel = env.MESH_CLIENT_BUILD_CHANNEL?.trim();
+    const channel = env.SARMESH_BUILD_CHANNEL?.trim();
     if (channel !== 'test' && channel !== 'release') {
       throw new Error(
-        `MESH_CLIENT_BUILD_CHANNEL must be test|release, got: ${String(env.MESH_CLIENT_BUILD_CHANNEL)}`,
+        `SARMESH_BUILD_CHANNEL must be test|release, got: ${String(env.SARMESH_BUILD_CHANNEL)}`,
       );
     }
-    let tag = env.MESH_CLIENT_BUILD_TAG?.trim();
+    let tag = env.SARMESH_BUILD_TAG?.trim();
     if (channel === 'release' && !tag) {
       tag = readReleaseTagFromPackageJson(opts.packageJsonPath);
     }
-    payload = buildMeshClientBuildInfoPayload({
+    payload = buildSARMeshBuildInfoPayload({
       channel,
-      workflow: env.MESH_CLIENT_BUILD_WORKFLOW,
+      workflow: env.SARMESH_BUILD_WORKFLOW,
       runId: env.GITHUB_RUN_ID,
       runNumber: env.GITHUB_RUN_NUMBER,
       sha: env.GITHUB_SHA,
@@ -73,12 +73,12 @@ export function writeFlatpakCiBuildInfoFile(env = process.env, opts = {}) {
 }
 
 /**
- * Shell snippet used in org.coloradomesh.MeshClient.yml before pnpm run build.
+ * Shell snippet used in io.github.w9mdm.SARMesh.yml before pnpm run build.
  * Kept as a constant so check-flatpak can assert the contract.
  */
 export const FLATPAK_BUILD_INFO_EXPORT_SNIPPET = [
   'if [ -f flatpak/ci-build-info.json ]; then',
-  '  export MESH_CLIENT_BUILD_INFO="$(cat flatpak/ci-build-info.json)"',
+  '  export SARMESH_BUILD_INFO="$(cat flatpak/ci-build-info.json)"',
   'fi',
   'pnpm run build',
 ].join('\n');

@@ -198,7 +198,7 @@ function extractAppImage(appImagePath, extractDir) {
 
 /** @param {'x64' | 'arm64'} arch @param {string} appImagePath */
 function assertSidecarInAppImage(arch, appImagePath) {
-  const extractDir = mkdtempSync(path.join(tmpdir(), `mesh-client-appimage-${arch}-`));
+  const extractDir = mkdtempSync(path.join(tmpdir(), `sarmesh-appimage-${arch}-`));
   try {
     const payloadRoot = extractAppImage(appImagePath, extractDir);
     assertBundledReticulumSidecarInBundle({

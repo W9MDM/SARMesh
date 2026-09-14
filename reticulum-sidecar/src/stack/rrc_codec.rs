@@ -559,11 +559,11 @@ mod tests {
 
     #[test]
     fn hello_body_has_client_name() {
-        let body = hello_body("mesh-client", "0.0.0");
+        let body = hello_body("sarmesh", "0.0.0");
         let Value::Map(entries) = body else {
             panic!("expected map");
         };
-        assert_eq!(entries[0].1, Value::Text("mesh-client".into()));
+        assert_eq!(entries[0].1, Value::Text("sarmesh".into()));
         let caps_entry = entries
             .iter()
             .find(|(k, _)| integer_key(k) == Some(2))

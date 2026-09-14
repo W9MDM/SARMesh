@@ -19,7 +19,7 @@ test.describe('startup', () => {
       ),
     ).toBe(false);
 
-    await expect(page).toHaveTitle('Mesh Client');
+    await expect(page).toHaveTitle('SARMesh');
     await expect(page.locator('#root')).toBeVisible();
 
     const switcher = page.getByRole('group', { name: 'Protocol switcher' });

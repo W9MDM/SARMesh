@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsLXMF PropagationClient LRPROOF establish diagnostics overlay.
+# Apply sarmesh rsLXMF PropagationClient LRPROOF establish diagnostics overlay.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

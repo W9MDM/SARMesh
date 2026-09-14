@@ -45,9 +45,9 @@ import {
   applyLxmPaperIngest,
   applyMeshcoreChannelAdd,
   applyMeshcoreContactAdd,
-} from './meshClientDeepLinkApply';
+} from './sarMeshDeepLinkApply';
 
-describe('meshClientDeepLinkApply', () => {
+describe('sarMeshDeepLinkApply', () => {
   beforeEach(() => {
     vi.mocked(registerReticulumKnownIdentity).mockReset();
     upsertReticulumDestination.mockReset();

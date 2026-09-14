@@ -49,7 +49,7 @@ export function meshcoreRoomMessageStoreId(
   return `room:${roomServerId}:${timestampSec}`;
 }
 
-/** MeshCore wire timestamps are Unix seconds; mesh-client UI/DB rows use ms when above 1e12. */
+/** MeshCore wire timestamps are Unix seconds; sarmesh UI/DB rows use ms when above 1e12. */
 function meshcoreTimestampSec(timestamp: number): number {
   return timestamp >= LAST_HEARD_MS_THRESHOLD ? Math.floor(timestamp / 1000) : timestamp;
 }

@@ -4,7 +4,7 @@
  * **Wire vs Chat:** Channel/DM chat uses companion text with optional `Sender:` prefix,
  * keyless `@[Name]` replies/tapbacks, and (Radio toggle) MeshCore Open keyed/`r:`/`g:` wire
  * — see `meshcoreChannelText.ts` + `meshcoreOpenReaction.ts`. Room BBS is a separate stack:
- * outbound `TXT_TYPE_PLAIN` (raw UTF-8, optional mesh-client `[i/N]` chunks); inbound user
+ * outbound `TXT_TYPE_PLAIN` (raw UTF-8, optional sarmesh `[i/N]` chunks); inbound user
  * posts are `SignedPlain` (4-byte author pubkey prefix + body, stripped here). System/bot
  * lines may arrive as Plain without a strip. Room posts do not carry `replyId` / tapback
  * metadata; ingest does not run bracket parent lookup or `meshcorePromoteEmojiOnlyReplyToTapback`.

@@ -14,7 +14,7 @@ const BACKUPS = ['sanitized', 'neal', 'jjs'] as const;
 describe('user backup repairs (local dumps)', () => {
   for (const name of BACKUPS) {
     it(`repairs ${name} backup in place on copy`, () => {
-      const src = join(BACKUP_DIR, `mesh-client-backup-2026-06-17-${name}.db`);
+      const src = join(BACKUP_DIR, `sarmesh-backup-2026-06-17-${name}.db`);
       if (!existsSync(src)) {
         return;
       }

@@ -34,7 +34,7 @@
     },
     "nodeLabel": "节点： {{name}}",
     "takClientLost": "TAK客户丢失",
-    "title": "网状客户端",
+    "title": "SARMesh",
     "brandName": "Colorado Mesh",
     "meshTubeSignOff": "Turn off Colorado Mesh sign",
     "meshTubeSignOn": "Turn on Colorado Mesh sign",
@@ -44,7 +44,7 @@
     "footerDiscordTitle": "Colorado Mesh Discord",
     "footerGithubTitle": "Colorado Mesh on GitHub",
     "footerWebsiteTitle": "Colorado Mesh website",
-    "loadingApp": "正在加载网格客户端",
+    "loadingApp": "正在加载 SARMesh",
     "reticulumQueueTooltip": "本地RNode “{{name}}”的主机TX队列：等待无线电的数据包（多个RNode时最糟糕的填充）。绿色在25%以下，琥珀色在60%以下，红色在60%或以上。",
     "reticulumQueueTooltipGeneric": "最繁忙的本地RNode的主机TX队列：等待无线电的数据包。绿色在25%以下，琥珀色在60%以下，红色在60%或以上。",
     "reticulumTxBuffering": "将出站数据包缓冲到本地RNode （主机TX队列排空）。",
@@ -194,7 +194,7 @@
     "reduceMotion": "减少动态效果",
     "reduceMotionDesc": "禁用动画图标和装饰效果。加载指示器和连接状态指示器仍会动画显示。",
     "roomMessages": "房间消息",
-    "importSchemaTooNew": "此数据库文件需要较新的 Mesh-Client（架构 {{dbVersion}}）。此版本仅支持架构 {{appVersion}} 或更早版本。请安装最新版本后重试。",
+    "importSchemaTooNew": "此数据库文件需要较新的 SARMesh（架构 {{dbVersion}}）。此版本仅支持架构 {{appVersion}} 或更早版本。请安装最新版本后重试。",
     "floodAdvertTypeLabel": "通告类型",
     "floodAdvertTypeFlood": "泛洪（多跳）",
     "floodAdvertTypeZeroHop": "零跳（仅限直系邻居）",
@@ -204,7 +204,7 @@
     "debugSnapshotFailed": "无法复制调试快照",
     "meshcoreOpenWireExperimentalTitle": "MeshCore Open wire (实验)",
     "meshcoreOpenWireCompatLabel": "启用 MeshCore Open 兼容性",
-    "meshcoreOpenWireCompatHint": "启用后，mesh-client 会发送带密钥的文本回复（@[Name#key]）、紧凑型 r: 反应和 g: Giphy GIF。这可能与官方 companion wire 格式不一致；接收方需要支持 MeshCore Open 的客户端。",
+    "meshcoreOpenWireCompatHint": "启用后，sarmesh 会发送带密钥的文本回复（@[Name#key]）、紧凑型 r: 反应和 g: Giphy GIF。这可能与官方 companion wire 格式不一致；接收方需要支持 MeshCore Open 的客户端。",
     "meshcorePathHashExperimentalTitle": "MeshCore路径哈希大小（实验）",
     "meshcorePathHashModeLabel": "默认路径哈希大小",
     "meshcorePathHashMode1Byte": "1字节（传统，高达64跳）",
@@ -731,7 +731,7 @@
       "tooLargeForWire": "语音备忘录太大，无法发送。录制一个较短的剪辑。",
       "tooLargeForPropagation": "语音消息大于传播节点限制。只有当收件人在线时，它才会派送。缩短存储时间，以便线下派送。",
       "directOnlyBadge": "仅限直接存储—对于离线存储来说太大",
-      "recordTooltip": "LXMF语音备忘录—为此直接消息录制一个简短的Opus剪辑。支持mesh-client、Ratspeak和Sideband (FIELD_AUDIO)。与LXST呼叫不同。",
+      "recordTooltip": "LXMF语音备忘录—为此直接消息录制一个简短的Opus剪辑。支持sarmesh、Ratspeak和Sideband (FIELD_AUDIO)。与LXST呼叫不同。",
       "sendTooltip": "发送录制的LXMF语音备忘录",
       "startFailed": "无法开始语音备忘录录制。请重试。",
       "sendAriaWithElapsed": "发送语音备忘录（记录{{seconds}}秒）",
@@ -956,7 +956,7 @@
         "accessDeniedLinuxHint": "在 Linux 上，将您的用户添加到 dialout 组： sudo usermod -aG dialout $USER （然后注销并重新登录）",
         "disconnectedHint": "确保 USB 电缆已连接并且设备已开机。",
         "timeoutHint": "如果该端口短暂出现，请尝试重新连接 USB 电缆。",
-        "portStillOpenHint": "The USB serial port did not release cleanly. Quit mesh-client completely and reopen it, or unplug and replug the USB cable, then connect again."
+        "portStillOpenHint": "The USB serial port did not release cleanly. Quit sarmesh completely and reopen it, or unplug and replug the USB cable, then connect again."
       },
       "http": {
         "timeoutMdnsWindows": "在 Windows 上，meshtastic.local 需要 Bonjour（与 iTunes 一起安装）。请改用设备的 IP 地址。",
@@ -984,7 +984,7 @@
         "connectionAttemptFailedLinuxHint": "在 Linux 上，您可以通过系统蓝牙设置或“bluetoothctl”工具管理配对。",
         "meshcoreHandshakeHint": "确保您的 MeshCore 设备处于蓝牙伴侣模式并使用 PIN 与您的计算机配对。如果连接问题仍然存在，请删除所有现有配对并重新配对。",
         "meshcoreHandshakeWindowsExtra": "在 Windows 上，如果仍然断开连接，请关闭/打开蓝牙，并在设备管理器中更新适配器驱动程序。",
-        "macWakeRecoveryHint": "After sleep, quit mesh-client (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
+        "macWakeRecoveryHint": "After sleep, quit sarmesh (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
         "dualProtocolContentionHint": "另一个协议可能仍在通过蓝牙连接。请等待几秒钟，然后重试，或切换到其他协议选项卡以检查其连接状态。",
         "scanBusy": "另一次蓝牙扫描正在进行中。稍后再试一次。",
         "sameDeviceConflict": "该蓝牙设备已连接到 {{owner}}。",
@@ -1014,9 +1014,9 @@
     "reticulumStackHint": "启动本地 Reticulum/LXMF 侧车进程（TCP 和 Auto 接口）。",
     "reticulumStartStack": "启动堆栈",
     "reticulumNetworkEmpty": "尚未报告任何接口。",
-    "reticulumSidecarMissing": "Reticulum 侧车未构建。请在 mesh-client 仓库中运行 `pnpm run reticulum:sidecar:build`（需要 Rust）。",
+    "reticulumSidecarMissing": "Reticulum 侧车未构建。请在 sarmesh 仓库中运行 `pnpm run reticulum:sidecar:build`（需要 Rust）。",
     "reticulumSidecarCargoMissing": "未找到 Rust 工具链（cargo）。请从 https://rustup.rs 安装，然后运行 `pnpm run reticulum:sidecar:build`。",
-    "reticulumSidecarPatchMissing": "Reticulum 侧车构建需要 rsReticulum packet-tap 覆盖。请在 mesh-client 仓库中运行 `pnpm run reticulum:sidecar:build`（自动应用补丁）。",
+    "reticulumSidecarPatchMissing": "Reticulum 侧车构建需要 rsReticulum packet-tap 覆盖。请在 sarmesh 仓库中运行 `pnpm run reticulum:sidecar:build`（自动应用补丁）。",
     "reticulumSidecarStartFailed": "无法启动 Reticulum 堆栈：{{message}}",
     "reticulumStopStack": "停止堆栈",
     "reticulumAutostart": "打开连接时自动启动堆栈",
@@ -1254,7 +1254,7 @@
       "advancedAria": "高级界面键值选项",
       "advancedKeyReserved": "键“{{key}}”是已知字段，已被忽略—请使用上面的表单。",
       "pickerDeviceAriaWithRssi": "{{name}} {{address}} ， {{rssi}} dBm",
-      "decommissionedHubEnableBlocked": "此枢纽已停用，无法保持启用 — mesh-client 会在每次启动协议栈时关闭它。请使用“添加默认骨干网”或骨干网目录获取可用端点。",
+      "decommissionedHubEnableBlocked": "此枢纽已停用，无法保持启用 — sarmesh 会在每次启动协议栈时关闭它。请使用“添加默认骨干网”或骨干网目录获取可用端点。",
       "decommissionedBadge": "退役",
       "defaultHubsPickerTitle": "添加默认骨干网",
       "defaultHubsPickerConfirm": "添加{{count}}集线器",
@@ -1299,8 +1299,8 @@
       "rmapFullModeHint": "RMAP发布的完整模式通过IGNORE_CONFIG_WARNINGS保持完整。LXMF传递公告将在堆栈公告间隔（默认为1小时）上退出此无线电。",
       "effectiveModeBadge": "有效期： {{mode}}",
       "effectiveModeAria": "有效运行时模式{{mode}}。配置的模式与Reticulum正在运行的模式不同。",
-      "effectiveModeTooltip": "Reticulum将此可发现接口重写到接入点（或其他允许的模式） ，因为除非设置了ignore_config_warnings ，否则DISCOVERABLE需要网关、内部或接入点。在选择退出的mesh-client戳后重新启动堆栈，以便完整（或您配置的模式）生效。",
-      "flowControlBleHint": "在蓝牙上，收音机通常不会发送CMD_READY。Mesh-Client仍然步进TX （短暂等待就绪，然后继续） ，因此流量控制可以在不冻结队列的情况下减少过载。",
+      "effectiveModeTooltip": "Reticulum将此可发现接口重写到接入点（或其他允许的模式） ，因为除非设置了ignore_config_warnings ，否则DISCOVERABLE需要网关、内部或接入点。在选择退出的sarmesh戳后重新启动堆栈，以便完整（或您配置的模式）生效。",
+      "flowControlBleHint": "在蓝牙上，收音机通常不会发送CMD_READY。SARMesh仍然步进TX （短暂等待就绪，然后继续） ，因此流量控制可以在不冻结队列的情况下减少过载。",
       "advancedFields": "高级设置",
       "field": {
         "port": "端口",
@@ -1366,12 +1366,12 @@
       "connectingRow": "{{name}}：通过蓝牙连接",
       "offlineHintWifi": "检查RNode是否在您的LAN上，已通电，并且可以在配置的IP上访问（默认TCP端口7633 ，而不是4242 ）。如果DHCP分配了新地址，请在下方更新主机，或在Reticulum → Admin中重新配置Wi-Fi。",
       "tcpUnreachable": "{{name}} ：无法访问TCP集线器（ {{host}} ： {{port}} ）",
-      "tcpUnreachableHint": "远程 Reticulum 实例可能处于离线状态或正在阻止连接。请禁用此接口或验证主机和端口。频繁重启 mesh-client 或协议栈可能导致 Reticulum 1.4.0+ 枢纽将您的 IP 封锁 12 小时 — 请等待，不要再次重启。",
+      "tcpUnreachableHint": "远程 Reticulum 实例可能处于离线状态或正在阻止连接。请禁用此接口或验证主机和端口。频繁重启 sarmesh 或协议栈可能导致 Reticulum 1.4.0+ 枢纽将您的 IP 封锁 12 小时 — 请等待，不要再次重启。",
       "connectingHintBle": "堆栈启动后，BLE RNode 链接可能需要长达 60 秒的时间（操作系统密钥窗口）。如果出现提示，请输入当前的 RNode PIN — 切勿输入 123456。这是正常现象，不是错误。成功绑定后，该设备可能不会出现在系统设置中。",
       "offlineHintBle": "要清除此错误，您可能需要删除此接口并重新添加（选择设备），以刷新已保存的蓝牙 ID，然后重新启动堆栈。操作系统可能会提示输入 6 位蓝牙 PIN（macOS、Windows 或 Linux）。RNode 每次配对都会生成新代码——切勿使用 123456（那是 Meshtastic 的默认值，不是 RNode）。在此应用连接之前，RNode 不必出现在系统设置 → 蓝牙中；堆栈配对时会出现操作系统对话框。无显示屏的电台：连接 USB → Reticulum Admin → 蓝牙 → 开始配对 → 将管理面板中显示的 PIN（不是电台屏幕上的）输入到操作系统对话框。有显示屏的电台：在 Heltec 设备上按住按钮约 7 秒（时间因机型而异；许多板上约 10 秒会启用 Wi‑Fi AP），读取屏幕上的 PIN，然后输入到操作系统对话框。重试前请在操作系统蓝牙设置中清除失败的绑定。",
       "offlineHintBleBondStale": "macOS 仍将此 RNode 显示为已配对，但蓝牙密钥不再匹配（对等方已删除配对信息）。在系统设置 → 蓝牙中忘记该设备，将 RNode 置于配对模式（管理 → 蓝牙 → 开始配对，或按住按钮约 7 秒），然后删除并重新添加此接口（选择设备），重新启动堆栈，并在提示时输入新的 6 位 PIN。",
       "tcpFastFlap": "{{name}} ： HUB可能在频繁重启堆栈后阻止了您的IP （ {{host}}: {{port}} ）",
-      "tcpFastFlapHint": "Reticulum 1.4.0+ 公共枢纽会在 12 小时内五次短 TCP 会话后封锁 IP。快速重启 mesh-client 或协议栈会计入。请禁用此枢纽并等待最多 12 小时 — 再次重启会延长封锁。"
+      "tcpFastFlapHint": "Reticulum 1.4.0+ 公共枢纽会在 12 小时内五次短 TCP 会话后封锁 IP。快速重启 sarmesh 或协议栈会计入。请禁用此枢纽并等待最多 12 小时 — 再次重启会延长封锁。"
     },
     "autoConnectingTo": "正在自动连接到 {{deviceName}}…",
     "autoReconnectInProgress": "正在自动重新连接…",
@@ -1835,7 +1835,7 @@
         "rmap_transport_disabled": "已配置可发现的接口，但传输模式已关闭。",
         "rmap_i2p_not_connectable": "I2P接口“{{name}}”是可发现的，但不是可连接的。",
         "shared_instance_client": "Share instance attached as a client of another app — local TCP hubs in this config are not started.",
-        "rmap_mode_autocorrect": "接口“{{name}}”可通过非AP/网关模式发现—除非设置ignore_config_warnings ，否则Reticulum将作为接入点运行。编辑界面或重新启动堆栈，以便mesh-client可以标记选择退出。"
+        "rmap_mode_autocorrect": "接口“{{name}}”可通过非AP/网关模式发现—除非设置ignore_config_warnings ，否则Reticulum将作为接入点运行。编辑界面或重新启动堆栈，以便sarmesh可以标记选择退出。"
       },
       "runtime": {
         "rnsNotReady": "RNS 堆栈尚未准备好",
@@ -1868,7 +1868,7 @@
         "announceBusPressureTipBoundaryHubs": "已启用边界/骨干集线器： {{hubs}}。",
         "announceBusPressureTipTxSaturated": "TX队列丢弃时间： {{names}} —该接口可能已饱和。",
         "tooManyDefaultBackbones": "您已启用{{count}}默认骨干网。请考虑禁用额外功能，并保留约2个以备不时之需。",
-        "decommissionedHubEnabled": "已停用的枢纽“{{name}}”仍处于启用状态 — mesh-client 会在每次启动协议栈时关闭它。请使用“添加默认骨干网”或骨干网目录获取可用端点。",
+        "decommissionedHubEnabled": "已停用的枢纽“{{name}}”仍处于启用状态 — sarmesh 会在每次启动协议栈时关闭它。请使用“添加默认骨干网”或骨干网目录获取可用端点。",
         "txQueueDropsBle": "接口“{{name}}”丢弃了{{count}}个出站数据包（ TX队列已满） — BLE RNode链接卡住；首选USB或重新配对",
         "txQueueDropsBleBondStale": "接口“{{name}}”丢弃了{{count}}个出站数据包（ TX队列已满） — BLE绑定已过期；忘记操作系统蓝牙并重新配对",
         "txQueueDropsNeutral": "接口“{{name}}”丢弃了{{count}}个出站数据包（ TX队列已满） —检查该接口的链路",
@@ -2134,11 +2134,11 @@
         "label": "数据库故障"
       },
       "database-chmod": {
-        "recommendation": "Database file permission tweak failed (often benign on Windows). If you see real DB errors elsewhere, check antivirus and folder permissions for the mesh-client userData directory.",
+        "recommendation": "Database file permission tweak failed (often benign on Windows). If you see real DB errors elsewhere, check antivirus and folder permissions for the sarmesh userData directory.",
         "label": "数据库chmod （非致命）"
       },
       "database-writable": {
-        "recommendation": "The app cannot write its database folder. Fix permissions on the mesh-client userData directory (see troubleshooting: Database directory is not writable).",
+        "recommendation": "The app cannot write its database folder. Fix permissions on the sarmesh userData directory (see troubleshooting: Database directory is not writable).",
         "label": "数据库不可写"
       },
       "tak-server": {
@@ -2642,7 +2642,7 @@
       "remoteHardwareEnabledDesc": "允许远程节点读取和写入此设备上的 GPIO 引脚。",
       "remoteHardwareAllowUndefinedPins": "允许访问未定义引脚",
       "remoteHardwareAllowUndefinedPinsDesc": "允许读取/写入未在可用引脚配置中列出的引脚。",
-      "mqttProxyGatewayHint": "With proxy enabled, mesh-client bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
+      "mqttProxyGatewayHint": "With proxy enabled, sarmesh bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
       "mapReportPublishInterval": "映射报告间隔（秒）",
       "mapReportPublishIntervalDesc": "0使用固件默认值。启用地图报告后，设备发布地图报告的频率。",
       "mapReportPositionPrecision": "地图报告位置精度",
@@ -3326,7 +3326,7 @@
       "missingIdentity": "此节点尚未记住身份。等待 Nomad 公告，然后重试。",
       "transportUnavailable": "Reticulum 传输不可用。请重新启动协议栈后重试。",
       "sidecarNotRunning": "Reticulum sidecar 未运行。请从 Connection 启动协议栈，然后重试。",
-      "responseTooLarge": "该节点返回的数据超出了 mesh-client 对此请求的接受上限。",
+      "responseTooLarge": "该节点返回的数据超出了 sarmesh 对此请求的接受上限。",
       "nomadBusy": "另一个 Nomad 页面或文件请求仍在进行中。请稍后再试。",
       "nomadNotServing": "这是您的 Nomad 节点，但“我的页面”托管未运行。打开“我的页面”，选择一个文件夹，然后开始在本地预览。",
       "networkNotReady": "等待集线器或无线电接口上线。连接显示界面后重试。",
@@ -4702,7 +4702,7 @@
     "localHostStats": "{{count}}已排队· {{bytes}}字节",
     "localHostName": "主机传播节点",
     "syncPeerCostExceedsMax": "此传播节点的对等成本高于您的最大对等成本—提高网络→高级PN托管的最大值，或选择其他节点。",
-    "offerUnsupported": "此目标不支持 LXMF /offer 同步 — mesh-client 无法将其用作传播节点。",
+    "offerUnsupported": "此目标不支持 LXMF /offer 同步 — sarmesh 无法将其用作传播节点。",
     "offerProbeTimeout": "检查/offer支持时超时—节点可能无法访问。请在路径可用时重试。",
     "offerProbeFailed": "无法验证/offer对此传播节点的支持—请稍后重试。",
     "enableLocalHostConfirmTitle": "启用本地传播节点托管？",
@@ -4949,7 +4949,7 @@
     "legendNotSavedTooltip": "空圆—此房间未存储密码",
     "legendSavedTooltip": "天空半圆—密码已存储；登录以打开会话",
     "legendLoggedInTooltip": "绿点—活动客户端会话（服务器离线时请离开房间）",
-    "historyLocalHint": "登录时，若此设备尚无本地水印，mesh-client 会请求聊天室服务器环形缓冲区中仍保留的最近帖子。启用自动同步以在连接期间保持订阅。",
+    "historyLocalHint": "登录时，若此设备尚无本地水印，sarmesh 会请求聊天室服务器环形缓冲区中仍保留的最近帖子。启用自动同步以在连接期间保持订阅。",
     "loginAllSavedDisabledNoSavedPasswords": "首先保存房间密码以使用全部登录",
     "membersHeadingWithCount": "成员({{count}})",
     "collapseRoomList": "折叠房间列表",
@@ -5203,7 +5203,7 @@
     "restartTitle": "重新启动并安装",
     "retryCheck": "重试更新检查",
     "updateError": "更新错误",
-    "menuToastUpToDateTitle": "Mesh-Client",
+    "menuToastUpToDateTitle": "SARMesh",
     "menuToastUpToDateBody": "你是最新版本。",
     "menuToastAvailableTitle": "更新可用",
     "menuToastAvailableBody": "版本 {{version}} 可用。",
@@ -5611,7 +5611,7 @@
       "enabled": "文件接收已启用。",
       "enableFailed": "无法启用文件接收： {{error}}",
       "saveDirRequired": "选择一个保存文件夹以启用接收。",
-      "shareDestWarning": "如果启用，mesh-client 会将您的 rncp 接收目标发送到该对等方，以便他们可以自动填充文件发送。",
+      "shareDestWarning": "如果启用，sarmesh 会将您的 rncp 接收目标发送到该对等方，以便他们可以自动填充文件发送。",
       "lxmfBody": "请启用 rncp 文件接收并回复您的 rncp 接收目标哈希。",
       "lxmfShareBody": "文件接收已启用。我的 rncp 接收目标哈希值：",
       "identityUnknown": "入站询问已打开，但该对等方的身份哈希尚不清楚，因此它们未添加到始终允许中。每个文件之前仍会询问您；尝试在路径或公告到达后再次始终允许。"
@@ -5715,7 +5715,7 @@
     "capabilityHeardShort": "LXST",
     "capabilityUnknownShort": "?",
     "help": {
-      "interop": "LXST语音需要运行LXST电话的对等端（Sideband、Ratspeak或mesh-client）。不是语音备注剪辑。Python LXST是参考； rsLXST是实验。"
+      "interop": "LXST语音需要运行LXST电话的对等端（Sideband、Ratspeak或sarmesh）。不是语音备注剪辑。Python LXST是参考； rsLXST是实验。"
     },
     "toast": {
       "busy": "线路繁忙。",
@@ -5864,7 +5864,7 @@
   },
   "longSession": {
     "title": "建议重新启动",
-    "body": "在蓝牙无线电连接的情况下，mesh-client 已经运行了四天。重新启动应用程序，以降低长时间 Noble BLE 会话中崩溃的风险。",
+    "body": "在蓝牙无线电连接的情况下，sarmesh 已经运行了四天。重新启动应用程序，以降低长时间 Noble BLE 会话中崩溃的风险。",
     "restart": "重启",
     "dismiss": "解散"
   },

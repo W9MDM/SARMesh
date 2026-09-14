@@ -1,7 +1,7 @@
 /**
- * LXMF control sentinels for mesh-client rncp receive enable / dest sharing.
+ * LXMF control sentinels for sarmesh rncp receive enable / dest sharing.
  * Human-readable LXMF bodies must stay app-agnostic (Sideband, Nomad, etc.).
- * mesh-client peers additionally parse these sentinels for UI automation
+ * sarmesh peers additionally parse these sentinels for UI automation
  * (enable-request modal + receive-dest autofill).
  */
 
@@ -16,8 +16,8 @@ export const RNCP_REQUEST_ENABLE_COOLDOWN_MS = 10 * 60 * 1000;
 const DEST_HASH_RE = /^[0-9a-f]{32}$/;
 
 /**
- * Enable-request LXMF body: app-agnostic human instructions, then the mesh-client
- * sentinel so receiving mesh-client builds can open the enable/share modal.
+ * Enable-request LXMF body: app-agnostic human instructions, then the sarmesh
+ * sentinel so receiving sarmesh builds can open the enable/share modal.
  * Other LXMF apps show the sentinel as an extra line they can ignore.
  */
 export function buildRncpRequestEnableMessageBody(instructions: string): string {
@@ -32,7 +32,7 @@ export function lxmfBodyContainsRncpRequestEnable(body: string | null | undefine
 
 /**
  * Build an LXMF body that shares this client's rncp.receive destination with a peer
- * who requested enable (plain hash for any LXMF client + mesh-client sentinel).
+ * who requested enable (plain hash for any LXMF client + sarmesh sentinel).
  */
 export function buildRncpReceiveDestShareBody(instructions: string, receiveHash: string): string {
   const hash = receiveHash.replace(/[^0-9a-f]/gi, '').toLowerCase();

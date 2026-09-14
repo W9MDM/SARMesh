@@ -1,6 +1,6 @@
 # Localization & Languages
 
-Mesh-Client is designed to be accessible to mesh users worldwide. The application currently supports **16 languages** and uses static translation bundles to ensure full functionality even when offline.
+SARMesh is designed to be accessible to mesh users worldwide. The application currently supports **16 languages** and uses static translation bundles to ensure full functionality even when offline.
 
 ---
 
@@ -41,13 +41,13 @@ The application will immediately update the UI strings. Your language preference
 
 ## Contributing Translations
 
-Most translations in Mesh-Client are initially machine-generated using [MyMemory](https://mymemory.translated.net/). We rely on community contributions to improve translation quality and accuracy.
+Most translations in SARMesh are initially machine-generated using [MyMemory](https://mymemory.translated.net/). We rely on community contributions to improve translation quality and accuracy.
 
 ### Reporting an Error
 
 If you find a mistranslation or an awkward phrasing:
 
-1. Go to the [Mesh-Client Issues](https://github.com/Colorado-Mesh/mesh-client/issues) page.
+1. Go to the [SARMesh Issues](https://github.com/Colorado-Mesh/mesh-client/issues) page.
 2. Open a new [Translation Error](https://github.com/Colorado-Mesh/mesh-client/issues/new?assignees=&labels=translation&template=translation-error.md&title=Translation+Error) issue.
 3. Provide the current text and your suggested correction.
 
@@ -81,4 +81,4 @@ If you would like to help us add support for a new language:
 
 ## Offline Support
 
-Translations are bundled as static JSON files within the application. Unlike many web apps, Mesh-Client **does not make network calls** to fetch translations at runtime. This ensures that the interface remains in your preferred language even when you are operating off-grid or in environments with no internet access.
+Translations are bundled as static JSON files within the application. Unlike many web apps, SARMesh **does not make network calls** to fetch translations at runtime. This ensures that the interface remains in your preferred language even when you are operating off-grid or in environments with no internet access.

@@ -650,14 +650,14 @@ function prepareStubNodeFixture(exitCode) {
 }
 
 /**
- * Temp layout matching the repo-local .rsstack workspace: mesh-client/reticulum-sidecar +
+ * Temp layout matching the repo-local .rsstack workspace: sarmesh/reticulum-sidecar +
  * .rsstack/{rsReticulum,rsLXMF,rsNomad,rsLXST,lrgp-rs}.
  * @param {{ buildExit: number }} opts
  */
 function prepareRebuildFixture(opts) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'mesh-update-root-'));
   tempDirs.push(root);
-  const work = path.join(root, 'mesh-client');
+  const work = path.join(root, 'sarmesh');
   const binDir = mkdtempSync(path.join(os.tmpdir(), 'mesh-update-bin-'));
   tempDirs.push(binDir);
   const cargoLog = path.join(binDir, 'cargo.log');

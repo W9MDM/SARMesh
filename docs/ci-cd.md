@@ -1,6 +1,6 @@
 # CI/CD Workflows
 
-Mesh-Client uses GitHub Actions for continuous integration and deployment.
+SARMesh uses GitHub Actions for continuous integration and deployment.
 
 ---
 
@@ -115,10 +115,10 @@ PR review comments come from [CodeRabbit](https://docs.coderabbit.ai/) via [`.co
 Triggered by pushing a version tag (e.g., `v1.2.3`):
 
 1. **`schema-release-compare`** — first job; compares this SHA’s `CURRENT_SCHEMA_VERSION` to the last **published** GitHub Release (paginated Releases API; highest semver among non-draft/non-prerelease rows; recovers `vX.Y.Z` from release **name** only when `tag_name` is missing or `untagged-*`), writes the Actions step summary, and uploads a schema readme artifact. Job outputs feed installer notices and the draft release body.
-2. **`prepare-github-release`** — **sole** creator of the draft GitHub release for the tag (`MESH_CLIENT_ALLOW_DRAFT_CREATE=1`), exports `release_id` (reconstructed from validated digits before `GITHUB_OUTPUT` — CodeQL `js/http-to-file-access`), then prepends the schema compare note (via `RELEASE_ID`, not List Releases). On `workflow_dispatch`, the tag is resolved in the workflow from `package.json` and passed as `RELEASE_TAG` (not read inside the release API script — avoids CodeQL `js/file-access-to-http`). The schema note is rebuilt from `schema-release-compare` job outputs (`MESH_CLIENT_SCHEMA_*`), not from a downloaded markdown artifact (same CodeQL rule).
+2. **`prepare-github-release`** — **sole** creator of the draft GitHub release for the tag (`SARMESH_ALLOW_DRAFT_CREATE=1`), exports `release_id` (reconstructed from validated digits before `GITHUB_OUTPUT` — CodeQL `js/http-to-file-access`), then prepends the schema compare note (via `RELEASE_ID`, not List Releases). On `workflow_dispatch`, the tag is resolved in the workflow from `package.json` and passed as `RELEASE_TAG` (not read inside the release API script — avoids CodeQL `js/file-access-to-http`). The schema note is rebuilt from `schema-release-compare` job outputs (`SARMESH_SCHEMA_*`), not from a downloaded markdown artifact (same CodeQL rule).
 3. Installs Linux build dependencies (`libudev-dev`, `rpm`, …) on `ubuntu-latest` runners
 4. Rebuilds native dependencies (`pnpm run rebuild`)
-5. **Stamp CI build info** — `scripts/ci-write-build-info-env.mjs` writes `MESH_CLIENT_BUILD_INFO` (`buildChannel=release` + tag + Actions `runUrl`) into `$GITHUB_ENV` before `dist:*` so support-bundle `manifest.json` and startup logs identify an official release build (see [Build channel stamp](#build-channel-stamp-test-vs-release)).
+5. **Stamp CI build info** — `scripts/ci-write-build-info-env.mjs` writes `SARMESH_BUILD_INFO` (`buildChannel=release` + tag + Actions `runUrl`) into `$GITHUB_ENV` before `dist:*` so support-bundle `manifest.json` and startup logs identify an official release build (see [Build channel stamp](#build-channel-stamp-test-vs-release)).
 6. Builds for all three platforms in parallel (or a filtered subset on `workflow_dispatch`) with **`--publish never`**:
    - `macos-latest` → `pnpm run dist:mac`
    - `ubuntu-latest` → `pnpm run dist:linux`
@@ -141,9 +141,9 @@ A matrix builds **x86_64** and **aarch64** in parallel. Both use the same privil
 
 1. **`schema-release-compare`** — same compare as Build Binaries / Release; uploads `READ-ME-FIRST-flatpak.md` and feeds `write-schema-upgrade-notice.mjs` so bumped schemas embed `SCHEMA-UPGRADE.txt` under Flatpak `resources/`
 2. Builds the Reticulum sidecar on bare Ubuntu runners, then generates `flatpak/generated-sources.json` via `flatpak-node-generator`
-3. Stamps CI build info (`test` on dispatch / `release` on tag), builds from `org.coloradomesh.MeshClient.yml` with offline pnpm sources
-4. Smoke-installs the unstamped local bundle; on **dispatch only**, renames to `org.coloradomesh.MeshClient-run{N}.flatpak`
-5. Uploads `org.coloradomesh.MeshClient.flatpak-{x86_64,aarch64}.flatpak` artifacts (file basename stamped on test builds) plus per-arch `flatpak-schema-warning-*`
+3. Stamps CI build info (`test` on dispatch / `release` on tag), builds from `io.github.w9mdm.SARMesh.yml` with offline pnpm sources
+4. Smoke-installs the unstamped local bundle; on **dispatch only**, renames to `io.github.w9mdm.SARMesh-run{N}.flatpak`
+5. Uploads `io.github.w9mdm.SARMesh.flatpak-{x86_64,aarch64}.flatpak` artifacts (file basename stamped on test builds) plus per-arch `flatpak-schema-warning-*`
 
 On **version tag pushes**, a `publish` job waits for the Electron `prepare-github-release` draft (`ci-wait-github-draft-release.mjs`), then attaches both **clean-named** bundles with `ci-upload-release-assets.mjs` (never creates a release). aarch64 is the primary ARM Linux install path (release `build.yaml` only produces x86_64 AppImage/deb/rpm).
 
@@ -274,7 +274,7 @@ pnpm run act:flatpak          # docker only
 # Override mode on one invocation
 node scripts/run-act.mjs ci --native
 node scripts/run-act.mjs ci --docker
-MESH_CLIENT_ACT_MODE=native pnpm run act:ci
+SARMESH_ACT_MODE=native pnpm run act:ci
 
 # Dry-run passthrough (container mode)
 node scripts/run-act.mjs ci -- -n
@@ -424,7 +424,7 @@ CI focuses on lint, typecheck, build, cheap always-on policy scanners, Flatpak m
 
 ### Build channel stamp (test vs release)
 
-**Build Binaries** (`build.yaml`), **Release** (`release.yaml`), and **Build Flatpak** (`flatpak.yaml`) run `scripts/ci-write-build-info-env.mjs` before packaging. That writes a JSON `MESH_CLIENT_BUILD_INFO` blob into `$GITHUB_ENV`, which `scripts/esbuild-main-build.mjs` embeds via esbuild `--define` into the main process. Flatpak also writes `flatpak/ci-build-info.json` (gitignored) so the sandbox `pnpm run build` sees the same env.
+**Build Binaries** (`build.yaml`), **Release** (`release.yaml`), and **Build Flatpak** (`flatpak.yaml`) run `scripts/ci-write-build-info-env.mjs` before packaging. That writes a JSON `SARMESH_BUILD_INFO` blob into `$GITHUB_ENV`, which `scripts/esbuild-main-build.mjs` embeds via esbuild `--define` into the main process. Flatpak also writes `flatpak/ci-build-info.json` (gitignored) so the sandbox `pnpm run build` sees the same env.
 
 | Channel   | Workflow                                                | Support-bundle `manifest.json`                            |
 | --------- | ------------------------------------------------------- | --------------------------------------------------------- |
@@ -440,12 +440,12 @@ CI focuses on lint, typecheck, build, cheap always-on policy scanners, Flatpak m
 
 **Test / one-off only** — never official GitHub Release assets:
 
-| Workflow       | When                       | Filename stamp                                                                                                                                                                                                                            |
-| -------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `build.yaml`   | Always (dispatch-only)     | After `dist:*`, `scripts/rename-test-build-artifacts.mjs` renames AppImage/deb/rpm/DMG/ZIP/Setup under `release/` to include `-run{GITHUB_RUN_NUMBER}` (e.g. `Mesh-client-5.26.0-run214.AppImage`, `Mesh-client-Setup-5.26.0-run214.exe`) |
-| `flatpak.yaml` | `workflow_dispatch` only   | After in-job smoke, rename to `org.coloradomesh.MeshClient-run{N}.flatpak`, then upload                                                                                                                                                   |
-| `flatpak.yaml` | tag `v*` (release publish) | Clean `org.coloradomesh.MeshClient.flatpak` (no `-run{N}`)                                                                                                                                                                                |
-| `release.yaml` | tag publish                | Clean electron-builder names (no rename step)                                                                                                                                                                                             |
+| Workflow       | When                       | Filename stamp                                                                                                                                                                                                                    |
+| -------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `build.yaml`   | Always (dispatch-only)     | After `dist:*`, `scripts/rename-test-build-artifacts.mjs` renames AppImage/deb/rpm/DMG/ZIP/Setup under `release/` to include `-run{GITHUB_RUN_NUMBER}` (e.g. `SARMesh-5.26.0-run214.AppImage`, `SARMesh-Setup-5.26.0-run214.exe`) |
+| `flatpak.yaml` | `workflow_dispatch` only   | After in-job smoke, rename to `io.github.w9mdm.SARMesh-run{N}.flatpak`, then upload                                                                                                                                               |
+| `flatpak.yaml` | tag `v*` (release publish) | Clean `io.github.w9mdm.SARMesh.flatpak` (no `-run{N}`)                                                                                                                                                                            |
+| `release.yaml` | tag publish                | Clean electron-builder names (no rename step)                                                                                                                                                                                     |
 
 `packaging-smoke` on Build Binaries downloads **stamped** names (Windows Setup matcher accepts default or `-run{N}`). Flatpak smoke always uses the unstamped local path **before** rename. Manual Flatpak runs use Actions run title **`Build Flatpak (no release)`**; tag runs use **`Build Flatpak`**.
 
@@ -483,7 +483,7 @@ Post-build smoke tests:
   - Staged **`00-READ-ME-BEFORE-EXTRACTING-macOS-ZIP.txt`** uploaded beside macOS ZIP/DMG on GitHub Releases
   - Thin **MacOS launcher** + full **Electron Framework** binary sizes; bundled **Reticulum sidecar** present
   - **Developer ID–signed builds only:** `codesign --verify --deep --strict` on the finished `.app` (DMG mount / ZIP extract / on-disk), `xcrun stapler validate` (stapled notarization ticket), and `codesign --verify --strict` on the bundled Reticulum sidecar. Unsigned or ad-hoc (non–Developer ID) local `dist:mac` builds skip this gate.
-  - CI uploads **DMG/ZIP only** — never raw `Mesh-client.app` (see comment in `release.yaml` **Upload macOS Artifact**)
+  - CI uploads **DMG/ZIP only** — never raw `SARMesh.app` (see comment in `release.yaml` **Upload macOS Artifact**)
   - Optional signing env (`CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`, `CSC_IDENTITY_AUTO_DISCOVERY`) is passed through from workflow secrets on `macos-latest`; layout checks do not require them, but signed CI builds must pass the codesign/stapler gate above
 - `scripts/test-linux-appimage-reticulum-sidecar.mjs` — x64 uses `--appimage-extract`; arm64 on x64 runners uses `unsquashfs` for cross-arch extract
 - `scripts/test-win-nsis-install.mjs` — NSIS + 7z sidecar probe on WoA

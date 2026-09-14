@@ -31,7 +31,7 @@ export interface ReticulumLocalInterfaceAlert {
   reason: 'stale_port' | 'enabled_down' | 'tcp_unreachable' | 'tcp_fast_flap';
 }
 
-/** True when mesh-client attached as a shared-instance client (local hubs not spawned). */
+/** True when sarmesh attached as a shared-instance client (local hubs not spawned). */
 export function isReticulumSharedInstanceClientMode(
   interfaces: readonly ReticulumLocalInterfaceInput[],
 ): boolean {

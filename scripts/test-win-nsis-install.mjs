@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CI smoke test: silent NSIS install and assert Mesh-client.exe lands on disk.
+ * CI smoke test: silent NSIS install and assert SARMesh.exe lands on disk.
  *
  * Failure point: NSIS can report success while dropping the main exe on WoA.
  * Fallback: exit non-zero with install log path so CI uploads diagnostics.
@@ -30,7 +30,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 const releaseDir = path.join(projectRoot, 'release');
 
-const APP_EXE = 'Mesh-client.exe';
+const APP_EXE = 'SARMesh.exe';
 const MIN_EXE_BYTES = 50 * 1024 * 1024;
 
 /** @param {string} msg */
@@ -169,7 +169,7 @@ function main(arch, probe7z) {
   const installerPath = path.join(releaseDir, installer);
 
   if (probe7z) {
-    const probeDir = mkdtempSync(path.join(tmpdir(), 'mesh-client-7z-probe-'));
+    const probeDir = mkdtempSync(path.join(tmpdir(), 'sarmesh-7z-probe-'));
     try {
       probe7zExtract(installerPath, probeDir, arch);
     } finally {
@@ -181,10 +181,10 @@ function main(arch, probe7z) {
   if (!localAppData) {
     fail('LOCALAPPDATA is not set');
   }
-  const instDir = path.join(localAppData, 'Programs', 'Mesh-client');
-  const workDir = mkdtempSync(path.join(tmpdir(), 'mesh-client-install-'));
+  const instDir = path.join(localAppData, 'Programs', 'SARMesh');
+  const workDir = mkdtempSync(path.join(tmpdir(), 'sarmesh-install-'));
   try {
-    const logPath = path.join(workDir, `mesh-client-install-${arch}.log`);
+    const logPath = path.join(workDir, `sarmesh-install-${arch}.log`);
 
     rmSync(instDir, { recursive: true, force: true });
 

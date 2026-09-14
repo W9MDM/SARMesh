@@ -1,6 +1,6 @@
 # Diagnostics Reference
 
-This document is the authoritative reference for every diagnostic output in Mesh-Client. It covers the two diagnostic subsystems; **Routing** and **RF**; and explains what each finding means, what triggers it, and how to interpret it.
+This document is the authoritative reference for every diagnostic output in SARMesh. It covers the two diagnostic subsystems; **Routing** and **RF**; and explains what each finding means, what triggers it, and how to interpret it.
 
 **Where diagnostics appear:**
 

@@ -28,11 +28,11 @@ import {
   useReticulumSidecarApi,
 } from '@/renderer/lib/reticulum/useReticulumSidecarApi';
 import { writeClipboardText } from '@/renderer/lib/writeClipboardText';
-import { buildLxmaContactUri, buildLxmIdentityUri } from '@/shared/meshClientDeepLink';
 import type {
   ReticulumConfigValidateResult,
   ReticulumSidecarEvent,
 } from '@/shared/reticulum-types';
+import { buildLxmaContactUri, buildLxmIdentityUri } from '@/shared/sarMeshDeepLink';
 
 import { useReticulumBlocklistIdentityId } from '../stores/blockStore';
 import { refreshReticulumPeersFromSidecar } from '../stores/reticulumPeerStore';
@@ -1452,7 +1452,7 @@ function IdentityConfiguredView({
       try {
         return buildLxmaContactUri(lxmfHash, pub);
       } catch {
-        // catch-no-log-ok fall through to mesh-client identity URI
+        // catch-no-log-ok fall through to sarmesh identity URI
       }
     }
     const idHash = identity?.identity_hash?.trim();

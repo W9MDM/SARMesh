@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsLXMF multi-file attachment pack/list overlay.
+# Apply sarmesh rsLXMF multi-file attachment pack/list overlay.
 # Carries ratspeak/rsLXMF#7 on floated origin/main until upstream merges.
 # Upstream: https://github.com/ratspeak/rsLXMF/pull/7
 set -euo pipefail

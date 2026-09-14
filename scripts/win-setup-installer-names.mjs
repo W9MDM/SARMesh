@@ -2,18 +2,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /**
- * Match Mesh-client Windows NSIS Setup installer basenames.
+ * Match SARMesh Windows NSIS Setup installer basenames.
  *
  * Accepts default electron-builder names, hyphenated GitHub-safe names, and
  * test-build stamped names:
- *   Mesh-client Setup 5.26.0.exe
- *   Mesh-client-Setup-5.26.0.exe
- *   Mesh-client Setup 5.26.0-arm64.exe
- *   Mesh-client-Setup-5.26.0-arm64.exe
- *   Mesh-client Setup 5.26.0-run214.exe
- *   Mesh-client-Setup-5.26.0-run214.exe
- *   Mesh-client Setup 5.26.0-run214-arm64.exe
- *   Mesh-client-Setup-5.26.0-run214-arm64.exe
+ *   SARMesh Setup 5.26.0.exe
+ *   SARMesh-Setup-5.26.0.exe
+ *   SARMesh Setup 5.26.0-arm64.exe
+ *   SARMesh-Setup-5.26.0-arm64.exe
+ *   SARMesh Setup 5.26.0-run214.exe
+ *   SARMesh-Setup-5.26.0-run214.exe
+ *   SARMesh Setup 5.26.0-run214-arm64.exe
+ *   SARMesh-Setup-5.26.0-run214-arm64.exe
  */
 
 /**
@@ -21,7 +21,7 @@ import path from 'node:path';
  * @returns {string[]}
  */
 function winSetupPrefixes(version) {
-  return [`Mesh-client-Setup-${version}`, `Mesh-client Setup ${version}`];
+  return [`SARMesh-Setup-${version}`, `SARMesh Setup ${version}`];
 }
 
 /**
@@ -63,9 +63,9 @@ export function hyphenateWinSetupInstallerName(name) {
  */
 export function hyphenatedWinSetupNameFromGithubDotted(name) {
   if (typeof name !== 'string') return null;
-  const m = /^Mesh-client\.Setup\.(\d+\.\d+\.\d+)(-arm64|-x64)?\.exe$/.exec(name);
+  const m = /^SARMesh\.Setup\.(\d+\.\d+\.\d+)(-arm64|-x64)?\.exe$/.exec(name);
   if (!m) return null;
-  return `Mesh-client-Setup-${m[1]}${m[2] ?? ''}.exe`;
+  return `SARMesh-Setup-${m[1]}${m[2] ?? ''}.exe`;
 }
 
 /**
@@ -126,7 +126,7 @@ export function normalizeWinSetupInstallerNames(rootDir, opts = {}) {
   const renamed = [];
   for (const name of names) {
     if (!name.includes(' ')) continue;
-    if (!name.startsWith('Mesh-client Setup ') || !name.endsWith('.exe')) continue;
+    if (!name.startsWith('SARMesh Setup ') || !name.endsWith('.exe')) continue;
     if (name.includes('__uninstaller')) continue;
     const next = hyphenateWinSetupInstallerName(name);
     if (next === name) continue;

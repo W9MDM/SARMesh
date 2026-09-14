@@ -1,6 +1,6 @@
 # Development Environment Setup
 
-This guide covers local development setup for Mesh Client (Meshtastic, MeshCore, and Reticulum), including cloning, prerequisites, and test harness tooling. For runtime errors, connection issues, and packaged-app problems, see [troubleshooting.md](troubleshooting.md).
+This guide covers local development setup for SARMesh (Meshtastic, MeshCore, and Reticulum), including cloning, prerequisites, and test harness tooling. For runtime errors, connection issues, and packaged-app problems, see [troubleshooting.md](troubleshooting.md).
 
 ## Shared Requirements and Tooling
 
@@ -63,7 +63,7 @@ If `pnpm run docs:install` fails with `externally-managed-environment`, activate
 
 ```bash
 git clone https://github.com/Colorado-Mesh/mesh-client
-cd mesh-client
+cd sarmesh
 node scripts/check-environment.mjs # optional but recommended on first clone
 pnpm install
 pnpm run check:environment # re-check after install
@@ -119,7 +119,7 @@ pnpm run reticulum:sidecar:build
 
 This writes `reticulum-sidecar/target/debug/mesh-client-reticulum` (macOS/Linux) or `.exe` on Windows.
 
-**First-time / recover the stack workspace:** from the mesh-client repo root, run `./scripts/clone-ratspeak-stack.sh`. That script clones (or updates) the repo-local `.rsstack/` workspace checkouts `rsReticulum`, `rsLXMF`, `rsNomad`, `rsLXST`, and `lrgp-rs`, floats each to **`origin/main`** by default, and applies mesh-client overlays (fails if a patch will not apply). For bisect only, set `RS_RETICULUM_REF` / `RS_LXMF_REF` / `RS_NOMAD_REF` / `RS_LXST_REF` / `RS_LRGP_REF` to a SHA or ref before running the clone script — CI and normal updates never pin Ratspeak SHAs.
+**First-time / recover the stack workspace:** from the sarmesh repo root, run `./scripts/clone-ratspeak-stack.sh`. That script clones (or updates) the repo-local `.rsstack/` workspace checkouts `rsReticulum`, `rsLXMF`, `rsNomad`, `rsLXST`, and `lrgp-rs`, floats each to **`origin/main`** by default, and applies sarmesh overlays (fails if a patch will not apply). For bisect only, set `RS_RETICULUM_REF` / `RS_LXMF_REF` / `RS_NOMAD_REF` / `RS_LXST_REF` / `RS_LRGP_REF` to a SHA or ref before running the clone script — CI and normal updates never pin Ratspeak SHAs.
 
 When those `.rsstack/` checkouts already exist, `pnpm run reticulum:sidecar:build` applies required overlays via `scripts/ensure-rsReticulum-patches.sh` before compiling with `rns-stack,rns-ble,rns-rnode-tcp`. See [`reticulum-sidecar/patches/README.md`](../reticulum-sidecar/patches/README.md) for overlay details.
 
@@ -363,7 +363,7 @@ For a release-quality local Flatpak, use `cargo build --release` with `rns-stack
 **4. Build and install locally**
 
 ```bash
-flatpak-builder --user --install --force-clean build-dir org.coloradomesh.MeshClient.yml
+flatpak-builder --user --install --force-clean build-dir io.github.w9mdm.SARMesh.yml
 ```
 
 This installs the app into your user Flatpak store.
@@ -371,25 +371,25 @@ This installs the app into your user Flatpak store.
 **5. Run**
 
 ```bash
-flatpak run org.coloradomesh.MeshClient
+flatpak run io.github.w9mdm.SARMesh
 ```
 
 **6. Produce a `.flatpak` bundle** (for sharing without a repo)
 
 ```bash
 flatpak build-bundle ~/.local/share/flatpak/repo \
-  org.coloradomesh.MeshClient.flatpak \
-  org.coloradomesh.MeshClient stable
+  io.github.w9mdm.SARMesh.flatpak \
+  io.github.w9mdm.SARMesh stable
 ```
 
-Installing a `.flatpak` file creates a one-off remote named like `meshclient-origin` (not `flathub`); that is expected. The ref branch is `stable` (release CI sets this; older artifacts used `master`). Version is shown in MetaInfo / `flatpak info`, not in the remote name.
+Installing a `.flatpak` file creates a one-off remote named like `sarmesh-origin` (not `flathub`); that is expected. The ref branch is `stable` (release CI sets this; older artifacts used `master`). Version is shown in MetaInfo / `flatpak info`, not in the remote name.
 
 **Reinstall after downloading a new bundle**
 
 ```bash
-flatpak uninstall --user org.coloradomesh.MeshClient
-flatpak install --user ./org.coloradomesh.MeshClient-aarch64.flatpak
-flatpak run org.coloradomesh.MeshClient
+flatpak uninstall --user io.github.w9mdm.SARMesh
+flatpak install --user ./io.github.w9mdm.SARMesh-aarch64.flatpak
+flatpak run io.github.w9mdm.SARMesh
 ```
 
 **Runtime issues** (GPU, VMware guests): see [Flatpak: `vmwgfx: driver missing` (VMware on macOS)](troubleshooting.md#flatpak-vmwgfx-driver-missing-vmware-on-macos).
@@ -400,7 +400,7 @@ flatpak run org.coloradomesh.MeshClient
 
 ```bash
 flatpak run --command=flatpak-builder-lint org.freedesktop.Sdk \
-  manifest org.coloradomesh.MeshClient.yml
+  manifest io.github.w9mdm.SARMesh.yml
 ```
 
 #### Test
@@ -593,7 +593,7 @@ Standalone suite under [`e2e/`](../e2e/) launches the **unpackaged** production 
 Constraints:
 
 - **`workers: 1`** — main uses `requestSingleInstanceLock()`; parallel launches flake.
-- **Linux:** set `MESH_CLIENT_DISABLE_GPU=1` (harness does this); CI uses `xvfb-run -a`. Local headless Linux needs `DISPLAY` for direct `pnpm run test:e2e`, or wrap with `xvfb-run -a` (`pnpm run check:environment` warns when `DISPLAY` is unset).
+- **Linux:** set `SARMESH_DISABLE_GPU=1` (harness does this); CI uses `xvfb-run -a`. Local headless Linux needs `DISPLAY` for direct `pnpm run test:e2e`, or wrap with `xvfb-run -a` (`pnpm run check:environment` warns when `DISPLAY` is unset).
 - **Not** wired into pre-commit, `pnpm run test:run`, or `pnpm run check:pr`. Daily + manual CI: [`.github/workflows/e2e.yaml`](../.github/workflows/e2e.yaml).
 
 Monolithic protocol runtimes (`useMeshtasticRuntime`, `useMeshcoreRuntime`) also use **source contract tests** (read `.ts` files and assert wiring strings) where full `renderHook` integration would require heavy BLE/MQTT mocking; see `*.reconnect*.test.ts` beside those runtimes. Another example: [`meshtasticRuntimeWireEffects.diagnostics.contract.test.ts`](../src/renderer/lib/meshtastic/meshtasticRuntimeWireEffects.diagnostics.contract.test.ts) asserts LocalStats / RF hop-SNR still call `processNodeUpdate` from `meshtasticNodeSideEffects` / `meshtasticRawPacketSideEffects`.
@@ -811,7 +811,7 @@ Electron **44** (this repo’s runtime) requires **macOS 13 Ventura** or later f
 
 ```bash
 git clone https://github.com/Colorado-Mesh/mesh-client
-cd mesh-client
+cd sarmesh
 pnpm install
 pnpm run dev
 ```
@@ -825,7 +825,7 @@ pnpm run dev
 On first BLE connection, macOS prompts for Bluetooth access. If denied accidentally:
 
 - Go to **System Settings > Privacy & Security > Bluetooth**
-- Enable access for Mesh-Client
+- Enable access for SARMesh
 
 ### Reticulum sidecar (optional)
 
@@ -833,7 +833,7 @@ If you work on the Reticulum protocol tab, install Rust and build the sidecar �
 
 ### macOS release-download note (not required for source development)
 
-If a downloaded app reports "Mesh-client is damaged and can't be opened", see [macOS: File is damaged and cannot be opened](troubleshooting.md#macos-file-is-damaged-and-cannot-be-opened). If launch fails with `Library not loaded: Squirrel.framework` after extracting the macOS **ZIP with 7-Zip**, see [macOS: Squirrel.framework after ZIP extract](troubleshooting.md#macos-library-not-loaded-squirrelframework-after-zip-extract).
+If a downloaded app reports "SARMesh is damaged and can't be opened", see [macOS: File is damaged and cannot be opened](troubleshooting.md#macos-file-is-damaged-and-cannot-be-opened). If launch fails with `Library not loaded: Squirrel.framework` after extracting the macOS **ZIP with 7-Zip**, see [macOS: Squirrel.framework after ZIP extract](troubleshooting.md#macos-library-not-loaded-squirrelframework-after-zip-extract).
 
 ## Windows
 
@@ -862,7 +862,7 @@ If a downloaded app reports "Mesh-client is damaged and can't be opened", see [m
 
 ```powershell
 git clone https://github.com/Colorado-Mesh/mesh-client
-cd mesh-client
+cd sarmesh
 pnpm install
 pnpm run dev
 ```
@@ -913,7 +913,7 @@ sudo dnf install python3 nspr nss
 
 ```bash
 git clone https://github.com/Colorado-Mesh/mesh-client
-cd mesh-client
+cd sarmesh
 pnpm install
 pnpm run dev
 ```

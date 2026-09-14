@@ -34,7 +34,7 @@
     },
     "nodeLabel": "Knoten: {{name}}",
     "takClientLost": "TAK-CLIENT VERLOREN",
-    "title": "Mesh-Client",
+    "title": "SARMesh",
     "brandName": "Colorado Mesh",
     "meshTubeSignOff": "Schalten Sie das Colorado Mesh-Schild aus",
     "meshTubeSignOn": "Schalten Sie das Colorado Mesh-Schild ein",
@@ -44,7 +44,7 @@
     "footerDiscordTitle": "Colorado Mesh Discord",
     "footerGithubTitle": "Colorado Mesh auf GitHub",
     "footerWebsiteTitle": "Colorado Mesh-Website",
-    "loadingApp": "Mesh-Client wird geladen",
+    "loadingApp": "SARMesh wird geladen",
     "reticulumQueueTooltip": "Host-TX-Warteschlange für lokalen RNode \"{{name}}\": Pakete, die auf das Funkgerät warten (am schlechtesten gefüllt, wenn mehrere RNodes vorhanden sind). Grün unter 25 %, Bernstein unter 60 %, Rot bei 60 % oder mehr.",
     "reticulumQueueTooltipGeneric": "Host-TX-Warteschlange für den verkehrsreichsten lokalen RNode: Pakete warten auf das Funkgerät. Grün unter 25 %, Bernstein unter 60 %, Rot bei 60 % oder mehr.",
     "reticulumTxBuffering": "Puffern ausgehender Pakete an einen lokalen RNode (Host TX Queue Draining).",
@@ -194,7 +194,7 @@
     "reduceMotion": "Bewegung reduzieren",
     "reduceMotionDesc": "Deaktiviert animierte Symbole und dekorative Effekte. Lade-Spinner und Verbindungsstatusanzeigen sind immer noch animiert.",
     "roomMessages": "Raumnachrichten",
-    "importSchemaTooNew": "Diese Datenbankdatei erfordert einen neueren Mesh-Client (Schema {{dbVersion}}). Dieser Build unterstützt Schema {{appVersion}} oder älter. Installieren Sie die neueste Version und versuchen Sie es erneut.",
+    "importSchemaTooNew": "Diese Datenbankdatei erfordert einen neueren SARMesh (Schema {{dbVersion}}). Dieser Build unterstützt Schema {{appVersion}} oder älter. Installieren Sie die neueste Version und versuchen Sie es erneut.",
     "floodAdvertTypeLabel": "Advert-Typ",
     "floodAdvertTypeFlood": "Flood (Multi-Hop)",
     "floodAdvertTypeZeroHop": "Zero-Hop (nur direkte Nachbarn)",
@@ -204,7 +204,7 @@
     "debugSnapshotFailed": "Debug-Snapshot konnte nicht kopiert werden",
     "meshcoreOpenWireExperimentalTitle": "MeshCore Open Wire (experimentell)",
     "meshcoreOpenWireCompatLabel": "MeshCore Open-Kompatibilität aktivieren",
-    "meshcoreOpenWireCompatHint": "Wenn aktiviert, sendet mesh-client Schlüssel-Textantworten (@[Name#key]), kompakte r:-Reaktionen und g:-Giphy-GIFs. Das entspricht möglicherweise nicht dem offiziellen Companion-Wire-Format; Empfänger benötigen MeshCore-Open-kompatible Clients.",
+    "meshcoreOpenWireCompatHint": "Wenn aktiviert, sendet sarmesh Schlüssel-Textantworten (@[Name#key]), kompakte r:-Reaktionen und g:-Giphy-GIFs. Das entspricht möglicherweise nicht dem offiziellen Companion-Wire-Format; Empfänger benötigen MeshCore-Open-kompatible Clients.",
     "meshcorePathHashExperimentalTitle": "MeshCore-Pfad-Hashgröße (experimentell)",
     "meshcorePathHashModeLabel": "Standard-Pfad-Hash-Größe",
     "meshcorePathHashMode1Byte": "1 Byte (Legacy, bis zu 64 Hops)",
@@ -731,7 +731,7 @@
       "tooLargeForWire": "Sprachnotiz ist zu groß zum Senden. Nehmen Sie einen kürzeren Clip auf.",
       "tooLargeForPropagation": "Sprachnachricht ist größer als die Ausbreitungsknotengrenze. Es wird nur geliefert, wenn der Empfänger online ist. Kürzen Sie es, um es für die Offline-Lieferung aufzubewahren.",
       "directOnlyBadge": "Nur direkt — zu groß für Offline-Speicher",
-      "recordTooltip": "LXMF-Sprachnotiz — zeichnet einen kurzen Opus-Clip für diese Direktnachricht auf. Unterstützt von mesh-client, Ratspeak und Sideband (FIELD_AUDIO). Nicht das gleiche wie LXST Call.",
+      "recordTooltip": "LXMF-Sprachnotiz — zeichnet einen kurzen Opus-Clip für diese Direktnachricht auf. Unterstützt von sarmesh, Ratspeak und Sideband (FIELD_AUDIO). Nicht das gleiche wie LXST Call.",
       "sendTooltip": "Die aufgezeichnete LXMF-Sprachnotiz senden",
       "startFailed": "Sprachnotizaufnahme konnte nicht gestartet werden. Versuchen Sie es erneut.",
       "sendAriaWithElapsed": "Sprachnotiz senden ({{seconds}} Sekunden aufgezeichnet)",
@@ -954,7 +954,7 @@
         "accessDeniedLinuxHint": "Fügen Sie unter Linux Ihren Benutzer zur Dialout-Gruppe hinzu: sudo usermod -aG dialout $USER (dann abmelden und wieder anmelden)",
         "disconnectedHint": "Stellen Sie sicher, dass das USB-Kabel angeschlossen und das Gerät eingeschaltet ist.",
         "timeoutHint": "Wenn der Anschluss kurzzeitig angezeigt wird, versuchen Sie, das USB-Kabel erneut anzuschließen.",
-        "portStillOpenHint": "The USB serial port did not release cleanly. Quit mesh-client completely and reopen it, or unplug and replug the USB cable, then connect again."
+        "portStillOpenHint": "The USB serial port did not release cleanly. Quit sarmesh completely and reopen it, or unplug and replug the USB cable, then connect again."
       },
       "http": {
         "timeoutMdnsWindows": "Unter Windows erfordert meshtastic.local Bonjour (installiert mit iTunes). Verwenden Sie stattdessen die IP-Adresse des Geräts.",
@@ -982,7 +982,7 @@
         "connectionAttemptFailedLinuxHint": "Unter Linux können Sie Kopplungen über die Bluetooth-Einstellungen des Systems oder das Tool „bluetoothctl“ verwalten.",
         "meshcoreHandshakeHint": "Stellen Sie sicher, dass sich Ihr MeshCore-Gerät im Bluetooth Companion-Modus befindet und über eine PIN mit Ihrem Computer gekoppelt ist. Entfernen Sie alle vorhandenen Kopplungen und koppeln Sie sie erneut, wenn die Verbindungsprobleme weiterhin bestehen.",
         "meshcoreHandshakeWindowsExtra": "Schalten Sie unter Windows Bluetooth aus/ein und aktualisieren Sie den Adaptertreiber im Geräte-Manager, wenn weiterhin Verbindungsabbrüche bestehen.",
-        "macWakeRecoveryHint": "After sleep, quit mesh-client (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
+        "macWakeRecoveryHint": "After sleep, quit sarmesh (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
         "dualProtocolContentionHint": "Das andere Protokoll verbindet sich möglicherweise immer noch über Bluetooth. Warten Sie ein paar Sekunden und versuchen Sie es erneut, oder wechseln Sie zur anderen Protokollregisterkarte, um den Verbindungsstatus zu überprüfen.",
         "scanBusy": "Ein weiterer Bluetooth-Scan wird durchgeführt. Versuchen Sie es gleich noch einmal.",
         "sameDeviceConflict": "Dieses Bluetooth-Gerät ist bereits mit {{owner}} verbunden.",
@@ -1012,9 +1012,9 @@
     "reticulumStackHint": "Startet den lokalen Reticulum/LXMF-Sidecar (TCP- und Auto-Schnittstellen).",
     "reticulumStartStack": "Stack starten",
     "reticulumNetworkEmpty": "Noch keine Schnittstellen gemeldet.",
-    "reticulumSidecarMissing": "Reticulum-Sidecar nicht gebaut. Im mesh-client-Repository `pnpm run reticulum:sidecar:build` ausführen (erfordert Rust).",
+    "reticulumSidecarMissing": "Reticulum-Sidecar nicht gebaut. Im sarmesh-Repository `pnpm run reticulum:sidecar:build` ausführen (erfordert Rust).",
     "reticulumSidecarCargoMissing": "Rust-Toolchain (cargo) nicht gefunden. Von https://rustup.rs installieren und dann `pnpm run reticulum:sidecar:build` ausführen.",
-    "reticulumSidecarPatchMissing": "Der Reticulum-Sidecar-Build benötigt das rsReticulum packet-tap-Overlay. Im mesh-client-Repository `pnpm run reticulum:sidecar:build` ausführen (wendet Patches automatisch an).",
+    "reticulumSidecarPatchMissing": "Der Reticulum-Sidecar-Build benötigt das rsReticulum packet-tap-Overlay. Im sarmesh-Repository `pnpm run reticulum:sidecar:build` ausführen (wendet Patches automatisch an).",
     "reticulumSidecarStartFailed": "Reticulum-Stack konnte nicht gestartet werden: {{message}}",
     "reticulumStopStack": "Stack stoppen",
     "reticulumAutostart": "Stack beim Öffnen der Verbindung automatisch starten",
@@ -1252,7 +1252,7 @@
       "advancedAria": "Erweiterte Schnittstellen-Key-Value-Optionen",
       "advancedKeyReserved": "Der Schlüssel „{{key}}“ ist ein bekanntes Feld und wurde ignoriert — verwende das obige Formular.",
       "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
-      "decommissionedHubEnableBlocked": "Dieser Hub ist außer Betrieb und kann nicht aktiviert bleiben — mesh-client schaltet ihn bei jedem Stack-Start aus. Nutzen Sie „Standard-Backbones hinzufügen“ oder das Backbone-Verzeichnis für aktuelle Endpunkte.",
+      "decommissionedHubEnableBlocked": "Dieser Hub ist außer Betrieb und kann nicht aktiviert bleiben — sarmesh schaltet ihn bei jedem Stack-Start aus. Nutzen Sie „Standard-Backbones hinzufügen“ oder das Backbone-Verzeichnis für aktuelle Endpunkte.",
       "decommissionedBadge": "stillgelegt",
       "defaultHubsPickerTitle": "Standard-Backbones hinzufügen",
       "defaultHubsPickerConfirm": "{{count}} Hubs hinzufügen",
@@ -1297,8 +1297,8 @@
       "rmapFullModeHint": "Der Vollmodus mit RMAP-Veröffentlichung hält Full über ignore_config_warnings. LXMF-Lieferansagen verlassen dieses Radio im Stack-Ankündigungsintervall (Standard 1 Stunde).",
       "effectiveModeBadge": "Gültig ab: {{mode}}",
       "effectiveModeAria": "Effektiver Laufzeitmodus {{mode}}. Der konfigurierte Modus unterscheidet sich von dem, was Reticulum ausführt.",
-      "effectiveModeTooltip": "Reticulum hat diese auffindbare Schnittstelle zum Access Point (oder einem anderen zulässigen Modus) neu geschrieben, da auffindbar Gateway, Intern oder Access Point erfordert, es sei denn, ignore_config_warnings ist eingestellt. Starten Sie den Stack neu, nachdem der mesh-client abgestempelt hat, dass die Abmeldung wirksam wird, damit Full (oder Ihr konfigurierter Modus) wirksam wird.",
-      "flowControlBleHint": "Bei Bluetooth sendet das Funkgerät oft nie cmd_READY. Der Mesh-Client beschleunigt TX immer noch (wartet kurz auf READY und fährt dann fort), sodass die Flusssteuerung die Überlastung reduziert, ohne die Warteschlange einzufrieren.",
+      "effectiveModeTooltip": "Reticulum hat diese auffindbare Schnittstelle zum Access Point (oder einem anderen zulässigen Modus) neu geschrieben, da auffindbar Gateway, Intern oder Access Point erfordert, es sei denn, ignore_config_warnings ist eingestellt. Starten Sie den Stack neu, nachdem der sarmesh abgestempelt hat, dass die Abmeldung wirksam wird, damit Full (oder Ihr konfigurierter Modus) wirksam wird.",
+      "flowControlBleHint": "Bei Bluetooth sendet das Funkgerät oft nie cmd_READY. Der SARMesh beschleunigt TX immer noch (wartet kurz auf READY und fährt dann fort), sodass die Flusssteuerung die Überlastung reduziert, ohne die Warteschlange einzufrieren.",
       "advancedFields": "Erweiterte Einstellungen",
       "field": {
         "port": "Port",
@@ -1364,12 +1364,12 @@
       "connectingRow": "{{name}}: Verbindung über Bluetooth",
       "offlineHintWifi": "Überprüfen Sie, ob sich der RNode in Ihrem LAN befindet, eingeschaltet ist und über die konfigurierte IP erreichbar ist (Standard-TCP-Port 7633, nicht 4242). Aktualisieren Sie den Host unten, wenn DHCP eine neue Adresse zugewiesen hat, oder stellen Sie Wi-Fi im Reticulum → Admin erneut bereit.",
       "tcpUnreachable": "{{name}}: TCP-Hub nicht erreichbar ({{host}}:{{port}})",
-      "tcpUnreachableHint": "Die Remote-Reticulum-Instanz kann offline sein oder Verbindungen blockieren. Deaktivieren Sie diese Schnittstelle oder überprüfen Sie den Host und den Port. Häufige Neustarts von mesh-client oder des Stacks können dazu führen, dass Reticulum-1.4.0+-Hubs Ihre IP 12 Stunden lang blockieren — lieber warten statt erneut neu starten.",
+      "tcpUnreachableHint": "Die Remote-Reticulum-Instanz kann offline sein oder Verbindungen blockieren. Deaktivieren Sie diese Schnittstelle oder überprüfen Sie den Host und den Port. Häufige Neustarts von sarmesh oder des Stacks können dazu führen, dass Reticulum-1.4.0+-Hubs Ihre IP 12 Stunden lang blockieren — lieber warten statt erneut neu starten.",
       "connectingHintBle": "BLE RNode-Links können bis zu 60 Sekunden nach dem Start des Stacks dauern (OS-Passkey-Fenster). Geben Sie bei Aufforderung die aktuelle RNode-PIN ein — niemals 123456. Das ist normal, kein Fehler. Das Gerät wird möglicherweise erst nach einer erfolgreichen Verbindung in den Systemeinstellungen angezeigt.",
       "offlineHintBle": "Um diesen Fehler zu beheben, müssen Sie möglicherweise diese Schnittstelle entfernen und wieder hinzufügen (Gerät auswählen), damit die gespeicherte Bluetooth-ID aktualisiert wird, und dann den Stack neu starten. Ihr Betriebssystem fordert möglicherweise eine 6-stellige Bluetooth-PIN an (macOS, Windows oder Linux). RNode generiert bei jeder Kopplung einen neuen Code — verwenden Sie niemals 123456 (das ist die Standardeinstellung von Meshtastic, nicht RNode). Der RNode muss nicht in den Systemeinstellungen → Bluetooth angezeigt werden, bevor diese App eine Verbindung herstellt; der OS-Dialog erscheint, wenn der Stack koppelt. Headless-Radios: USB verbinden → Reticulum Admin → Bluetooth → Kopplung starten → geben Sie die im Admin-Panel angezeigte PIN (nicht auf dem Radiodisplay) in den OS-Dialog ein. Radios mit Display: Taste ~7 s auf Heltec-Geräten gedrückt halten (Timing variiert; ~10 s auf vielen Boards aktiviert stattdessen Wi‑Fi-AP), PIN vom Bildschirm ablesen und im OS-Dialog eingeben. Löschen Sie fehlgeschlagene Bindungen in den Bluetooth-Einstellungen Ihres Betriebssystems, bevor Sie es erneut versuchen.",
       "offlineHintBleBondStale": "macOS zeigt diesen RNode immer noch als gekoppelt an, aber die Bluetooth-Schlüssel stimmen nicht mehr überein (Peer entfernte die Kopplungsinformationen). Vergessen Sie das Gerät in den Systemeinstellungen → Bluetooth, schalten Sie den RNode in den Kopplungsmodus (Admin → Bluetooth → Start Pairing oder halten Sie die Taste ~7 s gedrückt), entfernen Sie dann diese Schnittstelle und fügen Sie sie erneut hinzu (Gerät auswählen), starten Sie den Stack neu und geben Sie die neue 6-stellige PIN ein, wenn Sie dazu aufgefordert werden.",
       "tcpFastFlap": "{{name}}: Hub hat deine IP wahrscheinlich nach häufigen Stack-Neustarts blockiert ({{host}}:{{port}})",
-      "tcpFastFlapHint": "Reticulum 1.4.0+ öffentliche Hubs blockieren eine IP nach fünf kurzen TCP-Sitzungen innerhalb von 12 Stunden. Schnelle Neustarts von mesh-client oder des Stacks zählen. Deaktivieren Sie diesen Hub und warten Sie bis zu 12 Stunden — ein erneuter Neustart verlängert die Sperre."
+      "tcpFastFlapHint": "Reticulum 1.4.0+ öffentliche Hubs blockieren eine IP nach fünf kurzen TCP-Sitzungen innerhalb von 12 Stunden. Schnelle Neustarts von sarmesh oder des Stacks zählen. Deaktivieren Sie diesen Hub und warten Sie bis zu 12 Stunden — ein erneuter Neustart verlängert die Sperre."
     },
     "autoConnectingTo": "Automatische Verbindung mit {{deviceName}}…",
     "autoReconnectInProgress": "Automatische Wiederverbindung läuft…",
@@ -1835,7 +1835,7 @@
         "rmap_transport_disabled": "Erkennbare Schnittstellen sind konfiguriert, aber der Transportmodus ist ausgeschaltet.",
         "rmap_i2p_not_connectable": "Die I2P-Schnittstelle \"{{name}}\" ist auffindbar, aber anschließbar ist nicht ja.",
         "shared_instance_client": "Share instance attached as a client of another app — local TCP hubs in this config are not started.",
-        "rmap_mode_autocorrect": "Die Schnittstelle „{{name}}“ ist mit einem Nicht-AP-/Gateway-Modus auffindbar — Reticulum führt sie als Access Point aus, es sei denn, ignore_config_warnings ist festgelegt. Bearbeiten Sie die Schnittstelle oder starten Sie den Stack neu, damit der mesh-client das Opt-Out stempeln kann."
+        "rmap_mode_autocorrect": "Die Schnittstelle „{{name}}“ ist mit einem Nicht-AP-/Gateway-Modus auffindbar — Reticulum führt sie als Access Point aus, es sei denn, ignore_config_warnings ist festgelegt. Bearbeiten Sie die Schnittstelle oder starten Sie den Stack neu, damit der sarmesh das Opt-Out stempeln kann."
       },
       "runtime": {
         "rnsNotReady": "Der RNS-Stack ist nicht bereit",
@@ -1868,7 +1868,7 @@
         "announceBusPressureTipBoundaryHubs": "Aktivierte Grenz- / Backbone-Hubs: {{hubs}}.",
         "announceBusPressureTipTxSaturated": "TX-Warteschlange fällt auf: {{names}} — diese Schnittstelle kann gesättigt sein.",
         "tooManyDefaultBackbones": "Du hast {{count}} Standard-Backbones aktiviert. Erwägen Sie, Extras zu deaktivieren und etwa 2 für die Redundanz aufzubewahren.",
-        "decommissionedHubEnabled": "Außer Betrieb genommener Hub „{{name}}“ ist noch aktiviert — mesh-client schaltet ihn bei jedem Stack-Start aus. Nutzen Sie „Standard-Backbones hinzufügen“ oder das Backbone-Verzeichnis für aktuelle Endpunkte.",
+        "decommissionedHubEnabled": "Außer Betrieb genommener Hub „{{name}}“ ist noch aktiviert — sarmesh schaltet ihn bei jedem Stack-Start aus. Nutzen Sie „Standard-Backbones hinzufügen“ oder das Backbone-Verzeichnis für aktuelle Endpunkte.",
         "txQueueDropsBle": "Schnittstelle \"{{name}}\" abgelegt {{count}} ausgehende Pakete (TX-Warteschlange voll) — BLE RNode-Link klemmt; lieber USB oder Re-Pair",
         "txQueueDropsBleBondStale": "Schnittstelle „{{name}}“ abgelegt {{count}} ausgehende Pakete (TX-Warteschlange voll) — BLE-Bond veraltet; Bluetooth im Betriebssystem vergessen und neu koppeln",
         "txQueueDropsNeutral": "Schnittstelle \"{{name}}\" hat {{count}} ausgehende Pakete abgelegt (TX-Warteschlange voll) — überprüfen Sie den Link dieser Schnittstelle",
@@ -2134,11 +2134,11 @@
         "label": "Datenbankausfälle"
       },
       "database-chmod": {
-        "recommendation": "Database file permission tweak failed (often benign on Windows). If you see real DB errors elsewhere, check antivirus and folder permissions for the mesh-client userData directory.",
+        "recommendation": "Database file permission tweak failed (often benign on Windows). If you see real DB errors elsewhere, check antivirus and folder permissions for the sarmesh userData directory.",
         "label": "Datenbank chmod (nicht kritisch)"
       },
       "database-writable": {
-        "recommendation": "The app cannot write its database folder. Fix permissions on the mesh-client userData directory (see troubleshooting: Database directory is not writable).",
+        "recommendation": "The app cannot write its database folder. Fix permissions on the sarmesh userData directory (see troubleshooting: Database directory is not writable).",
         "label": "Datenbank nicht beschreibbar"
       },
       "tak-server": {
@@ -2642,7 +2642,7 @@
       "remoteHardwareEnabledDesc": "Ermöglicht entfernten Knoten, GPIO-Pins auf diesem Gerät zu lesen und zu schreiben.",
       "remoteHardwareAllowUndefinedPins": "Zugriff auf undefinierte Pins erlauben",
       "remoteHardwareAllowUndefinedPinsDesc": "Lese-/Schreibzugriff auf Pins erlauben, die nicht in der verfügbaren Pin-Konfiguration aufgeführt sind.",
-      "mqttProxyGatewayHint": "With proxy enabled, mesh-client bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
+      "mqttProxyGatewayHint": "With proxy enabled, sarmesh bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
       "mapReportPublishInterval": "MAP-Berichtsintervall (Sekunden)",
       "mapReportPublishIntervalDesc": "0 verwendet Firmware-Standard. Wie oft das Gerät Kartenberichte veröffentlicht, wenn die Kartenberichterstattung aktiviert ist.",
       "mapReportPositionPrecision": "Positionsgenauigkeit des Kartenberichts",
@@ -3326,7 +3326,7 @@
       "missingIdentity": "Dieser Knoten hat noch keine gespeicherte Identität. Warten Sie auf eine Nomad-Ankündigung und versuchen Sie es dann erneut.",
       "transportUnavailable": "Reticulum-Transport ist nicht verfügbar. Starten Sie den Stack neu und versuchen Sie es erneut.",
       "sidecarNotRunning": "Reticulum-Sidecar läuft nicht. Starten Sie den Stack unter Verbindung und versuchen Sie es erneut.",
-      "responseTooLarge": "Der Knoten hat mehr Daten zurückgegeben, als mesh-client für diese Anfrage akzeptiert.",
+      "responseTooLarge": "Der Knoten hat mehr Daten zurückgegeben, als sarmesh für diese Anfrage akzeptiert.",
       "nomadBusy": "Eine andere Nomad-Seiten- oder Dateianfrage läuft noch. Versuche es gleich noch einmal.",
       "nomadNotServing": "Dies ist Ihr Nomad-Knoten, aber das Hosting „Meine Seiten“ läuft nicht. Öffnen Sie „Meine Seiten“, wählen Sie einen Ordner aus und beginnen Sie mit der Bereitstellung zur lokalen Vorschau.",
       "networkNotReady": "Warten darauf, dass ein Hub oder eine Funkschnittstelle online geht. Versuchen Sie es erneut, sobald Connection eine Schnittstelle anzeigt.",
@@ -4702,7 +4702,7 @@
     "localHostStats": "{{count}} Queued · {{bytes}} Bytes",
     "localHostName": "Host-Ausbreitungsknoten",
     "syncPeerCostExceedsMax": "Die Peering-Kosten dieses Ausbreitungsknotens liegen über Ihren maximalen Peering-Kosten — erhöhen Sie den Höchstbetrag im Network → Advanced PN-Hosting oder wählen Sie einen anderen Knoten.",
-    "offerUnsupported": "Dieses Ziel unterstützt LXMF-/offer-Sync nicht — mesh-client kann es nicht als Propagationsknoten verwenden.",
+    "offerUnsupported": "Dieses Ziel unterstützt LXMF-/offer-Sync nicht — sarmesh kann es nicht als Propagationsknoten verwenden.",
     "offerProbeTimeout": "Zeitüberschreitung beim Überprüfen /Anbieten des Supports — der Knoten ist möglicherweise nicht erreichbar. Versuchen Sie es erneut, wenn ein Pfad verfügbar ist.",
     "offerProbeFailed": "Konnte Unterstützung für diesen Ausbreitungsknoten nicht verifizieren /anbieten — versuchen Sie es gleich noch einmal.",
     "enableLocalHostConfirmTitle": "Lokales Hosting für Ausbreitungsknoten aktivieren?",
@@ -4949,7 +4949,7 @@
     "legendNotSavedTooltip": "Leerer Kreis — kein Passwort für diesen Raum gespeichert",
     "legendSavedTooltip": "Himmelblauer Halbkreis — Passwort gespeichert; melden Sie sich an, um eine Sitzung zu öffnen",
     "legendLoggedInTooltip": "Grüner Punkt — aktive Client-Sitzung (Raum verlassen, wenn der Server offline ist)",
-    "historyLocalHint": "Bei der Anmeldung fordert mesh-client aktuelle Beiträge an, die noch im Ringpuffer des Raumservers liegen (wenn dieses Gerät noch kein lokales Wasserzeichen hat). Aktivieren Sie die automatische Synchronisierung, um bei Verbindung abonniert zu bleiben.",
+    "historyLocalHint": "Bei der Anmeldung fordert sarmesh aktuelle Beiträge an, die noch im Ringpuffer des Raumservers liegen (wenn dieses Gerät noch kein lokales Wasserzeichen hat). Aktivieren Sie die automatische Synchronisierung, um bei Verbindung abonniert zu bleiben.",
     "loginAllSavedDisabledNoSavedPasswords": "Speichern Sie zuerst ein Raumpasswort, um alle Anmeldedaten zu verwenden",
     "membersHeadingWithCount": "Mitglieder ({{count}})",
     "collapseRoomList": "Raumliste ausblenden",
@@ -5203,7 +5203,7 @@
     "restartTitle": "Neustart und Installation",
     "retryCheck": "Aktualisierungsprüfung wiederholen",
     "updateError": "Fehler bei der Aktualisierung",
-    "menuToastUpToDateTitle": "Mesh-Client",
+    "menuToastUpToDateTitle": "SARMesh",
     "menuToastUpToDateBody": "Sie haben die neueste Version.",
     "menuToastAvailableTitle": "Update verfügbar",
     "menuToastAvailableBody": "Version {{version}} liegt vor.",
@@ -5611,7 +5611,7 @@
       "enabled": "Der Dateiempfang ist aktiviert.",
       "enableFailed": "Dateiempfang konnte nicht aktiviert werden: {{error}}",
       "saveDirRequired": "Wählen Sie einen Speicherordner aus, um den Empfang zu aktivieren.",
-      "shareDestWarning": "Wenn Sie diese Option aktivieren, sendet der Mesh-Client Ihr RNCP-Empfangsziel an diesen Peer, damit dieser den Dateiversand automatisch ausfüllen kann.",
+      "shareDestWarning": "Wenn Sie diese Option aktivieren, sendet der SARMesh Ihr RNCP-Empfangsziel an diesen Peer, damit dieser den Dateiversand automatisch ausfüllen kann.",
       "lxmfBody": "Bitte aktivieren Sie den Empfang von RNCP-Dateien und antworten Sie mit Ihrem RNCP-Empfangsziel-Hash.",
       "lxmfShareBody": "Der Dateiempfang ist aktiviert. Mein RNCP-Empfangsziel-Hash:",
       "identityUnknown": "„Eingehende Anfragen“ ist aktiviert, aber der Identitäts-Hash dieses Peers ist noch nicht bekannt, sodass er nicht zu „Immer zulassen“ hinzugefügt wurde. Sie werden weiterhin vor jeder Datei gefragt; Versuchen Sie „Immer zulassen“ erneut, nachdem ein Pfad oder eine Ankündigung eintrifft."
@@ -5716,7 +5716,7 @@
     "capabilityHeardShort": "LXST",
     "capabilityUnknownShort": "?",
     "help": {
-      "interop": "LXST Voice benötigt einen Peer, der LXST-Telefonie ausführt (Sideband, Ratspeak oder mesh-client). Kein Sprachnotizclip. Python LXST ist die Referenz; rsLXST ist experimentell."
+      "interop": "LXST Voice benötigt einen Peer, der LXST-Telefonie ausführt (Sideband, Ratspeak oder sarmesh). Kein Sprachnotizclip. Python LXST ist die Referenz; rsLXST ist experimentell."
     },
     "toast": {
       "busy": "Leitung besetzt",
@@ -5864,7 +5864,7 @@
   },
   "longSession": {
     "title": "Neustart empfohlen",
-    "body": "mesh-client läuft seit vier Tagen mit Bluetooth-Funkverbindung. Starte die App neu, um das Risiko von Abstürzen bei langen Noble BLE-Sitzungen zu reduzieren.",
+    "body": "sarmesh läuft seit vier Tagen mit Bluetooth-Funkverbindung. Starte die App neu, um das Risiko von Abstürzen bei langen Noble BLE-Sitzungen zu reduzieren.",
     "restart": "Neustart",
     "dismiss": "Ablehnen"
   },

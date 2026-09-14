@@ -1,6 +1,6 @@
 # mesh-client-reticulum sidecar
 
-Headless Reticulum/LXMF daemon spawned by mesh-client Electron main process.
+Headless Reticulum/LXMF daemon spawned by sarmesh Electron main process.
 
 ## Prerequisites
 
@@ -8,7 +8,7 @@ Install Rust (**1.85+**, edition 2024). Prefer [rustup](https://rustup.rs/). See
 
 ## Build
 
-**First-time setup** — from the mesh-client repo root, clone/float the repo-local `.rsstack/` workspace and apply overlays:
+**First-time setup** — from the sarmesh repo root, clone/float the repo-local `.rsstack/` workspace and apply overlays:
 
 ```bash
 ./scripts/clone-ratspeak-stack.sh
@@ -25,7 +25,7 @@ pnpm run reticulum:sidecar:build
 **Full rsReticulum + rsLXMF + rsNomad + rsLXST + lrgp-rs** — repo-local workspace (Ratspeak crates + Colorado-Mesh rsNomad + LXST voice + LRGP games):
 
 ```
-mesh-client/
+sarmesh/
   .rsstack/
     rsReticulum/
     rsLXMF/
@@ -95,4 +95,4 @@ Install coverage tooling once: `cargo install cargo-llvm-cov`.
 
 ## License
 
-AGPL-3.0-or-later (separate process from GPL-3.0-or-later mesh-client app).
+AGPL-3.0-or-later (separate process from GPL-3.0-or-later sarmesh app).

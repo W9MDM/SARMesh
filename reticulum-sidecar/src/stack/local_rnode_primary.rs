@@ -355,7 +355,7 @@ mod tests {
     #[test]
     fn reorder_moves_primary_before_other_local_serial_blocks() {
         let dir =
-            std::env::temp_dir().join(format!("mesh-client-primary-rnode-{}", std::process::id()));
+            std::env::temp_dir().join(format!("sarmesh-primary-rnode-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         let content = r#"[reticulum]

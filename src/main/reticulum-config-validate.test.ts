@@ -16,7 +16,7 @@ vi.mock('child_process', () => ({
 
 vi.mock('electron', () => ({
   app: {
-    getPath: () => path.join(os.tmpdir(), 'mesh-client-validate-test-userdata'),
+    getPath: () => path.join(os.tmpdir(), 'sarmesh-validate-test-userdata'),
     isPackaged: false,
   },
 }));

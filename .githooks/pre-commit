@@ -8,7 +8,14 @@
 # Ensure locally installed tooling (e.g. `actionlint`) is on PATH.
 REPO_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 if [ -d "$REPO_ROOT/.githooks/bin" ]; then
-  export PATH="$REPO_ROOT/.githooks/bin:$PATH"
+  HOOK_BIN="$REPO_ROOT/.githooks/bin"
+  # On Git for Windows, `pwd` here yields a Windows path (C:/...), which the
+  # POSIX shell silently ignores as a PATH entry. Convert it so locally
+  # installed tooling is actually found.
+  if command -v cygpath > /dev/null 2>&1; then
+    HOOK_BIN=$(cygpath -u "$HOOK_BIN")
+  fi
+  export PATH="$HOOK_BIN:$PATH"
 fi
 
 fail() {
@@ -49,7 +56,7 @@ if [ "$deps_changed" -eq 1 ] && [ -s "$STAGED_LIST" ]; then
   while IFS= read -r f || [ -n "$f" ]; do
     [ -n "$f" ] || continue
     case "$f" in
-      package.json | pnpm-lock.yaml | org.coloradomesh.MeshClient.yml) ;;
+      package.json | pnpm-lock.yaml | io.github.w9mdm.SARMesh.yml) ;;
       *)
         manifest_only=0
         break
@@ -152,13 +159,13 @@ else
   skip_manifest_only 'check:electron-security'
 fi
 
-if staged_match '^(flatpak/|org\.coloradomesh\.MeshClient\.yml|package\.json|scripts/check-flatpak\.mjs|scripts/sync-flatpak-electron)'; then
+if staged_match '^(flatpak/|org\.coloradomesh\.SARMesh\.yml|package\.json|scripts/check-flatpak\.mjs|scripts/sync-flatpak-electron)'; then
   # Bumping packageManager without the vendored pnpm pin fails the offline Flatpak
   # build, so re-pin from package.json and re-stage before verifying.
   if staged_match '^package\.json$'; then
     node scripts/sync-flatpak-electron.mjs || fail 'scripts/sync-flatpak-electron.mjs'
-    if ! git diff --quiet -- org.coloradomesh.MeshClient.yml; then
-      git add org.coloradomesh.MeshClient.yml || fail 'git add (flatpak manifest sync)'
+    if ! git diff --quiet -- io.github.w9mdm.SARMesh.yml; then
+      git add io.github.w9mdm.SARMesh.yml || fail 'git add (flatpak manifest sync)'
     fi
   fi
   pnpm run check:flatpak || fail 'pnpm run check:flatpak'

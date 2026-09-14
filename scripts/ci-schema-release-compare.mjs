@@ -93,12 +93,12 @@ export function formatSchemaCompareMarkdown(opts) {
     lines.push('');
     lines.push(
       'Installing and launching this build will upgrade the local SQLite database. ' +
-        'You **cannot downgrade** to an older Mesh-Client that only supports the previous schema ' +
+        'You **cannot downgrade** to an older SARMesh that only supports the previous schema ' +
         'while keeping the same database.',
     );
     lines.push('');
     lines.push(
-      'On first launch, Mesh-Client shows a **Quit / Upgrade** dialog before changing the database.',
+      'On first launch, SARMesh shows a **Quit / Upgrade** dialog before changing the database.',
     );
   } else {
     lines.push(`Last official release: **${opts.prevTag}** (schema **${opts.prevSchema}**)`);
@@ -174,7 +174,7 @@ export function parseGithubLinkNext(linkHeader) {
  */
 export async function fetchAllGithubReleases(opts = {}) {
   const owner = opts.owner ?? 'Colorado-Mesh';
-  const repo = opts.repo ?? 'mesh-client';
+  const repo = opts.repo ?? 'sarmesh';
   const headers = opts.headers ?? {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
@@ -205,7 +205,7 @@ export async function fetchAllGithubReleases(opts = {}) {
  */
 export async function fetchLatestPublishedReleaseSchema(opts = {}) {
   const owner = opts.owner ?? 'Colorado-Mesh';
-  const repo = opts.repo ?? 'mesh-client';
+  const repo = opts.repo ?? 'sarmesh';
   const token = opts.token ?? process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN;
   const headers = {
     Accept: 'application/vnd.github+json',
@@ -278,9 +278,8 @@ export async function runSchemaReleaseCompare(argv, env = process.env) {
   const workflowLabel =
     labelIdx >= 0 && argv[labelIdx + 1]
       ? argv[labelIdx + 1]
-      : typeof env.MESH_CLIENT_SCHEMA_WORKFLOW_LABEL === 'string' &&
-          env.MESH_CLIENT_SCHEMA_WORKFLOW_LABEL
-        ? env.MESH_CLIENT_SCHEMA_WORKFLOW_LABEL
+      : typeof env.SARMESH_SCHEMA_WORKFLOW_LABEL === 'string' && env.SARMESH_SCHEMA_WORKFLOW_LABEL
+        ? env.SARMESH_SCHEMA_WORKFLOW_LABEL
         : undefined;
 
   const currFile = path.join(ROOT, SCHEMA_REL);
@@ -288,8 +287,8 @@ export async function runSchemaReleaseCompare(argv, env = process.env) {
 
   let prevSchema = null;
   let prevTag = null;
-  const prevSchemaEnv = env.MESH_CLIENT_SCHEMA_PREV;
-  const prevTagEnv = env.MESH_CLIENT_SCHEMA_PREV_TAG;
+  const prevSchemaEnv = env.SARMESH_SCHEMA_PREV;
+  const prevTagEnv = env.SARMESH_SCHEMA_PREV_TAG;
   if (typeof prevSchemaEnv === 'string' && prevSchemaEnv !== '' && /^\d+$/.test(prevSchemaEnv)) {
     if (typeof prevTagEnv === 'string' && prevTagEnv && /^v\d+\.\d+\.\d+$/.test(prevTagEnv)) {
       prevSchema = trustedSchemaVersion(prevSchemaEnv);

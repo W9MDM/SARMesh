@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.w9mdm.SARMesh</id>
+  <name>SARMesh</name>
+  <summary>Search and rescue mesh client with an APRS bridge for CalTopo</summary>
+  <!-- metadata_license covers the AppStream metadata file itself, not the application -->
+  <metadata_license>MIT</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <description>
+    <p>
+      SARMesh is a desktop application for communicating with Meshtastic,
+      MeshCore, and Reticulum mesh networks via Bluetooth LE, USB serial, and MQTT.
+      It supports diagnostics, channel management, node mapping, and direct
+      messaging across all three protocols simultaneously.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.w9mdm.SARMesh.desktop</launchable>
+  <url type="homepage">https://github.com/W9MDM/SARMesh</url>
+  <url type="bugtracker">https://github.com/W9MDM/SARMesh/issues</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.0.0" date="2026-09-14"/>
+  </releases>
+  <developer id="io.github.w9mdm">
+    <name>W9MDM</name>
+  </developer>
+</component>

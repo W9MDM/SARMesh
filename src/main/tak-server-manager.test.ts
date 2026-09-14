@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('electron', () => ({
   app: {
-    getPath: () => '/tmp/mesh-client-test',
+    getPath: () => '/tmp/sarmesh-test',
   },
 }));
 
@@ -137,7 +137,7 @@ describe('TakServerManager server error sanitization', () => {
     await manager.start({
       enabled: true,
       autoStart: false,
-      serverName: 'mesh-client-test',
+      serverName: 'sarmesh-test',
       port: 8089,
       requireClientCert: false,
     });
@@ -164,7 +164,7 @@ describe('TakServerManager.regenerateCertificates', () => {
   function seedRunningManager(manager: TakServerManager): TakServerManagerInternals {
     const internal = manager as unknown as TakServerManagerInternals;
     internal._status = { running: true, port: 8089, clientCount: 0 };
-    internal.settings = { serverName: 'mesh-client-test', port: 8089, requireClientCert: false };
+    internal.settings = { serverName: 'sarmesh-test', port: 8089, requireClientCert: false };
     internal.certBundle = OLD_CERT_BUNDLE;
     vi.spyOn(manager, 'stop').mockImplementation(() => {
       internal._status = { running: false, port: 8089, clientCount: 0 };
@@ -218,7 +218,7 @@ describe('TakServerManager.regenerateCertificates', () => {
     const manager = new TakServerManager();
     const internal = manager as unknown as TakServerManagerInternals;
     internal._status = { running: false, port: 8089, clientCount: 0 };
-    internal.settings = { serverName: 'mesh-client-test', port: 8089, requireClientCert: false };
+    internal.settings = { serverName: 'sarmesh-test', port: 8089, requireClientCert: false };
     internal.certBundle = OLD_CERT_BUNDLE;
     vi.mocked(regenerateCerts).mockResolvedValueOnce(NEW_CERT_BUNDLE);
     const startSpy = vi.spyOn(manager, 'start');

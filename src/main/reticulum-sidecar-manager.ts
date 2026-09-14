@@ -392,7 +392,7 @@ export class ReticulumSidecarManager extends EventEmitter {
       if (!text) return;
       this.recordSidecarOutputLine(text);
       if (!shouldForwardReticulumSidecarStdout(text)) return;
-      // WARN/ERROR and PN-triage INFO must reach mesh-client.log (debug is filtered in packaged).
+      // WARN/ERROR and PN-triage INFO must reach sarmesh.log (debug is filtered in packaged).
       console.warn('[ReticulumSidecar]', text);
     };
     proc.stdout?.on('data', (chunk: Buffer) => {

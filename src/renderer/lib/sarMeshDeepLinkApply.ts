@@ -1,6 +1,6 @@
 /**
- * Apply classified mesh-client deep links (lxma / meshcore / lxm contact) to stores.
- * Used by MeshClientDeepLinkHost and in-app QrIngestControl handlers.
+ * Apply classified sarmesh deep links (lxma / meshcore / lxm contact) to stores.
+ * Used by SARMeshDeepLinkHost and in-app QrIngestControl handlers.
  */
 
 import { errLikeToLogString } from '@/renderer/lib/errLikeToLogString';
@@ -12,11 +12,11 @@ import { extractLxmfPayloadFromSendResponse } from '@/renderer/lib/reticulum/lxm
 import { registerReticulumKnownIdentity } from '@/renderer/lib/reticulum/reticulumSidecarReads';
 import { refreshReticulumPeersFromSidecar } from '@/renderer/stores/reticulumPeerStore';
 import { hexToBytesExact } from '@/shared/hexBytes';
-import type { MeshClientDeepLink } from '@/shared/meshClientDeepLink';
 import { paperErrorToI18n } from '@/shared/reticulumPaperErrors';
+import type { SARMeshDeepLink } from '@/shared/sarMeshDeepLink';
 
 export type DeepLinkApplyResult =
-  | { ok: true; kind: MeshClientDeepLink['kind']; deferred?: boolean }
+  | { ok: true; kind: SARMeshDeepLink['kind']; deferred?: boolean }
   | { ok: false; errorKey: string; detail?: string };
 
 /** Import Columba lxma:// contact: register pubkey then SQLite saved contact. */
@@ -50,7 +50,7 @@ export async function applyLxmaContactImport(opts: {
   }
 }
 
-/** Import mesh-client / legacy lxm://contact (History stamp; not necessarily saved contact). */
+/** Import sarmesh / legacy lxm://contact (History stamp; not necessarily saved contact). */
 export async function applyLxmContactImport(opts: {
   destinationHash: string;
   name?: string | null;

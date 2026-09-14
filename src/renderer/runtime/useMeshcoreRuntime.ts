@@ -4533,7 +4533,7 @@ export function useMeshcoreRuntime() {
             if (mqttStatusRef.current === 'connected') {
               void window.electronAPI.mqtt
                 .publishMeshcorePacketLog({
-                  origin: selfInfo?.name ?? 'mesh-client',
+                  origin: selfInfo?.name ?? 'sarmesh',
                   snr: 0,
                   rssi: 0,
                   direction: 'tx',

@@ -32,7 +32,7 @@ describe('write-schema-upgrade-notice', () => {
     expect(text).toContain('v5.26.0');
     expect(text).toContain('cannot downgrade');
     const nsh = formatNsisSchemaUpgradeInclude(text);
-    expect(nsh).toContain('!define MESH_CLIENT_SCHEMA_UPGRADE_NOTICE');
+    expect(nsh).toContain('!define SARMESH_SCHEMA_UPGRADE_NOTICE');
     expect(nsh).toContain('$\\r$\\n');
   });
 
@@ -42,23 +42,23 @@ describe('write-schema-upgrade-notice', () => {
 
     writeSchemaUpgradeNoticeFiles(
       {
-        MESH_CLIENT_SCHEMA_BUMPED: '1',
-        MESH_CLIENT_SCHEMA_CURR: '49',
-        MESH_CLIENT_SCHEMA_PREV: '48',
-        MESH_CLIENT_SCHEMA_PREV_TAG: 'v5.26.0',
+        SARMESH_SCHEMA_BUMPED: '1',
+        SARMESH_SCHEMA_CURR: '49',
+        SARMESH_SCHEMA_PREV: '48',
+        SARMESH_SCHEMA_PREV_TAG: 'v5.26.0',
       },
       dir,
     );
     expect(fs.existsSync(path.join(dir, 'SCHEMA-UPGRADE.txt'))).toBe(true);
     expect(fs.existsSync(path.join(dir, 'schema-upgrade-notice.nsh'))).toBe(true);
 
-    writeSchemaUpgradeNoticeFiles({ MESH_CLIENT_SCHEMA_BUMPED: '0' }, dir);
+    writeSchemaUpgradeNoticeFiles({ SARMESH_SCHEMA_BUMPED: '0' }, dir);
     expect(fs.existsSync(path.join(dir, 'SCHEMA-UPGRADE.txt'))).toBe(false);
     expect(fs.readFileSync(path.join(dir, 'schema-upgrade-notice.nsh'), 'utf8')).toBe(
       NSIS_SCHEMA_UPGRADE_STUB,
     );
     expect(fs.readFileSync(path.join(dir, 'schema-upgrade-notice.nsh'), 'utf8')).not.toContain(
-      'MESH_CLIENT_SCHEMA_UPGRADE_NOTICE',
+      'SARMESH_SCHEMA_UPGRADE_NOTICE',
     );
   });
 
@@ -79,7 +79,7 @@ describe('write-schema-upgrade-notice', () => {
       return origRename(from, to);
     });
 
-    expect(() => writeSchemaUpgradeNoticeFiles({ MESH_CLIENT_SCHEMA_BUMPED: '0' }, dir)).toThrow(
+    expect(() => writeSchemaUpgradeNoticeFiles({ SARMESH_SCHEMA_BUMPED: '0' }, dir)).toThrow(
       'simulated rename failure',
     );
     expect(fs.readFileSync(nshPath, 'utf8')).toBe('PRIOR_NSH');
@@ -108,7 +108,7 @@ describe('write-schema-upgrade-notice', () => {
       return origUnlink(p);
     });
 
-    expect(() => writeSchemaUpgradeNoticeFiles({ MESH_CLIENT_SCHEMA_BUMPED: '0' }, dir)).toThrow(
+    expect(() => writeSchemaUpgradeNoticeFiles({ SARMESH_SCHEMA_BUMPED: '0' }, dir)).toThrow(
       'simulated unlink failure',
     );
     expect(fs.readFileSync(nshPath, 'utf8')).toBe('PRIOR_NSH');

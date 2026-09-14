@@ -168,7 +168,7 @@ export class TakServerManager extends EventEmitter {
    * the concrete cause.
    */
   async regenerateCertificates(): Promise<void> {
-    const serverName = this.settings?.serverName ?? 'mesh-client';
+    const serverName = this.settings?.serverName ?? 'sarmesh';
     const wasRunning = this._status.running;
     const previousCertBundle = this.certBundle;
 

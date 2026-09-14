@@ -93,13 +93,13 @@ export function validateRmapReachableOn(value: string): string | null {
   return null;
 }
 
-/** Interface types mesh-client can mark discoverable for RMAP v4 (see rmap.world/info.html). */
+/** Interface types sarmesh can mark discoverable for RMAP v4 (see rmap.world/info.html). */
 const RMAP_DISCOVERY_EXCLUDED_TYPES = new Set(['auto', 'tcp']);
 
 /**
  * Enabled interfaces that support per-interface discoverable=yes in rnsd config.
  * Excludes Auto (LAN), outbound TCP client hubs, and system-managed shared-instance
- * rows — Scenario A server/backbone interfaces are not CRUD-managed in mesh-client today.
+ * rows — Scenario A server/backbone interfaces are not CRUD-managed in sarmesh today.
  */
 export function isReticulumRmapDiscoveryCapable(
   row: Pick<ReticulumInterfaceRow, 'type' | 'enabled' | 'serial_port'> &

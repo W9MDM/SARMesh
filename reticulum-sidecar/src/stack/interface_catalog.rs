@@ -95,7 +95,7 @@ impl InterfaceCatalog {
         self.by_ui_type.get(ui_type)
     }
 
-    /// RNS config `type =` values mesh-client will parse out of a config file.
+    /// RNS config `type =` values sarmesh will parse out of a config file.
     pub fn supported_config_types(&self) -> &[&'static str] {
         &self.config_types
     }
@@ -132,7 +132,7 @@ mod tests {
 
     /// Every `configType` must be a name the upstream factory `synthesize_interface`
     /// accepts, otherwise the interface silently never comes up. `BlePeerInterface`
-    /// is the documented exception: mesh-client spawns it from `live.rs`.
+    /// is the documented exception: sarmesh spawns it from `live.rs`.
     const UPSTREAM_FACTORY_TYPES: &[&str] = &[
         "TCPClientInterface",
         "TCPServerInterface",
@@ -149,14 +149,14 @@ mod tests {
         "BackboneInterface",
     ];
 
-    const MESH_CLIENT_SPAWNED_TYPES: &[&str] = &["BlePeerInterface"];
+    const SARMESH_SPAWNED_TYPES: &[&str] = &["BlePeerInterface"];
 
     #[test]
     fn every_config_type_is_constructible() {
         for ui in INTERFACE_CATALOG.ui_types() {
             let entry = INTERFACE_CATALOG.get(ui).expect("entry");
             let known = UPSTREAM_FACTORY_TYPES.contains(&entry.config_type.as_str())
-                || MESH_CLIENT_SPAWNED_TYPES.contains(&entry.config_type.as_str());
+                || SARMESH_SPAWNED_TYPES.contains(&entry.config_type.as_str());
             assert!(
                 known,
                 "{ui} has configType {} which no factory arm accepts",

@@ -32,21 +32,21 @@ export function classifyElectronStartupError(stderrText) {
 
 export function fedoraLibffmpegRemediation() {
   return [
-    '[mesh-client] Detected Linux startup failure: libffmpeg.so could not be loaded.',
-    '[mesh-client] This can happen when required runtime libraries are unavailable.',
-    '[mesh-client] Verify your system has the Electron runtime dependencies installed.',
-    '[mesh-client] On Fedora/RHEL-based systems, ensure ffmpeg runtime libs are present.',
+    '[sarmesh] Detected Linux startup failure: libffmpeg.so could not be loaded.',
+    '[sarmesh] This can happen when required runtime libraries are unavailable.',
+    '[sarmesh] Verify your system has the Electron runtime dependencies installed.',
+    '[sarmesh] On Fedora/RHEL-based systems, ensure ffmpeg runtime libs are present.',
   ].join('\n');
 }
 
 export function linuxDisplayMissingRemediation() {
   return [
-    '[mesh-client] Detected Linux startup failure: no active desktop display (X11/Wayland).',
-    '[mesh-client] Electron could not initialize a GUI backend (Missing X server or $DISPLAY).',
-    '[mesh-client] If you are in SSH or headless mode, launch from a desktop session instead.',
-    '[mesh-client] If already in a desktop session, verify display environment variables:',
+    '[sarmesh] Detected Linux startup failure: no active desktop display (X11/Wayland).',
+    '[sarmesh] Electron could not initialize a GUI backend (Missing X server or $DISPLAY).',
+    '[sarmesh] If you are in SSH or headless mode, launch from a desktop session instead.',
+    '[sarmesh] If already in a desktop session, verify display environment variables:',
     '  echo "DISPLAY=$DISPLAY WAYLAND_DISPLAY=$WAYLAND_DISPLAY XDG_SESSION_TYPE=$XDG_SESSION_TYPE"',
-    '[mesh-client] For Wayland sessions, forcing X11 may help:',
+    '[sarmesh] For Wayland sessions, forcing X11 may help:',
     '  ELECTRON_OZONE_PLATFORM_HINT=x11 pnpm start',
   ].join('\n');
 }

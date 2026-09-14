@@ -9,8 +9,8 @@ vi.mock('child_process', () => ({
 
 vi.mock('electron', () => ({
   app: {
-    getPath: () => '/tmp/mesh-client-test',
-    getAppPath: () => '/tmp/mesh-client-test',
+    getPath: () => '/tmp/sarmesh-test',
+    getAppPath: () => '/tmp/sarmesh-test',
   },
 }));
 
@@ -20,7 +20,7 @@ vi.mock('./log-service', () => ({
 
 vi.mock('./reticulum-sidecar-path', () => ({
   ensureDevSidecarBinary: vi.fn().mockResolvedValue(undefined),
-  resolveSidecarBinaryPath: () => '/tmp/mesh-client-test/mesh-client-reticulum',
+  resolveSidecarBinaryPath: () => '/tmp/sarmesh-test/mesh-client-reticulum',
 }));
 
 const suspendNobleMock = vi.fn().mockResolvedValue(undefined);

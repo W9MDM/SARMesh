@@ -84,7 +84,7 @@ function normalizeIssues(
 }
 
 /**
- * One-shot offline lint of the mesh-client Reticulum INI using the bundled sidecar.
+ * One-shot offline lint of the sarmesh Reticulum INI using the bundled sidecar.
  * Safe to run while the long-lived sidecar is up (read-only; no HTTP bind).
  */
 export async function validateReticulumUserConfig(opts?: {

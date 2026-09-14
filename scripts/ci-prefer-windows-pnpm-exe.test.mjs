@@ -133,11 +133,11 @@ describe('assert-win-setup-installers', () => {
       /Expected exactly one x64 NSIS installer/,
     );
 
-    fs.writeFileSync(path.join(releaseDir, 'Mesh-client Setup 5.35.0-run281.exe'), '');
-    fs.writeFileSync(path.join(releaseDir, 'Mesh-client Setup 5.35.0-run281-arm64.exe'), '');
+    fs.writeFileSync(path.join(releaseDir, 'SARMesh Setup 5.35.0-run281.exe'), '');
+    fs.writeFileSync(path.join(releaseDir, 'SARMesh Setup 5.35.0-run281-arm64.exe'), '');
     expect(assertWinSetupInstallers({ rootDir: releaseDir, packageJsonPath })).toEqual({
-      x64: 'Mesh-client Setup 5.35.0-run281.exe',
-      arm64: 'Mesh-client Setup 5.35.0-run281-arm64.exe',
+      x64: 'SARMesh Setup 5.35.0-run281.exe',
+      arm64: 'SARMesh Setup 5.35.0-run281-arm64.exe',
     });
   });
 });

@@ -23,7 +23,7 @@ describe('reticulum PropagationNode policy setter contracts', () => {
     expect(source).toMatch(/node\.set_max_message_size\s*\(/);
   });
 
-  it('mesh-client ships PropagationNode policy setters overlay wiring', () => {
+  it('sarmesh ships PropagationNode policy setters overlay wiring', () => {
     expect(existsSync(POLICY_SETTERS_PATCH)).toBe(true);
     expect(existsSync(APPLY_SCRIPT)).toBe(true);
     const patch = readFileSync(POLICY_SETTERS_PATCH, 'utf8');

@@ -50,7 +50,7 @@ describe('TakServerPanel', () => {
     expect(window.electronAPI.tak.start).toHaveBeenCalledWith({
       enabled: true,
       port: 8089,
-      serverName: 'mesh-client',
+      serverName: 'sarmesh',
       requireClientCert: true,
       autoStart: false,
     });

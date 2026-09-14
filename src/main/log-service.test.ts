@@ -15,7 +15,7 @@ describe('log-service source contracts', () => {
   });
 
   it('defines LOG_BACKUP_FILENAME', () => {
-    expect(LOG_SERVICE_SOURCE).toContain("const LOG_BACKUP_FILENAME = 'mesh-client.log.1'");
+    expect(LOG_SERVICE_SOURCE).toContain("const LOG_BACKUP_FILENAME = 'sarmesh.log.1'");
   });
 
   it('initLogFile preserves a non-empty prior session log as .1 before truncating', () => {
@@ -232,8 +232,8 @@ describe('initLogFile previous-session preserve', () => {
   it('renames a non-empty prior log to .1 then creates an empty current log', async () => {
     vi.mocked(fs.existsSync).mockImplementation((target) => {
       const s = String(target);
-      if (s.endsWith('mesh-client.log.1')) return true;
-      if (s.endsWith('mesh-client.log')) return true;
+      if (s.endsWith('sarmesh.log.1')) return true;
+      if (s.endsWith('sarmesh.log')) return true;
       return false;
     });
     vi.mocked(fs.statSync).mockReturnValue({ size: 128 } as fs.Stats);
@@ -244,15 +244,15 @@ describe('initLogFile previous-session preserve', () => {
     expect(fs.unlinkSync).toHaveBeenCalled();
     // Staging rename: current → .1.staging-* → .1 (avoids losing backup if promote fails).
     expect(fs.renameSync).toHaveBeenCalledWith(
-      expect.stringMatching(/mesh-client\.log$/),
-      expect.stringMatching(/mesh-client\.log\.1\.staging-/),
+      expect.stringMatching(/sarmesh\.log$/),
+      expect.stringMatching(/sarmesh\.log\.1\.staging-/),
     );
     expect(fs.renameSync).toHaveBeenCalledWith(
-      expect.stringMatching(/mesh-client\.log\.1\.staging-/),
-      expect.stringMatching(/mesh-client\.log\.1$/),
+      expect.stringMatching(/sarmesh\.log\.1\.staging-/),
+      expect.stringMatching(/sarmesh\.log\.1$/),
     );
     expect(fs.writeFileSync).toHaveBeenCalledWith(
-      expect.stringMatching(/mesh-client\.log$/),
+      expect.stringMatching(/sarmesh\.log$/),
       '',
       expect.objectContaining({ encoding: 'utf8' }),
     );
@@ -266,16 +266,14 @@ describe('initLogFile previous-session preserve', () => {
 
     expect(fs.renameSync).not.toHaveBeenCalled();
     expect(fs.writeFileSync).toHaveBeenCalledWith(
-      expect.stringMatching(/mesh-client\.log$/),
+      expect.stringMatching(/sarmesh\.log$/),
       '',
       expect.objectContaining({ encoding: 'utf8' }),
     );
   });
 
   it('does not rotate when the prior log exists but is empty (size 0)', async () => {
-    vi.mocked(fs.existsSync).mockImplementation((target) =>
-      String(target).endsWith('mesh-client.log'),
-    );
+    vi.mocked(fs.existsSync).mockImplementation((target) => String(target).endsWith('sarmesh.log'));
     vi.mocked(fs.statSync).mockReturnValue({ size: 0 } as fs.Stats);
 
     const { initLogFile } = await import('./log-service');
@@ -283,7 +281,7 @@ describe('initLogFile previous-session preserve', () => {
 
     expect(fs.renameSync).not.toHaveBeenCalled();
     expect(fs.writeFileSync).toHaveBeenCalledWith(
-      expect.stringMatching(/mesh-client\.log$/),
+      expect.stringMatching(/sarmesh\.log$/),
       '',
       expect.objectContaining({ encoding: 'utf8' }),
     );
@@ -297,25 +295,25 @@ describe('initLogFile previous-session preserve', () => {
 
     vi.mocked(fs.existsSync).mockImplementation((target) => {
       const s = String(target);
-      if (s.endsWith('mesh-client.log.1')) return false;
+      if (s.endsWith('sarmesh.log.1')) return false;
       if (s.includes('.staging-')) return stagingContents.has(s);
-      if (s.endsWith('mesh-client.log')) return currentExists;
+      if (s.endsWith('sarmesh.log')) return currentExists;
       return false;
     });
     vi.mocked(fs.statSync).mockReturnValue({ size: prior.length } as fs.Stats);
     vi.mocked(fs.renameSync).mockImplementation((from, to) => {
       const f = String(from);
       const t = String(to);
-      if (f.endsWith('mesh-client.log') && t.includes('.staging-')) {
+      if (f.endsWith('sarmesh.log') && t.includes('.staging-')) {
         stagingPath = t;
         stagingContents.set(t, prior);
         currentExists = false;
         return;
       }
-      if (f.includes('.staging-') && t.endsWith('mesh-client.log.1')) {
+      if (f.includes('.staging-') && t.endsWith('sarmesh.log.1')) {
         throw new Error('promote failed');
       }
-      if (f.includes('.staging-') && t.endsWith('mesh-client.log')) {
+      if (f.includes('.staging-') && t.endsWith('sarmesh.log')) {
         stagingContents.delete(f);
         currentExists = true;
         return;
@@ -328,12 +326,12 @@ describe('initLogFile previous-session preserve', () => {
     expect(stagingPath).toBeTruthy();
     // Must restore staging → current and skip destructive truncate of prior content.
     expect(fs.renameSync).toHaveBeenCalledWith(
-      expect.stringMatching(/mesh-client\.log\.1\.staging-/),
-      expect.stringMatching(/mesh-client\.log$/),
+      expect.stringMatching(/sarmesh\.log\.1\.staging-/),
+      expect.stringMatching(/sarmesh\.log$/),
     );
     const truncatedCurrent = vi
       .mocked(fs.writeFileSync)
-      .mock.calls.some((args) => String(args[0]).endsWith('mesh-client.log') && args[1] === '');
+      .mock.calls.some((args) => String(args[0]).endsWith('sarmesh.log') && args[1] === '');
     expect(truncatedCurrent).toBe(false);
   });
 });

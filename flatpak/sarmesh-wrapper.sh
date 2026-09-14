@@ -2,14 +2,14 @@
 # Electron2 BaseApp provides zypak-wrapper; Chromium binary comes from node_modules/electron.
 set -eu
 
-APP_ROOT=/app/lib/mesh-client
+APP_ROOT=/app/lib/sarmesh
 ELECTRON="${APP_ROOT}/electron/electron"
 # package.json "main"; launch via "." from APP_ROOT
 MAIN_REL=dist-electron/main/index.js
 
-export TMPDIR="${XDG_RUNTIME_DIR:-/tmp}/app/${FLATPAK_ID:-org.coloradomesh.MeshClient}"
+export TMPDIR="${XDG_RUNTIME_DIR:-/tmp}/app/${FLATPAK_ID:-io.github.w9mdm.SARMesh}"
 mkdir -p "$TMPDIR"
-export CHROME_WRAPPER=/app/bin/mesh-client
+export CHROME_WRAPPER=/app/bin/sarmesh
 
 for path in "$ELECTRON" "${APP_ROOT}/${MAIN_REL}" "${APP_ROOT}/package.json"; do
   if [ ! -e "$path" ]; then
@@ -22,8 +22,8 @@ done
 # When vmwgfx is present but Mesa DRI fails in the Flatpak sandbox, auto software rendering.
 # Bare-metal aarch64 and x86_64 use full GPU acceleration by default (same finish-args).
 gpu_args=
-if [ "${MESH_CLIENT_ENABLE_GPU:-}" != "1" ] && [ "${MESH_CLIENT_DISABLE_GPU:-}" != "0" ]; then
-  case "${MESH_CLIENT_DISABLE_GPU:-}" in
+if [ "${SARMESH_ENABLE_GPU:-}" != "1" ] && [ "${SARMESH_DISABLE_GPU:-}" != "0" ]; then
+  case "${SARMESH_DISABLE_GPU:-}" in
     1) ;;
     *)
       # Check each DRM card uevent explicitly (avoid recursive grep over many cards).
@@ -36,12 +36,12 @@ if [ "${MESH_CLIENT_ENABLE_GPU:-}" != "1" ] && [ "${MESH_CLIENT_DISABLE_GPU:-}" 
         fi
       done
       if [ "$vmwgfx" = 1 ]; then
-        export MESH_CLIENT_DISABLE_GPU=1
+        export SARMESH_DISABLE_GPU=1
       fi
       ;;
   esac
 fi
-if [ "${MESH_CLIENT_DISABLE_GPU:-}" = "1" ]; then
+if [ "${SARMESH_DISABLE_GPU:-}" = "1" ]; then
   gpu_args=--disable-gpu
 fi
 
@@ -52,10 +52,10 @@ fi
 
 cd "$APP_ROOT"
 
-retry_log="${TMPDIR}/mesh-client-sandbox.log"
+retry_log="${TMPDIR}/sarmesh-sandbox.log"
 
 # Explicit opt-in: single attempt with --no-sandbox (outer bubblewrap sandbox still active).
-if [ "${MESH_CLIENT_NO_SANDBOX:-}" = "1" ]; then
+if [ "${SARMESH_NO_SANDBOX:-}" = "1" ]; then
   # shellcheck disable=SC2086
   exec zypak-wrapper "$ELECTRON" $gpu_args $electron_args --no-sandbox . "$@"
 fi

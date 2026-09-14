@@ -39,7 +39,7 @@ describe('macos-install-notice', () => {
     const second = mergeMacosInstallNoteIntoReleaseBody(first, '### macOS install\n\nnew');
     expect(second).toContain('new');
     expect(second).not.toContain('old');
-    expect((second.match(/<!-- mesh-client-macos-install -->/g) ?? []).length).toBe(2);
+    expect((second.match(/<!-- sarmesh-macos-install -->/g) ?? []).length).toBe(2);
   });
 
   it('stageMacosInstallNoticeReleaseAsset writes companion asset name', () => {

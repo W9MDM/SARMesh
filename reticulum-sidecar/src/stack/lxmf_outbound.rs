@@ -246,7 +246,7 @@ impl LxmfOutboundDriver {
     ///
     /// Without this, peers Ack on the backchannel (LinkProof) but the plaintext is
     /// dropped before `delivery_callback` — the classic “first reply Ack’d, second shows”
-    /// Chat gap after a mesh-client Direct send.
+    /// Chat gap after a sarmesh Direct send.
     pub fn set_inbound_packet_sender(&mut self, tx: mpsc::UnboundedSender<(Vec<u8>, [u8; 16])>) {
         self.link_delivery.set_inbound_packet_sender(tx);
     }

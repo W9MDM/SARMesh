@@ -68,7 +68,7 @@ describe('check-i18n locales directory access', () => {
     const missingLocales = join(scriptDir, '__missing_locales_dir__');
     const result = spawnSync(process.execPath, ['scripts/check-i18n.mjs'], {
       cwd: join(scriptDir, '..'),
-      env: { ...process.env, MESH_CLIENT_LOCALES_DIR: missingLocales },
+      env: { ...process.env, SARMESH_LOCALES_DIR: missingLocales },
       encoding: 'utf8',
     });
     expect(result.status).toBe(1);

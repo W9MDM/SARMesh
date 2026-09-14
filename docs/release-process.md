@@ -1,6 +1,6 @@
 # Release Process
 
-This document describes how maintainers create releases for Mesh-Client.
+This document describes how maintainers create releases for SARMesh.
 
 ---
 
@@ -15,7 +15,7 @@ Cut releases from **Actions → Cut release** ([`cut-release.yaml`](../.github/w
 
 Both workflows upload to a **draft** GitHub Release. A maintainer reviews artifacts and publishes manually when ready.
 
-`prepare-github-release` is the **only** job that creates the draft (`MESH_CLIENT_ALLOW_DRAFT_CREATE=1`). Matrix builds and Flatpak attach with `ci-upload-release-assets.mjs` by `release_id` so parallel jobs cannot fork duplicate drafts. `electron-builder.yml` still sets `releaseType: draft` for local `dist:*:publish` use.
+`prepare-github-release` is the **only** job that creates the draft (`SARMESH_ALLOW_DRAFT_CREATE=1`). Matrix builds and Flatpak attach with `ci-upload-release-assets.mjs` by `release_id` so parallel jobs cannot fork duplicate drafts. `electron-builder.yml` still sets `releaseType: draft` for local `dist:*:publish` use.
 
 Documentation deploys separately: [`docs.yml`](../.github/workflows/docs.yml) runs on every push to `main` (including the version-bump commit from `pnpm run release`).
 
@@ -25,7 +25,7 @@ Documentation deploys separately: [`docs.yml`](../.github/workflows/docs.yml) ru
 
 - **CI:** `schema-release-compare` (Build Binaries, Build Flatpak, and Release) warns when this build’s schema is newer than the last published release. Test builds also upload a `READ-ME-FIRST-*.md` artifact with the download set.
 - **Installers:** when bumped, Windows NSIS shows an advisory MessageBox; macOS/Linux/Flatpak packages may include `SCHEMA-UPGRADE.txt` in app resources.
-- **App launch:** if an existing database’s `user_version` is behind this build, Mesh-Client shows a blocking **Quit / Upgrade** dialog **before** running `runSchemaUpgrade`. Quit leaves the database unchanged. Set `MESH_CLIENT_ACCEPT_SCHEMA_UPGRADE=1` to auto-accept (E2E / automation only).
+- **App launch:** if an existing database’s `user_version` is behind this build, SARMesh shows a blocking **Quit / Upgrade** dialog **before** running `runSchemaUpgrade`. Quit leaves the database unchanged. Set `SARMESH_ACCEPT_SCHEMA_UPGRADE=1` to auto-accept (E2E / automation only).
 - **Too new:** opening a database upgraded by a newer app with an older build still fails with the existing schema-too-new fatal dialog.
 
 ---
@@ -47,12 +47,12 @@ Documentation deploys separately: [`docs.yml`](../.github/workflows/docs.yml) ru
 1. (Optional) Run once with **dry_run** checked to confirm the computed version in the job summary (`feat(scope):` → minor, etc.).
 2. Re-run with dry_run unchecked. Default bump is **auto**; override with `patch` / `minor` / `major` / exact `X.Y.Z` when needed.
 3. **skip_dep_update** defaults to **true** — bump dependencies in a normal PR via `pnpm run update` before cutting.
-4. The workflow sets `MESH_CLIENT_RELEASE_YES=1` (non-interactive). Locally use `pnpm run release --yes` or the same env var.
+4. The workflow sets `SARMESH_RELEASE_YES=1` (non-interactive). Locally use `pnpm run release --yes` or the same env var.
 5. Wait for `release.yaml` + `flatpak.yaml` to attach draft artifacts, then **Publish** on GitHub.
 
 **Secret:** `RELEASE_PUSH_TOKEN` — fine-grained PAT (or GitHub App installation token) owned by a repo **admin** (so the merge-queue ruleset bypass applies), with **contents: write**, **workflows: write**, and **pull requests: write** (also used by `third-party-licenses.yaml` so bot PRs run required checks). Plain `GITHUB_TOKEN` cannot trigger tag workflows, cannot push past the ruleset, and cannot open check-running license PRs.
 
-Version detection lives in [`scripts/detectReleaseBump.mjs`](../scripts/detectReleaseBump.mjs) (handles scoped Conventional Commits such as `feat(rrc): …`). Do not set `MESH_CLIENT_RELEASE_PARSE_ONLY` in Actions (test-only hook; Cut release clears it).
+Version detection lives in [`scripts/detectReleaseBump.mjs`](../scripts/detectReleaseBump.mjs) (handles scoped Conventional Commits such as `feat(rrc): …`). Do not set `SARMESH_RELEASE_PARSE_ONLY` in Actions (test-only hook; Cut release clears it).
 
 ---
 
@@ -62,12 +62,12 @@ Local `scripts/release.sh` remains for emergencies when Actions is unavailable. 
 
 1. Verifies you are on `main` and pulls latest
 2. Runs **`pnpm update`** and **`pnpm dedupe`** (updates lockfile before the bump)
-3. Syncs **`org.coloradomesh.MeshClient.yml`** Electron vendored archives to match `package.json` (`node scripts/sync-flatpak-electron.mjs`)
+3. Syncs **`io.github.w9mdm.SARMesh.yml`** Electron vendored archives to match `package.json` (`node scripts/sync-flatpak-electron.mjs`)
 4. Auto-detects **patch / minor / major** via [`detectReleaseBump.mjs`](../scripts/detectReleaseBump.mjs) (scoped Conventional Commits such as `feat(rrc):` count as **minor**) since the last tag (or accept an explicit bump — see below)
 5. Runs **pre-flight validation** (`check:environment`, release CLI health, format, lint, typecheck, **all** `check:*` scanners including path-gated pre-commit ones, **`check:flatpak`**, **`check:flatpak-offline-pnpm`**, **`check:i18n`**, lockfile re-dedupe stability (not `pnpm dedupe --check` — that breaks hoisted `node_modules/.bin`), audit, **required** actionlint + yamllint, **full** Vitest via `pnpm run test:run`, Reticulum sidecar `cargo test`)
 6. Prints **copy-paste release notes** grouped by feat/fix/other/breaking
 7. Bumps `package.json` via `pnpm version`
-8. Prepends a `<release>` entry to `flatpak/org.coloradomesh.MeshClient.metainfo.xml`
+8. Prepends a `<release>` entry to `flatpak/io.github.w9mdm.SARMesh.metainfo.xml`
 9. Commits, creates an annotated tag, and pushes **commit + tag** to `origin`
 
 ```bash
@@ -80,12 +80,12 @@ pnpm run release --auto                        # explicit auto-detect
 pnpm run release --finish                      # complete a mid-release after package.json was already bumped
 pnpm run release --yes                         # non-interactive (skip both confirmation prompts)
 pnpm run release --yes --skip-dep-update patch # CI-style: no pnpm update
-MESH_CLIENT_RELEASE_YES=1 pnpm run release     # same as --yes (avoids pnpm's own -y)
+SARMESH_RELEASE_YES=1 pnpm run release         # same as --yes (avoids pnpm's own -y)
 # Invalid: --auto cannot be combined with patch|minor|major|x.x.x
 # Note: `pnpm run release -- minor` is fine — pnpm 11 forwards bare `--`; release.sh ignores it.
 ```
 
-The script prompts twice by default (start pre-flight, then confirm after checks pass). Pass **`--yes`** after `pnpm run release` (or set `MESH_CLIENT_RELEASE_YES=1`) to skip those prompts — useful for automation. **`--auto` plus an explicit bump is rejected.** **Expect several minutes** for the full validation chain.
+The script prompts twice by default (start pre-flight, then confirm after checks pass). Pass **`--yes`** after `pnpm run release` (or set `SARMESH_RELEASE_YES=1`) to skip those prompts — useful for automation. **`--auto` plus an explicit bump is rejected.** **Expect several minutes** for the full validation chain.
 
 **Full suite only:** Release must never use `test:staged`, `test:changed`, or `vitest related`. Pre-commit and pull-request CI may run affected subsets for speed; release matches protected merge-queue CI by running the unrestricted `pnpm run test:run` (`vitest run`) and does not soft-skip actionlint/yamllint when those tools are missing.
 
@@ -96,7 +96,7 @@ If pre-flight fails, fix the issue on `main` and cut again — do not tag manual
 If `package.json` was already bumped but the Flatpak MetaInfo `<release>` entry is wrong/corrupt (or the release commit was blocked by `check:flatpak`):
 
 1. **Do not** re-run `pnpm run release` — that would bump again.
-2. Fix the top `<release version="…">` in `flatpak/org.coloradomesh.MeshClient.metainfo.xml` to match `package.json`’s `version`.
+2. Fix the top `<release version="…">` in `flatpak/io.github.w9mdm.SARMesh.metainfo.xml` to match `package.json`’s `version`.
 3. Complete with `pnpm run release --finish` (commit + tag + push; no version bump, no full preflight replay).
 
 The version written into MetaInfo always comes from `package.json` after `pnpm version` (never from `pnpm version` stdout).
@@ -154,10 +154,10 @@ Only if `pnpm run release` cannot be used:
 
 ```bash
 # Edit package.json version, then:
-git add package.json pnpm-lock.yaml org.coloradomesh.MeshClient.yml
+git add package.json pnpm-lock.yaml io.github.w9mdm.SARMesh.yml
 # If electron changed: node scripts/sync-flatpak-electron.mjs
-# Add a <release version="…" date="YYYY-MM-DD"/> entry to flatpak/org.coloradomesh.MeshClient.metainfo.xml
-git add flatpak/org.coloradomesh.MeshClient.metainfo.xml
+# Add a <release version="…" date="YYYY-MM-DD"/> entry to flatpak/io.github.w9mdm.SARMesh.metainfo.xml
+git add flatpak/io.github.w9mdm.SARMesh.metainfo.xml
 git commit -m "chore: release vX.Y.Z"
 git tag -a vX.Y.Z -m "Release X.Y.Z"
 git push origin main
@@ -191,7 +191,7 @@ Build jobs also run `verify-reticulum-sidecar-staged.mjs` after staging sidecars
 
 1. **`schema-release-compare`** — compares this SHA’s schema to the last published release; uploads `READ-ME-FIRST-flatpak.md` (included again beside Flatpak Actions artifacts)
 2. **`reticulum-sidecar`** — builds `mesh-client-reticulum` per arch (x86_64 on `ubuntu-latest`, aarch64 on `ubuntu-24.04-arm`) with full RNS stack features
-3. **`flatpak`** — stamps CI build info, writes schema upgrade notice when bumped, generates offline pnpm sources, builds `org.coloradomesh.MeshClient.flatpak` per arch inside the Flathub freedesktop 24.08 container, smoke-installs the unstamped bundle (manual **Build Flatpak (no release)** dispatch also renames downloadable artifacts to `…-run{N}.flatpak`; tag runs keep clean names)
+3. **`flatpak`** — stamps CI build info, writes schema upgrade notice when bumped, generates offline pnpm sources, builds `io.github.w9mdm.SARMesh.flatpak` per arch inside the Flathub freedesktop 24.08 container, smoke-installs the unstamped bundle (manual **Build Flatpak (no release)** dispatch also renames downloadable artifacts to `…-run{N}.flatpak`; tag runs keep clean names)
 4. **`publish`** (tag only) — waits for the Electron prepare draft (`ci-wait-github-draft-release.mjs`), then attaches both clean-named `.flatpak` files with `ci-upload-release-assets.mjs` using the shared `release_id` (never creates or publishes a release)
 
 Both tag-triggered workflows must complete before the release is fully populated. Flatpak bundles often arrive a few minutes after the Electron artifacts.
@@ -212,36 +212,36 @@ Both tag-triggered workflows must complete before the release is fully populated
 3. Confirm the release **tag** is `vX.Y.Z` (not `untagged-*` — a wrong tag breaks the in-app updater footer)
 4. Confirm artifacts:
 
-| Platform      | Artifacts                                                                                   |
-| ------------- | ------------------------------------------------------------------------------------------- |
-| macOS         | `.dmg` and `.zip` (x64 and arm64)                                                           |
-| Linux         | `.AppImage`, `.deb`, `.rpm` (x64 and arm64)                                                 |
-| Linux Flatpak | `org.coloradomesh.MeshClient-x86_64.flatpak`, `org.coloradomesh.MeshClient-aarch64.flatpak` |
-| Windows x64   | `Mesh-client-Setup-{version}.exe`                                                           |
-| Windows arm64 | `Mesh-client-Setup-{version}-arm64.exe` (Windows 11 on ARM — not the x64 installer)         |
+| Platform      | Artifacts                                                                           |
+| ------------- | ----------------------------------------------------------------------------------- |
+| macOS         | `.dmg` and `.zip` (x64 and arm64)                                                   |
+| Linux         | `.AppImage`, `.deb`, `.rpm` (x64 and arm64)                                         |
+| Linux Flatpak | `io.github.w9mdm.SARMesh-x86_64.flatpak`, `io.github.w9mdm.SARMesh-aarch64.flatpak` |
+| Windows x64   | `SARMesh-Setup-{version}.exe`                                                       |
+| Windows arm64 | `SARMesh-Setup-{version}-arm64.exe` (Windows 11 on ARM — not the x64 installer)     |
 
 1. Paste or edit release notes (use the block printed by `pnpm run release`, or GitHub’s generated notes)
 2. Optionally smoke-test downloads on one platform per family
 
 Until you click **Publish release**, the tag exists but the release stays hidden from the public Releases page.
 
-`finalize-github-release` runs `scripts/assert-github-release-update-yml.mjs` so every `latest.yml` / `latest-mac.yml` / `latest-linux.yml` / `latest-linux-arm64.yml` `url` is an exact GitHub asset name. Windows Setup names must be hyphenated (`Mesh-client-Setup-{version}.exe`). Spaced names become dotted on upload and the in-app updater 404s.
+`finalize-github-release` runs `scripts/assert-github-release-update-yml.mjs` so every `latest.yml` / `latest-mac.yml` / `latest-linux.yml` / `latest-linux-arm64.yml` `url` is an exact GitHub asset name. Windows Setup names must be hyphenated (`SARMesh-Setup-{version}.exe`). Spaced names become dotted on upload and the in-app updater 404s.
 
 ### Repair Windows updater assets on an already-published release
 
-If `latest.yml` lists hyphenated Setup names but the release only has dotted GitHub names (`Mesh-client.Setup.{version}.exe`):
+If `latest.yml` lists hyphenated Setup names but the release only has dotted GitHub names (`SARMesh.Setup.{version}.exe`):
 
 1. Download the existing x64 and arm64 NSIS binaries from the release (dotted names).
-2. Re-upload the **same files** as extra assets named `Mesh-client-Setup-{version}.exe` and `Mesh-client-Setup-{version}-arm64.exe`. Keep the dotted files.
-3. Confirm `https://github.com/Colorado-Mesh/mesh-client/releases/download/v{version}/Mesh-client-Setup-{version}.exe` returns 302, not 404.
+2. Re-upload the **same files** as extra assets named `SARMesh-Setup-{version}.exe` and `SARMesh-Setup-{version}-arm64.exe`. Keep the dotted files.
+3. Confirm `https://github.com/Colorado-Mesh/mesh-client/releases/download/v{version}/SARMesh-Setup-{version}.exe` returns 302, not 404.
 
 Example for v5.36.0 (run from a temp dir after `gh auth login`):
 
 ```bash
-gh release download v5.36.0 --pattern 'Mesh-client.Setup.5.36.0.exe' --pattern 'Mesh-client.Setup.5.36.0-arm64.exe'
-mv Mesh-client.Setup.5.36.0.exe Mesh-client-Setup-5.36.0.exe
-mv Mesh-client.Setup.5.36.0-arm64.exe Mesh-client-Setup-5.36.0-arm64.exe
-gh release upload v5.36.0 Mesh-client-Setup-5.36.0.exe Mesh-client-Setup-5.36.0-arm64.exe
+gh release download v5.36.0 --pattern 'SARMesh.Setup.5.36.0.exe' --pattern 'SARMesh.Setup.5.36.0-arm64.exe'
+mv SARMesh.Setup.5.36.0.exe SARMesh-Setup-5.36.0.exe
+mv SARMesh.Setup.5.36.0-arm64.exe SARMesh-Setup-5.36.0-arm64.exe
+gh release upload v5.36.0 SARMesh-Setup-5.36.0.exe SARMesh-Setup-5.36.0-arm64.exe
 ```
 
 v5.36.0 already has both dotted and hyphenated Setup assets (repaired 2026-09-13). Repeat only for an older tag that still 404s. The next tag still needs hyphenated names from CI (`normalize-win-setup-artifact-names.mjs`).
@@ -276,7 +276,7 @@ Release notes “Breaking Changes” use the same subject bang + footer rules (n
 - [ ] Test download and install on at least one platform
 - [ ] **Publish** the draft on GitHub
 - [ ] Confirm docs site updated after the version commit landed on `main` ([docs workflow](ci-cd.md#docs-docsyml))
-- [ ] Announce (Discord `#mesh-client`, etc.)
+- [ ] Announce (Discord `#sarmesh`, etc.)
 - [ ] Close milestone if used
 
 ---
@@ -297,7 +297,7 @@ Release notes “Breaking Changes” use the same subject bang + footer rules (n
 
 ### Duplicate draft releases for one tag
 
-- Historically caused when parallel `dist:*:publish` / softprops jobs each `POST`ed a draft after a List Releases miss. Current CI: only `prepare-github-release` may create (`MESH_CLIENT_ALLOW_DRAFT_CREATE=1`); builds/Flatpak upload by id; Flatpak waits with `ci-wait-github-draft-release.mjs`.
+- Historically caused when parallel `dist:*:publish` / softprops jobs each `POST`ed a draft after a List Releases miss. Current CI: only `prepare-github-release` may create (`SARMESH_ALLOW_DRAFT_CREATE=1`); builds/Flatpak upload by id; Flatpak waits with `ci-wait-github-draft-release.mjs`.
 - **`finalize-github-release`** runs consolidation then **`ci-verify-github-draft-release.mjs`**, which **fails the workflow** if the draft `tag_name` is still `untagged-*`. Do not publish until that job is green and the draft tag shows `vX.Y.Z`.
 - **Finalize PATCH 403 (`Resource not accessible by integration`):** Actions `GITHUB_TOKEN` cannot PATCH `target_commitish` when the tagged commit differs in `.github/workflows/` from the default branch. Consolidation retries tag repair with `RELEASE_PUSH_TOKEN` when set; tag repair must succeed or the verify step fails.
 - **Assets still split (external fork):** `finalize-github-release` merges via `ci-ensure-github-draft-release.mjs`; outside CI run `node scripts/consolidate-github-release-duplicates.mjs --tag vX.Y.Z` (requires `GH_TOKEN`).

@@ -4,7 +4,7 @@ import os from 'os';
 import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-client-tak-certs-'));
+const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'sarmesh-tak-certs-'));
 
 vi.mock('electron', () => ({
   app: {

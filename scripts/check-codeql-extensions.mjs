@@ -74,7 +74,7 @@ function main() {
           !body.includes('sanitizeForConsoleEcho')
         ) {
           console.error(
-            `check-codeql-extensions: ${ent.name} must model mesh-client log sanitizers as barriers`,
+            `check-codeql-extensions: ${ent.name} must model sarmesh log sanitizers as barriers`,
           );
           process.exit(1);
         }

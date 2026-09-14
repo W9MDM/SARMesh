@@ -123,10 +123,10 @@ jobs:
 
       - name: Write schema upgrade installer notice
         env:
-          MESH_CLIENT_SCHEMA_BUMPED: ${{ needs.schema-release-compare.outputs.schema_bumped }}
-          MESH_CLIENT_SCHEMA_CURR: ${{ needs.schema-release-compare.outputs.curr_schema }}
-          MESH_CLIENT_SCHEMA_PREV: ${{ needs.schema-release-compare.outputs.prev_schema }}
-          MESH_CLIENT_SCHEMA_PREV_TAG: ${{ needs.schema-release-compare.outputs.prev_tag }}
+          SARMESH_SCHEMA_BUMPED: ${{ needs.schema-release-compare.outputs.schema_bumped }}
+          SARMESH_SCHEMA_CURR: ${{ needs.schema-release-compare.outputs.curr_schema }}
+          SARMESH_SCHEMA_PREV: ${{ needs.schema-release-compare.outputs.prev_schema }}
+          SARMESH_SCHEMA_PREV_TAG: ${{ needs.schema-release-compare.outputs.prev_tag }}
         run: node scripts/write-schema-upgrade-notice.mjs
 
       - name: Download READ-ME-FIRST warning
@@ -190,8 +190,8 @@ jobs:
       # Embed buildChannel=test|release + Actions runUrl into the Flatpak main bundle.
       - name: Stamp CI build info
         env:
-          MESH_CLIENT_BUILD_CHANNEL: ${{ github.event_name == 'workflow_dispatch' && 'test' || 'release' }}
-          MESH_CLIENT_BUILD_WORKFLOW: >-
+          SARMESH_BUILD_CHANNEL: ${{ github.event_name == 'workflow_dispatch' && 'test' || 'release' }}
+          SARMESH_BUILD_WORKFLOW: >-
             ${{ github.event_name == 'workflow_dispatch'
             && 'Build Flatpak (no release)'
             || 'Build Flatpak' }}
@@ -201,12 +201,12 @@ jobs:
           node scripts/write-flatpak-ci-build-info.mjs
 
       # flatpak/flatpak-github-actions v6 appends -${arch} to the artifact name on upload;
-      # keep bundle arch-agnostic here to avoid org.coloradomesh.MeshClient-aarch64-aarch64.flatpak.
+      # keep bundle arch-agnostic here to avoid io.github.w9mdm.SARMesh-aarch64-aarch64.flatpak.
       # upload-artifact: false — we upload once after smoke (+ optional -run{N} rename on dispatch).
       - uses: flatpak/flatpak-github-actions/flatpak-builder@401fe28a8384095fc1531b9d320b292f0ee45adb
         with:
-          bundle: org.coloradomesh.MeshClient.flatpak
-          manifest-path: org.coloradomesh.MeshClient.yml
+          bundle: io.github.w9mdm.SARMesh.flatpak
+          manifest-path: io.github.w9mdm.SARMesh.yml
           arch: ${{ matrix.arch }}
           branch: stable
           cache-key: flatpak-builder-${{ matrix.arch }}-${{ github.sha }}
@@ -215,14 +215,14 @@ jobs:
       - name: Smoke test Flatpak install
         run: |
           set -euo pipefail
-          flatpak install --assumeyes ./org.coloradomesh.MeshClient.flatpak
+          flatpak install --assumeyes ./io.github.w9mdm.SARMesh.flatpak
 
-          flatpak run --branch=stable --command=sh org.coloradomesh.MeshClient -c \
-            'test -x /app/lib/mesh-client/electron/electron;
-            test -f /app/lib/mesh-client/resources/reticulum-sidecar/mesh-client-reticulum'
+          flatpak run --branch=stable --command=sh io.github.w9mdm.SARMesh -c \
+            'test -x /app/lib/sarmesh/electron/electron;
+            test -f /app/lib/sarmesh/resources/reticulum-sidecar/mesh-client-reticulum'
 
           set +e
-          out=$(dbus-run-session xvfb-run -a timeout 20s flatpak run --branch=stable org.coloradomesh.MeshClient 2>&1)
+          out=$(dbus-run-session xvfb-run -a timeout 20s flatpak run --branch=stable io.github.w9mdm.SARMesh 2>&1)
           code=$?
           set -e
           printf '%s\n' "$out"
@@ -248,9 +248,9 @@ jobs:
       - name: Upload Flatpak bundle
         uses: actions/upload-artifact@v7
         with:
-          name: org.coloradomesh.MeshClient.flatpak-${{ matrix.arch }}.flatpak
+          name: io.github.w9mdm.SARMesh.flatpak-${{ matrix.arch }}.flatpak
           path: |
-            org.coloradomesh.MeshClient*.flatpak
+            io.github.w9mdm.SARMesh*.flatpak
           if-no-files-found: error
           retention-days: 30
 
@@ -277,7 +277,7 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          pattern: 'org.coloradomesh.MeshClient.flatpak-*.flatpak'
+          pattern: 'io.github.w9mdm.SARMesh.flatpak-*.flatpak'
           path: flatpak-dist
 
       - name: Flatten arch-suffixed bundles for release

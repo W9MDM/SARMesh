@@ -2,7 +2,7 @@
 /**
  * Rename test-build installer artifacts to include `-run{GITHUB_RUN_NUMBER}`.
  *
- * Gate: MESH_CLIENT_BUILD_CHANNEL=test (or buildInfo.channel=test) with a finite runNumber.
+ * Gate: SARMESH_BUILD_CHANNEL=test (or buildInfo.channel=test) with a finite runNumber.
  * Official release / local builds: no-op.
  *
  * Pure helpers exported for unit tests.
@@ -52,14 +52,14 @@ export function shouldRenameInstaller(name) {
   if (!name || name.startsWith('.')) return false;
   if (name.startsWith('READ-ME-FIRST')) return false;
   if (name.includes('blockmap') || name.endsWith('.blockmap')) return false;
-  if (name === 'Mesh-client.exe') return false;
+  if (name === 'SARMesh.exe') return false;
   if (name.includes('__uninstaller')) return false;
 
   const ext = path.extname(name);
   if (!INSTALLER_EXTENSIONS.has(ext)) return false;
 
   if (ext === '.exe') {
-    return name.startsWith('Mesh-client Setup ') || name.startsWith('Mesh-client-Setup-');
+    return name.startsWith('SARMesh Setup ') || name.startsWith('SARMesh-Setup-');
   }
   return true;
 }
@@ -108,18 +108,18 @@ export function parseBuildInfoEnv(raw) {
   try {
     const parsed = JSON.parse(String(raw));
     if (parsed == null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error('MESH_CLIENT_BUILD_INFO must be a JSON object');
+      throw new Error('SARMESH_BUILD_INFO must be a JSON object');
     }
     /** @type {{ channel?: string, runNumber?: number }} */
     const out = {};
     if (typeof parsed.channel === 'string') out.channel = parsed.channel;
     if (parsed.runNumber != null && parsed.runNumber !== '') {
-      out.runNumber = parseStrictRunNumber(parsed.runNumber, 'MESH_CLIENT_BUILD_INFO.runNumber');
+      out.runNumber = parseStrictRunNumber(parsed.runNumber, 'SARMESH_BUILD_INFO.runNumber');
     }
     return out;
   } catch (e) {
     if (e instanceof SyntaxError) {
-      throw new Error(`Invalid MESH_CLIENT_BUILD_INFO JSON: ${e.message}`, { cause: e });
+      throw new Error(`Invalid SARMESH_BUILD_INFO JSON: ${e.message}`, { cause: e });
     }
     throw e;
   }
@@ -155,7 +155,7 @@ export function resolveTestRenameStamp(opts) {
   const runNumber = opts.runNumber ?? fromEnv.runNumber;
   if (runNumber == null) {
     throw new Error(
-      'MESH_CLIENT_BUILD_CHANNEL=test requires a finite runNumber (MESH_CLIENT_BUILD_INFO.runNumber)',
+      'SARMESH_BUILD_CHANNEL=test requires a finite runNumber (SARMESH_BUILD_INFO.runNumber)',
     );
   }
   return {
@@ -278,8 +278,8 @@ export function parseRenameCliArgs(argv, env = process.env) {
   }
   return {
     ...out,
-    channel: env.MESH_CLIENT_BUILD_CHANNEL,
-    buildInfoRaw: env.MESH_CLIENT_BUILD_INFO,
+    channel: env.SARMESH_BUILD_CHANNEL,
+    buildInfoRaw: env.SARMESH_BUILD_INFO,
   };
 }
 

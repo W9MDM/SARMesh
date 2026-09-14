@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsReticulum response-Resource WINDOW_MAX_FAST overlay.
+# Apply sarmesh rsReticulum response-Resource WINDOW_MAX_FAST overlay.
 # TCP-class RTT never crosses RATE_FAST under WINDOW_MAX_SLOW=10, so Nomad
 # /media crawls. Promote inbound response Resources when RTT <= 1s.
 set -euo pipefail

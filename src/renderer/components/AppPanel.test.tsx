@@ -335,7 +335,7 @@ describe('AppPanel: support bundle exports', () => {
   beforeEach(() => {
     vi.mocked(window.electronAPI.support.exportBundle).mockReset();
     vi.mocked(window.electronAPI.support.exportBundle).mockResolvedValue(
-      '/tmp/mesh-client-github-report.zip',
+      '/tmp/sarmesh-github-report.zip',
     );
   });
 

@@ -7,7 +7,7 @@ assignees: ''
 ---
 
 <!--
-  This template is normally pre-filled by Mesh-Client when a crash is reported.
+  This template is normally pre-filled by SARMesh when a crash is reported.
   If you are filing manually, complete the sections below.
 -->
 
@@ -37,7 +37,7 @@ assignees: ''
 
 Please also attach the zip from **App → Support / Bug reports → Export for GitHub** (includes debug snapshot + logs) if the app is still responsive. See [Troubleshooting — Reporting bugs](https://github.com/Colorado-Mesh/mesh-client/blob/main/docs/troubleshooting.md#reporting-bugs-export-for-github-app-tab).
 
-**Do not** attach **Export for Developer** or `mesh-client.db` to this public issue — the database may contain saved passwords. Share the developer bundle only via a private channel if a maintainer requests it.
+**Do not** attach **Export for Developer** or `sarmesh.db` to this public issue — the database may contain saved passwords. Share the developer bundle only via a private channel if a maintainer requests it.
 
 **Steps to reproduce (please fill in):**
 

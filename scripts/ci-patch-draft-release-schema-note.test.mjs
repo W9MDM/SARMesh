@@ -9,14 +9,14 @@ import {
 describe('mergeSchemaNoteIntoReleaseBody', () => {
   it('prepends schema markdown to an empty body', () => {
     const out = mergeSchemaNoteIntoReleaseBody('', '# Schema\n\nbumped\n');
-    expect(out).toContain('<!-- mesh-client-schema-compare -->');
+    expect(out).toContain('<!-- sarmesh-schema-compare -->');
     expect(out).toContain('# Schema');
     expect(out).toContain('bumped');
   });
 
   it('replaces a previous schema block and keeps the rest', () => {
     const existing =
-      '<!-- mesh-client-schema-compare -->\nold\n<!-- mesh-client-schema-compare -->\n\nDraft release for v1.0.0.\n';
+      '<!-- sarmesh-schema-compare -->\nold\n<!-- sarmesh-schema-compare -->\n\nDraft release for v1.0.0.\n';
     const out = mergeSchemaNoteIntoReleaseBody(existing, 'new note');
     expect(out).toContain('new note');
     expect(out).not.toContain('old');
@@ -45,9 +45,9 @@ describe('requireDraftReleaseForSchemaPatch', () => {
 describe('schemaMarkdownFromCompareOutputs', () => {
   it('rebuilds release markdown from trusted schema outputs', () => {
     const md = schemaMarkdownFromCompareOutputs({
-      MESH_CLIENT_SCHEMA_CURR: '49',
-      MESH_CLIENT_SCHEMA_PREV: '48',
-      MESH_CLIENT_SCHEMA_PREV_TAG: 'v5.26.0',
+      SARMESH_SCHEMA_CURR: '49',
+      SARMESH_SCHEMA_PREV: '48',
+      SARMESH_SCHEMA_PREV_TAG: 'v5.26.0',
     });
     expect(md).toContain('Release build — database schema check');
     expect(md).toContain('49');
@@ -58,9 +58,9 @@ describe('schemaMarkdownFromCompareOutputs', () => {
   it('rejects unsafe tags', () => {
     expect(() =>
       schemaMarkdownFromCompareOutputs({
-        MESH_CLIENT_SCHEMA_CURR: '49',
-        MESH_CLIENT_SCHEMA_PREV: '48',
-        MESH_CLIENT_SCHEMA_PREV_TAG: 'evil;rm',
+        SARMESH_SCHEMA_CURR: '49',
+        SARMESH_SCHEMA_PREV: '48',
+        SARMESH_SCHEMA_PREV_TAG: 'evil;rm',
       }),
     ).toThrow(/Unsafe release tag/);
   });

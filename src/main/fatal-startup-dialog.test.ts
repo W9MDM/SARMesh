@@ -6,7 +6,7 @@ import {
   confirmDatabaseSchemaUpgrade,
   formatDatabaseSchemaTooNewMessage,
   formatSchemaUpgradeConfirmMessage,
-  MESH_CLIENT_ACCEPT_SCHEMA_UPGRADE_ENV,
+  SARMESH_ACCEPT_SCHEMA_UPGRADE_ENV,
 } from './fatal-startup-dialog';
 
 const showMessageBoxSync = vi.fn();
@@ -20,7 +20,7 @@ vi.mock('electron', () => ({
 }));
 
 vi.mock('./log-service', () => ({
-  getLogPath: () => '/tmp/mesh-client/mesh-client.log',
+  getLogPath: () => '/tmp/sarmesh/sarmesh.log',
 }));
 
 describe('formatDatabaseSchemaTooNewMessage', () => {
@@ -30,8 +30,8 @@ describe('formatDatabaseSchemaTooNewMessage', () => {
     expect(message).toContain('schema 40');
     expect(message).toContain('1.2.3-test');
     expect(message).toContain('schema version 36');
-    expect(message).toContain('/tmp/mesh-client/mesh-client.log');
-    expect(message).toContain('latest Mesh-Client release');
+    expect(message).toContain('/tmp/sarmesh/sarmesh.log');
+    expect(message).toContain('latest SARMesh release');
   });
 });
 
@@ -48,12 +48,12 @@ describe('formatSchemaUpgradeConfirmMessage', () => {
 
 describe('confirmDatabaseSchemaUpgrade', () => {
   afterEach(() => {
-    Reflect.deleteProperty(process.env, MESH_CLIENT_ACCEPT_SCHEMA_UPGRADE_ENV);
+    Reflect.deleteProperty(process.env, SARMESH_ACCEPT_SCHEMA_UPGRADE_ENV);
     showMessageBoxSync.mockReset();
   });
 
-  it('auto-accepts when MESH_CLIENT_ACCEPT_SCHEMA_UPGRADE=1', () => {
-    process.env[MESH_CLIENT_ACCEPT_SCHEMA_UPGRADE_ENV] = '1';
+  it('auto-accepts when SARMESH_ACCEPT_SCHEMA_UPGRADE=1', () => {
+    process.env[SARMESH_ACCEPT_SCHEMA_UPGRADE_ENV] = '1';
     expect(confirmDatabaseSchemaUpgrade(40, 48)).toBe(true);
     expect(showMessageBoxSync).not.toHaveBeenCalled();
   });

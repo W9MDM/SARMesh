@@ -39,8 +39,8 @@ export function logDeviceConnection(detail: string): void {
   );
 }
 
-const LOG_FILENAME = 'mesh-client.log';
-const LOG_BACKUP_FILENAME = 'mesh-client.log.1';
+const LOG_FILENAME = 'sarmesh.log';
+const LOG_BACKUP_FILENAME = 'sarmesh.log.1';
 const LOG_MAX_BYTES = 100 * 1024 * 1024; // 100 MB
 const MAX_LINE_LENGTH = 8192;
 const MAX_IPC_MESSAGE_LENGTH = 4096;
@@ -89,7 +89,7 @@ function getLogFilePath(): string {
 }
 
 /**
- * Start a fresh session log. If the previous run left a non-empty `mesh-client.log`,
+ * Start a fresh session log. If the previous run left a non-empty `sarmesh.log`,
  * rename it to {@link LOG_BACKUP_FILENAME} first so restart-then-export still keeps
  * the hung/prior session (size rotation alone only kicks in at {@link LOG_MAX_BYTES}).
  * Call from app.whenReady before other heavy init.

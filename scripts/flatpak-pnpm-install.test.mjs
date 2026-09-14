@@ -47,7 +47,7 @@ describe('flatpak-pnpm-install.mjs', () => {
     tempRoots.push(root);
     fs.writeFileSync(
       path.join(root, 'pnpm-workspace.yaml'),
-      'nodeLinker: hoisted\nstoreDir=/__w/mesh-client/bad-store\n',
+      'nodeLinker: hoisted\nstoreDir=/__w/sarmesh/bad-store\n',
       'utf8',
     );
     fs.writeFileSync(path.join(root, '.npmrc'), 'store-dir=/__w/host\n', 'utf8');

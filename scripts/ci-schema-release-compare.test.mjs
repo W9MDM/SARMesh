@@ -262,8 +262,8 @@ describe('runSchemaReleaseCompare offline', () => {
     const output = path.join(dir, 'github-output.txt');
 
     const result = await runSchemaReleaseCompare(['--offline', '--write-readme', readme], {
-      MESH_CLIENT_SCHEMA_PREV: '40',
-      MESH_CLIENT_SCHEMA_PREV_TAG: 'v5.20.0',
+      SARMESH_SCHEMA_PREV: '40',
+      SARMESH_SCHEMA_PREV_TAG: 'v5.20.0',
       GITHUB_STEP_SUMMARY: summary,
       GITHUB_OUTPUT: output,
     });

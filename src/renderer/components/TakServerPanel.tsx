@@ -91,7 +91,7 @@ export default function TakServerPanel({ atakMessages, capabilities }: Props) {
   const buildSettings = (): TAKSettings => ({
     enabled: true,
     port: portNum,
-    serverName: localServerName.trim() || 'mesh-client',
+    serverName: localServerName.trim() || 'sarmesh',
     requireClientCert: localRequireCert,
     autoStart: localAutoStart,
   });

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsReticulum announce-rebroadcast RF exclusion overlay.
+# Apply sarmesh rsReticulum announce-rebroadcast RF exclusion overlay.
 # Transport-mode announce rebroadcast must not enqueue onto flow-controlled RNodes.
 set -euo pipefail
 

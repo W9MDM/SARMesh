@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Clone rsReticulum + rsLXMF + rsNomad + rsLXST + lrgp-rs (float origin/main by default),
-# then apply mesh-client overlays for rns-stack sidecar builds.
+# then apply sarmesh overlays for rns-stack sidecar builds.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

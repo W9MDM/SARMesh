@@ -1,25 +1,29 @@
 {
-  "name": "mesh-client",
-  "version": "5.36.0",
-  "description": "Cross-platform Electron desktop client for Meshtastic, MeshCore, and Reticulum on macOS, Linux, and Windows with BLE, USB serial, Wi-Fi/TCP, MQTT, local SQLite history, and routing diagnostics.",
+  "name": "sarmesh",
+  "version": "1.0.0",
+  "description": "Search and rescue desktop client for Meshtastic, MeshCore and Reticulum on Windows, Linux and macOS, with an APRS bridge for CalTopo/SARTopo, an accountable radio inventory, and batch configuration applied on connect.",
   "keywords": [
+    "search-and-rescue",
+    "sar",
     "meshtastic",
+    "aprs",
+    "caltopo",
+    "sartopo",
     "mesh-network",
-    "bluetooth",
-    "mqtt",
     "electron",
     "desktop"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Colorado-Mesh/mesh-client"
+    "url": "https://github.com/W9MDM/SARMesh"
   },
   "license": "GPL-3.0-or-later",
   "author": {
-    "name": "Colorado Mesh",
-    "email": "nv0n@coloradomesh.org"
+    "name": "w9mdm",
+    "email": "matthewmelton@gmail.com"
   },
   "contributors": [
+    "w9mdm (SARMesh fork)",
     "Joey Stanford https://github.com/rinchen",
     "dude.eth https://github.com/defidude",
     "megabear - KD5IHC",

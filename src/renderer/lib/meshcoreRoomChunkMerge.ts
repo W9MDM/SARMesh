@@ -22,7 +22,7 @@ function parseRoomChunkPrefix(
 }
 
 /**
- * Merge consecutive room posts that use `[i/N] ` chunk prefixes (mesh-client long posts).
+ * Merge consecutive room posts that use `[i/N] ` chunk prefixes (sarmesh long posts).
  * Failure point: out-of-order chunks — only merges strictly increasing index on same sender.
  */
 export function mergeDisplayedRoomPostChunks(posts: readonly ChatMessage[]): ChatMessage[] {

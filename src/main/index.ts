@@ -36,7 +36,6 @@ import { APP_ABOUT_TAGLINE } from '../shared/appTagline';
 import { clampQueryLimit } from '../shared/clampQueryLimit';
 import { parseConnectHostPort } from '../shared/connectHost';
 import { NODES_LAST_HEARD_SEC_SQL, normalizeLastHeardToUnixSec } from '../shared/lastHeardUnits';
-import { findLxmUrlInArgv, isForwardableMeshClientOpenUrl } from '../shared/meshClientDeepLink';
 import {
   sanitizeMeshcoreAdvLatLonForDb,
   sanitizeMeshcoreLastAdvertForDb,
@@ -51,6 +50,7 @@ import {
 import { effectiveMessageTimestampMs } from '../shared/messageTimestampSkew';
 import { sanitizeUnicodeReactionScalar } from '../shared/reactionEmoji';
 import type { ReticulumSidecarStatus } from '../shared/reticulum-types';
+import { findLxmUrlInArgv, isForwardableSARMeshOpenUrl } from '../shared/sarMeshDeepLink';
 import type { TAKServerStatus, TAKSettings } from '../shared/tak-types';
 import { MS_PER_MINUTE, MS_PER_SECOND } from '../shared/timeConstants';
 import {
@@ -195,7 +195,7 @@ try {
 
 // Linux: SIGSEGV in Electron GPU process on some Wayland / driver stacks (electron#41980).
 // Must run before app.whenReady(). CLI flags --disable-gpu also work; env avoids wrapper scripts.
-if (process.platform === 'linux' && process.env.MESH_CLIENT_DISABLE_GPU === '1') {
+if (process.platform === 'linux' && process.env.SARMESH_DISABLE_GPU === '1') {
   app.disableHardwareAcceleration();
 }
 
@@ -208,12 +208,12 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.meshclient.app');
+  app.setAppUserModelId('com.sarmesh.app');
 }
 
 /** Trusted Help menu / About credits URLs (static, not user-controlled). */
 const HELP_URL_WEBSITE = 'https://coloradomesh.org/';
-const HELP_URL_GITHUB = 'https://github.com/Colorado-Mesh/mesh-client';
+const HELP_URL_GITHUB = 'https://github.com/W9MDM/SARMesh';
 const HELP_URL_DISCORD = 'https://discord.com/invite/McChKR5NpS';
 
 // ─── Window state persistence ───────────────────────────────────────
@@ -1230,14 +1230,14 @@ function buildTrayIcon(hasUnread: boolean): Electron.NativeImage {
 function setupTray(window: BrowserWindow) {
   try {
     tray = new Tray(buildTrayIcon(false));
-    tray.setToolTip('Mesh-Client');
+    tray.setToolTip('SARMesh');
     tray.on('click', () => {
       window.show();
       window.focus();
     });
     trayContextMenu = Menu.buildFromTemplate([
       {
-        label: 'Show Mesh-Client',
+        label: 'Show SARMesh',
         click: () => {
           window.show();
           window.focus();
@@ -1718,7 +1718,7 @@ function createWindow() {
     y: center ? undefined : bounds.y,
     minWidth: 900,
     minHeight: 600,
-    title: 'Mesh Client',
+    title: 'SARMesh',
     // Use the helper to select .ico, .icns, or .png automatically
     icon: getAppIconPath(),
     webPreferences: {
@@ -2026,7 +2026,7 @@ function createWindow() {
     );
     try {
       dialog.showErrorBox(
-        'Mesh-Client — Renderer Stopped',
+        'SARMesh — Renderer Stopped',
         `The renderer process ended unexpectedly (${details.reason}, exit ${details.exitCode ?? 'n/a'}).\n\nRestart the application. If this keeps happening, export the log from the app (if still usable) or check the log file in your userData folder.`,
       );
     } catch {
@@ -2056,7 +2056,7 @@ function createWindow() {
         ? 'Ensure the dev server is running (pnpm run dev) and the URL is reachable.'
         : 'The app bundle may be missing or damaged. Try reinstalling or run from source with pnpm run build && pnpm start.';
       dialog.showErrorBox(
-        'Mesh-Client — Failed to Load',
+        'SARMesh — Failed to Load',
         `Could not load the application UI (code ${errorCode}: ${errorDesc}).\n\n${hint}\n\nURL: ${validatedURL}`,
       );
     } catch {
@@ -2195,7 +2195,7 @@ ipcMain.on('set-tray-unread', (event, count: unknown) => {
       }
       tray?.setImage(img);
     }
-    tray?.setToolTip(hasUnread ? `Mesh-Client (${n} unread)` : 'Mesh-Client');
+    tray?.setToolTip(hasUnread ? `SARMesh (${n} unread)` : 'SARMesh');
   } catch (e) {
     console.error(
       '[main] tray unread update failed:',
@@ -4705,7 +4705,7 @@ ipcMain.handle('db:export', async (event) => {
     if (!mainWindow) return null;
     const result = await dialog.showSaveDialog(mainWindow, {
       title: 'Export Database',
-      defaultPath: `mesh-client-backup-${new Date().toISOString().slice(0, 10)}.db`,
+      defaultPath: `sarmesh-backup-${new Date().toISOString().slice(0, 10)}.db`,
       filters: [{ name: 'SQLite Database', extensions: ['db'] }],
     });
     if (!result.canceled && result.filePath) {
@@ -4736,7 +4736,7 @@ ipcMain.handle('db:import', async (event) => {
     return null;
   } catch (err) {
     if (isDatabaseSchemaTooNewError(err)) {
-      showFatalStartupError('Mesh-Client — Import Blocked', formatDatabaseSchemaTooNewMessage(err));
+      showFatalStartupError('SARMesh — Import Blocked', formatDatabaseSchemaTooNewMessage(err));
     }
     finishDbIpcHandler('db:import', err);
   }
@@ -4820,7 +4820,7 @@ ipcMain.handle('log:export', async (event) => {
     if (!mainWindow) return null;
     const result = await dialog.showSaveDialog(mainWindow, {
       title: 'Export log',
-      defaultPath: `mesh-client-log-${new Date().toISOString().slice(0, 10)}.log`,
+      defaultPath: `sarmesh-log-${new Date().toISOString().slice(0, 10)}.log`,
       filters: [{ name: 'Log file', extensions: ['log', 'txt'] }],
     });
     if (!result.canceled && result.filePath) {
@@ -6540,7 +6540,7 @@ let pendingOpenUrl: string | null = null;
 function forwardOpenUrlToRenderer(url: string): void {
   const trimmed = url.trim();
   if (!trimmed) return;
-  if (!isForwardableMeshClientOpenUrl(trimmed)) {
+  if (!isForwardableSARMeshOpenUrl(trimmed)) {
     console.debug('[main] ignoring non-mesh open URL:', sanitizeLogMessage(trimmed.slice(0, 120)));
     return;
   }
@@ -6714,7 +6714,7 @@ void app
         : isNativeModuleError
           ? `A native module failed to load. This usually means the app needs to be rebuilt for this version of Electron.\n\nFix: run "pnpm install" in the project directory, then restart.\n\nDetails: ${error.message}`
           : `The application failed to start:\n\n${error instanceof Error ? error.message : String(error)}\n\nPlease report this issue.`;
-      showFatalStartupError('Mesh-Client — Startup Error', message);
+      showFatalStartupError('SARMesh — Startup Error', message);
       app.quit();
       return;
     }
@@ -6740,7 +6740,7 @@ void app
       sanitizeLogMessage(error instanceof Error ? (error.stack ?? error.message) : String(error)),
     );
     showFatalStartupError(
-      'Mesh-Client — Startup Error',
+      'SARMesh — Startup Error',
       `The application failed to start:\n\n${error instanceof Error ? error.message : String(error)}\n\nPlease report this issue.`,
     );
     app.quit();

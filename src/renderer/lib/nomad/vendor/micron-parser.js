@@ -774,7 +774,7 @@ class MicronParser {
     if (fgColor && fgColor !== 'default') {
       el.style.color = fgColor;
       // Same fg as page/default bg → progressive tip for non-truecolor clients;
-      // hide on color-capable renderers (mesh-client).
+      // hide on color-capable renderers (sarmesh).
       const pageBgCss = this.colorToCss(defaultBg);
       if (pageBgCss && fgColor.toLowerCase() === pageBgCss.toLowerCase()) {
         el.classList.add('nomad-micron-fg-matches-bg');

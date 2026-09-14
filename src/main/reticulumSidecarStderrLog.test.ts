@@ -76,10 +76,10 @@ describe('resolveSidecarRustLog', () => {
     expect(SIDECAR_DEFAULT_RUST_LOG).toContain('rrc=info');
   });
 
-  it('honors MESH_CLIENT_RUST_LOG over RUST_LOG', () => {
+  it('honors SARMESH_RUST_LOG over RUST_LOG', () => {
     expect(
       resolveSidecarRustLog({
-        MESH_CLIENT_RUST_LOG: 'info',
+        SARMESH_RUST_LOG: 'info',
         RUST_LOG: 'debug',
       }),
     ).toBe('info');

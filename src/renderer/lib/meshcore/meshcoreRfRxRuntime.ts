@@ -660,7 +660,7 @@ function publishMeshcoreRfMqttPacketLog(
   if (!tryTakeMeshcoreMqttPacketLogToken(deps.mqttPacketLogBucket, nowMs)) return;
   void window.electronAPI.mqtt
     .publishMeshcorePacketLog({
-      origin: deps.selfInfoRef.current?.name ?? 'mesh-client',
+      origin: deps.selfInfoRef.current?.name ?? 'sarmesh',
       snr,
       rssi,
       rawHex: fields?.rawHex,

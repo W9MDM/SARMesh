@@ -196,9 +196,9 @@ impl ImportMode {
 /// Default stack-level re-announce interval when absent from config (1 hour).
 pub const DEFAULT_ANNOUNCE_INTERVAL_SEC: u32 = 3600;
 
-/// Private shared-instance name so mesh-client does not attach as a client on
+/// Private shared-instance name so sarmesh does not attach as a client on
 /// system/MeshChat `\0rns/default` (which skips spawning local TCP hubs).
-pub const DEFAULT_INSTANCE_NAME: &str = "mesh-client";
+pub const DEFAULT_INSTANCE_NAME: &str = "sarmesh";
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct StackSettings {
@@ -1695,7 +1695,7 @@ pub fn ensure_announce_interval_sec_default(config_dir: &Path) -> Result<bool, S
     Ok(true)
 }
 
-/// Ensure mesh-client-safe share defaults when keys are absent.
+/// Ensure sarmesh-safe share defaults when keys are absent.
 /// Does not overwrite explicit `share_instance` / `instance_name` values.
 pub fn ensure_share_instance_defaults(config_dir: &Path) -> Result<bool, String> {
     let content = read_config(config_dir)?;

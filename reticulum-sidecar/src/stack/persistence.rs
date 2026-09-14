@@ -15,7 +15,7 @@ use super::types::{
 };
 use super::via::resolve_outbound_sent_via;
 
-const STATE_FILE: &str = "mesh_client_stack.json";
+const STATE_FILE: &str = "sarmesh_stack.json";
 
 #[allow(clippy::struct_excessive_bools)] // persisted flags mirror independent user prefs
 pub struct PersistedState {

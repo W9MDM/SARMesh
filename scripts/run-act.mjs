@@ -17,7 +17,7 @@ const repoRoot = resolve(__dirname, '..');
 /** @typedef {{ event?: string, workflow: string, job?: string, matrix?: string[], containerOptions?: string, extraArgs?: string[] }} ActInvocation */
 /** @typedef {{ name: string, command: string, args?: string[], shell?: boolean, optionalTool?: string, skip?: () => boolean }} NativeStep */
 
-export const ACT_MODE_ENV = 'MESH_CLIENT_ACT_MODE';
+export const ACT_MODE_ENV = 'SARMESH_ACT_MODE';
 
 function commandOk(command, args) {
   const res = spawnSync(command, args, { stdio: 'ignore' });
@@ -126,13 +126,13 @@ export const NATIVE_TARGETS = {
     {
       name: 'Validate desktop file',
       command: 'desktop-file-validate',
-      args: ['flatpak/org.coloradomesh.MeshClient.desktop'],
+      args: ['flatpak/io.github.w9mdm.SARMesh.desktop'],
       optionalTool: 'desktop-file-validate',
     },
     {
       name: 'Validate metainfo',
       command: 'appstreamcli',
-      args: ['validate', '--no-net', 'flatpak/org.coloradomesh.MeshClient.metainfo.xml'],
+      args: ['validate', '--no-net', 'flatpak/io.github.w9mdm.SARMesh.metainfo.xml'],
       optionalTool: 'appstreamcli',
     },
   ],
@@ -421,7 +421,7 @@ export function runNativeTarget(target) {
     console.log('Native targets:', Object.keys(NATIVE_TARGETS).join(', '));
     console.log('Docker (act) targets:', Object.keys(ACT_TARGETS).join(', '), '+ pull-images, pr');
     console.log('');
-    console.log('Modes: default docker (act) | --native | MESH_CLIENT_ACT_MODE=native');
+    console.log('Modes: default docker (act) | --native | SARMESH_ACT_MODE=native');
     return 0;
   }
 
@@ -520,7 +520,7 @@ function printUsage() {
 Modes (default: docker / act in containers):
   --docker           Run workflow jobs via act + containers (any Docker-compatible engine, e.g. Podman Desktop or Docker Desktop)
   --native           Run equivalent pnpm/cargo commands on the host (no container engine)
-  MESH_CLIENT_ACT_MODE=native|docker
+  SARMESH_ACT_MODE=native|docker
 
 Targets:
   ci                 CI work jobs (quality, lint, typecheck, app-build, policy-scanners)

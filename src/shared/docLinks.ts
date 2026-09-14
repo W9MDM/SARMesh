@@ -8,8 +8,7 @@ export interface BrokenDocLink {
   resolvedPath: string;
 }
 
-const MESH_CLIENT_BLOB_RE =
-  /https:\/\/github\.com\/Colorado-Mesh\/mesh-client\/blob\/main\/([^\s"'#)]+)/g;
+const SARMESH_BLOB_RE = /https:\/\/github\.com\/Colorado-Mesh\/sarmesh\/blob\/main\/([^\s"'#)]+)/g;
 
 const RELATIVE_DOC_LINK_RE = /\]\((docs\/[^)#]+\.md)/g;
 
@@ -58,8 +57,8 @@ export function extractDocLinkTargets(content: string): string[] {
   const targets: string[] = [];
 
   let match: RegExpExecArray | null;
-  MESH_CLIENT_BLOB_RE.lastIndex = 0;
-  while ((match = MESH_CLIENT_BLOB_RE.exec(content)) !== null) {
+  SARMESH_BLOB_RE.lastIndex = 0;
+  while ((match = SARMESH_BLOB_RE.exec(content)) !== null) {
     const target = match.at(1);
     if (target !== undefined) targets.push(target);
   }
@@ -83,8 +82,8 @@ export function findBrokenDocLinks(repoRoot: string): BrokenDocLink[] {
     const relSource = relative(repoRoot, sourceFile);
 
     let match: RegExpExecArray | null;
-    MESH_CLIENT_BLOB_RE.lastIndex = 0;
-    while ((match = MESH_CLIENT_BLOB_RE.exec(content)) !== null) {
+    SARMESH_BLOB_RE.lastIndex = 0;
+    while ((match = SARMESH_BLOB_RE.exec(content)) !== null) {
       const target = match.at(1);
       if (target === undefined) continue;
       const resolvedPath = join(repoRoot, target);

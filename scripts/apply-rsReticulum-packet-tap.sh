@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsReticulum packet-tap overlay for rns-stack local builds.
+# Apply sarmesh rsReticulum packet-tap overlay for rns-stack local builds.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

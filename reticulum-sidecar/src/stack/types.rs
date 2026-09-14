@@ -67,7 +67,7 @@ pub struct InterfaceRow {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub flow_control: Option<bool>,
     /// Upstream RNS opt-out: keep configured mode when `discoverable` would
-    /// otherwise auto-correct to Access Point / Gateway. Derived by mesh-client
+    /// otherwise auto-correct to Access Point / Gateway. Derived by sarmesh
     /// when publish is on and mode is not AP/Gateway.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ignore_config_warnings: Option<bool>,

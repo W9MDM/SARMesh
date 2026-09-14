@@ -33,12 +33,7 @@ describe('fetchAllGithubReleases', () => {
       return Promise.reject(new Error(`Unexpected fetch ${url}`));
     });
 
-    const releases = await fetchAllGithubReleases(
-      REPO,
-      'mesh-client-test',
-      fetchMock,
-      TEST_PAGE_SIZE,
-    );
+    const releases = await fetchAllGithubReleases(REPO, 'sarmesh-test', fetchMock, TEST_PAGE_SIZE);
     expect(releases).toHaveLength(3);
     expect(fetchMock).toHaveBeenCalledTimes(2);
 

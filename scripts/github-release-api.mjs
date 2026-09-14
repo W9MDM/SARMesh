@@ -10,7 +10,7 @@ import path from 'node:path';
 import { releaseMatchesTag, versionFromTrustedTag } from './github-release-version.mjs';
 
 export const OWNER = 'Colorado-Mesh';
-export const REPO = 'mesh-client';
+export const REPO = 'sarmesh';
 export const API_ROOT = `https://api.github.com/repos/${OWNER}/${REPO}`;
 
 /** Release tags must be vX.Y.Z — validated before any GitHub API call (CodeQL file-access-to-http). */
@@ -742,7 +742,7 @@ export async function normalizeDraftReleasesForTag(
  *   allowCreate?: boolean,
  *   log?: (...args: unknown[]) => void,
  * }} opts
- * Create only when `allowCreate` is true (prepare job sets MESH_CLIENT_ALLOW_DRAFT_CREATE=1).
+ * Create only when `allowCreate` is true (prepare job sets SARMESH_ALLOW_DRAFT_CREATE=1).
  * Upload jobs must reuse the prepare draft and never POST /releases.
  */
 export async function ensureGithubDraftRelease({
@@ -764,7 +764,7 @@ export async function ensureGithubDraftRelease({
   if (!allowCreate) {
     fail(
       `No draft release for ${tag}. prepare-github-release must create it first ` +
-        `(set MESH_CLIENT_ALLOW_DRAFT_CREATE=1 only in that job).`,
+        `(set SARMESH_ALLOW_DRAFT_CREATE=1 only in that job).`,
     );
     return /** @type {never} */ (undefined);
   }

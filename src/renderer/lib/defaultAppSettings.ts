@@ -53,7 +53,7 @@ export const DEFAULT_APP_SETTINGS_SHARED = {
   /** When sharing location in chat, also send a Meshtastic Waypoint packet (map pin). */
   shareLocationSendWaypoint: true,
   /**
-   * When false, mesh-client skips host GPS lookups and blocks all app-initiated location
+   * When false, sarmesh skips host GPS lookups and blocks all app-initiated location
    * transmission (Meshtastic, MeshCore, Reticulum). Static coords remain for local map only.
    */
   shareMyLocation: true,

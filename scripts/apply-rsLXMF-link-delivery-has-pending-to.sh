@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsLXMF LinkDeliveryManager::has_pending_to for rns-stack builds.
+# Apply sarmesh rsLXMF LinkDeliveryManager::has_pending_to for rns-stack builds.
 # Serializes packed Propagated deposits vs a second LinkRequest to the same PN.
 set -euo pipefail
 

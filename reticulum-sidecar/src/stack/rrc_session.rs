@@ -34,7 +34,7 @@ use super::rrc_link::{
     rrc_disconnect_should_drop_path, rrc_link_proof_timeout_log_fields, rrc_reconnect_hops,
 };
 
-const CLIENT_NAME: &str = "mesh-client";
+const CLIENT_NAME: &str = "sarmesh";
 const CLIENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const WELCOME_TIMEOUT: Duration = Duration::from_secs(20);
@@ -1749,7 +1749,7 @@ async fn resolve_reconnect_nickname(
         .unwrap_or_else(|| {
             let trimmed = intent_nick.trim();
             if trimmed.is_empty() {
-                "mesh-client".into()
+                "sarmesh".into()
             } else {
                 trimmed.to_string()
             }

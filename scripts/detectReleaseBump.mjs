@@ -1,5 +1,5 @@
 /**
- * Conventional Commits → semver bump for mesh-client releases.
+ * Conventional Commits → semver bump for sarmesh releases.
  *
  * Matches `type:`, `type(scope):`, and breaking `type!:` / `type(scope)!:`
  * (the historical bash regex only matched unscoped `type:` and missed squash

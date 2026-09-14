@@ -85,7 +85,7 @@ fn discovery_status_str(status: Option<DiscoveryStatus>) -> &'static str {
     }
 }
 
-/// Null-island and out-of-range coords are not map markers (matches mesh-client geo rules).
+/// Null-island and out-of-range coords are not map markers (matches sarmesh geo rules).
 pub fn is_valid_map_coordinate(lat: f64, lon: f64) -> bool {
     if !lat.is_finite() || !lon.is_finite() {
         return false;

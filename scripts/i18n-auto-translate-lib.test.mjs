@@ -110,7 +110,7 @@ describe('filterMissingKeysToTranslate', () => {
       brandOnly: 'Colorado Mesh',
       wirePassword: 'hello',
       filterToken: 'ADVERT',
-      prose: 'Quit mesh-client completely and reconnect',
+      prose: 'Quit sarmesh completely and reconnect',
     };
     const existing = { ...enFlat };
     const result = filterMissingKeysToTranslate(Object.keys(enFlat), existing, null, {
@@ -119,7 +119,7 @@ describe('filterMissingKeysToTranslate', () => {
       auditIdentical: true,
       enFlat,
     });
-    // prose still has translatable words after stripping mesh-client
+    // prose still has translatable words after stripping sarmesh
     expect(result).toEqual(['prose']);
   });
 

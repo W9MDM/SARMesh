@@ -12,7 +12,7 @@ export interface ReticulumSharedInstanceClientBannerProps {
   onBeginBleConnectGrace?: () => void;
 }
 
-/** Connection alert when mesh-client is a shared-instance client of another RNS app. */
+/** Connection alert when sarmesh is a shared-instance client of another RNS app. */
 export function ReticulumSharedInstanceClientBanner({
   onRestartStack,
   onRefresh,

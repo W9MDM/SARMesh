@@ -35,16 +35,16 @@ Before opening a GitHub issue, use **App → Support / Bug reports → Export fo
 
 Open `manifest.json` first when triaging: `appVersion` is package semver; **`buildChannel`** is `test` (Build Binaries / Flatpak no-release), `release` (official Release or Flatpak tag), or `local` (unmarked local dist). For CI builds, `buildInfo.runUrl` links to the exact GitHub Actions run — do not assume `appVersion` alone means an official release. Test-build downloadable installers include `-run{N}` in the filename; if the filename and `runUrl` disagree, trust `runUrl` / the `[Startup] runtime … run=` log line.
 
-**Do not attach Export for Developer or `mesh-client.db` to public GitHub issues.** The developer bundle includes your SQLite database, which may contain **saved passwords** (MeshCore room/repeater credentials, MQTT settings, etc.). It may also include **Reticulum** rnsd config and sidecar stack state under `reticulum/` — share only via a **private channel** when a maintainer requests **Export for Developer**.
+**Do not attach Export for Developer or `sarmesh.db` to public GitHub issues.** The developer bundle includes your SQLite database, which may contain **saved passwords** (MeshCore room/repeater credentials, MQTT settings, etc.). It may also include **Reticulum** rnsd config and sidecar stack state under `reticulum/` — share only via a **private channel** when a maintainer requests **Export for Developer**.
 
 Works on macOS, Windows, Linux (.deb / .rpm / AppImage), and Flatpak. Local data paths:
 
-| Install                   | Log / DB location                                            |
-| ------------------------- | ------------------------------------------------------------ |
-| macOS                     | `~/Library/Application Support/mesh-client/`                 |
-| Windows                   | `%APPDATA%\mesh-client\`                                     |
-| Linux (native / AppImage) | `~/.config/mesh-client/`                                     |
-| Flatpak                   | `~/.var/app/org.coloradomesh.MeshClient/config/mesh-client/` |
+| Install                   | Log / DB location                                    |
+| ------------------------- | ---------------------------------------------------- |
+| macOS                     | `~/Library/Application Support/sarmesh/`             |
+| Windows                   | `%APPDATA%\sarmesh\`                                 |
+| Linux (native / AppImage) | `~/.config/sarmesh/`                                 |
+| Flatpak                   | `~/.var/app/io.github.w9mdm.SARMesh/config/sarmesh/` |
 
 **Copy Debug Snapshot** (clipboard JSON) and **Log → Export** remain available under Data Management and the Log panel.
 
@@ -61,7 +61,7 @@ Works on macOS, Windows, Linux (.deb / .rpm / AppImage), and Flatpak. Local data
 | `meshcore.orphanRoomMessageCount`                                       | number                    | Room posts whose `room_server_id` is not in current contacts                                               |
 | `meshcore.roomNodeCount` / `roomMessageCount` / `roomsLastReadKeyCount` | numbers                   | Rooms triage counts                                                                                        |
 
-Zip contents also include **`mesh-client.log.1`** when present (prior session preserved on restart, or size-rotated backup; export may tail-cap large backups).
+Zip contents also include **`sarmesh.log.1`** when present (prior session preserved on restart, or size-rotated backup; export may tail-cap large backups).
 
 The top-level **`legend`** explains that ids like `offline-meshcore` are **internal hydration-slot store keys**, not “disconnected.” When connect reuses that slot (`hydrationSlotIsLiveSession: true`), the id still contains `offline-` while BLE/MQTT are up — that is **expected**.
 
@@ -90,13 +90,13 @@ The top-level **`legend`** explains that ids like `offline-meshcore` are **inter
 - `diagnosticRows` — Reticulum-native Diagnostics tab rows (`reticulum/*` conditions).
 - `fetchErrors` — per-API errors when the stack was stopped or proxy failed.
 
-Developer bundle only: `reticulum/config` (rnsd INI) and `reticulum/mesh_client_stack.json` (mnemonic redacted).
+Developer bundle only: `reticulum/config` (rnsd INI) and `reticulum/sarmesh_stack.json` (mnemonic redacted).
 
-Attach the GitHub report zip (or paste `debug-snapshot.json` from it; redact `myNodeNum` if you prefer). Do **not** attach the developer bundle or `mesh-client.db` to this public issue.
+Attach the GitHub report zip (or paste `debug-snapshot.json` from it; redact `myNodeNum` if you prefer). Do **not** attach the developer bundle or `sarmesh.db` to this public issue.
 
 ## System requirements
 
-Packaged Mesh-Client (Electron **44**) needs:
+Packaged SARMesh (Electron **44**) needs:
 
 | Platform    | Minimum                                                                                         |
 | ----------- | ----------------------------------------------------------------------------------------------- |
@@ -153,7 +153,7 @@ pnpm run electron:open -- --disable-gpu
 
 Optional persistent mitigation:
 
-- `export MESH_CLIENT_DISABLE_GPU=1`
+- `export SARMESH_DISABLE_GPU=1`
 - `ELECTRON_OZONE_PLATFORM_HINT=x11 pnpm run electron:open`
 
 ### "A native module failed to load" dialog on startup
@@ -186,13 +186,13 @@ npm's JSON tree lists hoisted packages with many duplicate refs (one per edge). 
 
 **Cause**
 
-1. **Spaces in the project path**: node-gyp is unreliable when the repo lives under a path with spaces (e.g. `C:\Users\Joey Stanford\mesh-client`). This can surface as "Attempting to build a module with a space in the path", "Could not find any Visual Studio installation to use", or EPERM. See [node-gyp#65](https://github.com/nodejs/node-gyp/issues/65#issuecomment-368820565).
+1. **Spaces in the project path**: node-gyp is unreliable when the repo lives under a path with spaces (e.g. `C:\Users\Joey Stanford\sarmesh`). This can surface as "Attempting to build a module with a space in the path", "Could not find any Visual Studio installation to use", or EPERM. See [node-gyp#65](https://github.com/nodejs/node-gyp/issues/65#issuecomment-368820565).
 2. **EPERM on unlink**: Something on Windows still has the `.node` file open (another `node`/`electron` process, antivirus/Windows Defender scanning the file, or a stuck handle).
 
 **Fix**
 
-1. **Use a path without spaces** (strongly recommended): clone or copy the repo to e.g. `C:\dev\mesh-client`, then `pnpm install` and `pnpm run dist:win` from there.
-2. **Clear the lock before rebuild**: quit any running Mesh-Client/Electron dev instances, then delete the affected `build` folder under `node_modules` and retry.
+1. **Use a path without spaces** (strongly recommended): clone or copy the repo to e.g. `C:\dev\sarmesh`, then `pnpm install` and `pnpm run dist:win` from there.
+2. **Clear the lock before rebuild**: quit any running SARMesh/Electron dev instances, then delete the affected `build` folder under `node_modules` and retry.
 3. **Rebuild then dist**: `pnpm run rebuild`; if that succeeds, run `pnpm run dist:win`.
 
 CI builds avoid both issues by using short paths and clean agents; local Windows builds need the same constraints.
@@ -206,7 +206,7 @@ CI builds avoid both issues by using short paths and clean agents; local Windows
 
 **Fix** (use one or more)
 
-1. **Shorten the repo path** (most reliable): clone or copy the project to a shallow path such as `C:\dev\mesh-client` instead of e.g. `C:\Users\…\Documents\GitHub\org\mesh-client`.
+1. **Shorten the repo path** (most reliable): clone or copy the project to a shallow path such as `C:\dev\sarmesh` instead of e.g. `C:\Users\…\Documents\GitHub\org\sarmesh`.
 2. **Enable long paths in Git** (helps clones/checkouts): `git config --global core.longpaths true`, then re-clone or ensure no stuck long paths in the worktree.
 3. **Enable Win32 long paths in Windows** (Windows 10 1607+): this option is **not** available as a normal toggle in **Settings**; enable it via **Local Group Policy** → _Computer Configuration → Administrative Templates → System → Filesystem → Enable Win32 long paths_, or set the registry DWORD **`LongPathsEnabled = 1`** under `HKLM\SYSTEM\CurrentControlSet\Control\FileSystem` (admin rights; reboot may be required). See [Microsoft: Maximum Path Length Limitation](https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation).
 4. **`pnpm run dist:win`** already runs a **hoisted** `pnpm install` to shorten `node_modules` depth before packaging; if **`pnpm install`** / **`pnpm run rebuild`** fails earlier with this error, try the short path and long-path OS settings first, or temporarily: `pnpm install --config.node-linker=hoisted` from a short root path.
@@ -233,8 +233,8 @@ The session allowlist grants **serial**, **geolocation**, and **media** (camera 
 
 If microphone permission is denied when placing or answering an LXST voice call:
 
-- **macOS:** System Settings → Privacy & Security → Microphone — allow Mesh-client (or Electron when running `pnpm run dev`). Packaged builds include `NSMicrophoneUsageDescription`.
-- **Windows:** Settings → Privacy & security → Microphone — allow desktop apps / Mesh-client. The app opens this page when OS status is `denied`.
+- **macOS:** System Settings → Privacy & Security → Microphone — allow SARMesh (or Electron when running `pnpm run dev`). Packaged builds include `NSMicrophoneUsageDescription`.
+- **Windows:** Settings → Privacy & security → Microphone — allow desktop apps / SARMesh. The app opens this page when OS status is `denied`.
 - **Linux:** Ensure PulseAudio or PipeWire can capture; Flatpak builds already include `--socket=pulseaudio`. AppImage/deb use the host audio stack.
 
 ### Reticulum LXMF paper create/ingest fails
@@ -255,7 +255,7 @@ See [reticulum.md](reticulum.md#chat-lxmf) and [sidecar IPC](reticulum-sidecar-i
 ### Reticulum Games challenge fails or board does not update
 
 - **Stack not running / games disabled:** Games need a live `rns-stack` sidecar with sibling `lrgp-rs`. Check Connection → Start stack and `GET` status via Games tab (or logs for `games requires live rns-stack`).
-- **`unsupported_app`:** Peer lacks that LRGP app (mesh-client and Ratspeak ship Tic-Tac-Toe + Chess). Challenge with `ttt` or `chess`.
+- **`unsupported_app`:** Peer lacks that LRGP app (sarmesh and Ratspeak ship Tic-Tac-Toe + Chess). Challenge with `ttt` or `chess`.
 - **`not_your_turn` / `invalid_move`:** Local validation rejected the move before send; wait for opponent or pick a legal cell/UCI move.
 - **Challenge never arrives:** Path/Direct delivery required for reliable LRGP; ensure a path to the peer (Peers → Probe) or preferred PN fallback. Confirm peer Games tab / unread session list (sidebar Games badge + DM-style ping on inbound challenge).
 - **Accept does nothing / session stays Pending:** After a stack restart the Games tab can still list SQLite sessions; the sidecar now rehydrates those into memory on spawn. If Accept still fails, check the action error toast (`unknown_session` / `no_propagation_node`) and that the stack is running.
@@ -274,13 +274,13 @@ See [reticulum.md](reticulum.md#chat-lxmf) and [sidecar IPC](reticulum-sidecar-i
 - **Busy / rejected / no answer:** Line-busy and reject play distinct tones; discovery/ring timeouts surface as no-answer toasts. Only one local call at a time — Hang up before dialing again.
 - **Call progress tones (outbound):** Expect **dial tone → peer-derived DTMF burst → UK double-ring** while connecting. **Busy / no-answer** uses a short busy cadence; **connect-fail / unexpected drop** uses a fast reorder tone (not the same as busy). Hearing dial/ring without two-way audio is often still connecting — wait for Established before assuming failure.
 - **One-way or silent audio:** Confirm microphone permission (above). **Answer** only warms `AudioContext` on the click; **microphone capture/TX begins after `voice.update: established`** (Call click warms contexts before dial). If capture still fails after Established, check OS privacy and that another app is not exclusive-locking the mic. TX drops increment `localTxDrops` under IPC pressure — hang up and retry on a quieter link.
-- **Inbound accept fails (Columba / Python LXST):** mesh-client→peer may work while peer→mesh-client fails on Answer. Current builds defer mic/TX until Established and soft-drop pre-establish PCM (older packages could fatal-error lxst with `active call is not established` on Answer). Rebuild sidecar + app, then retry. If it still fails, check developer-bundle logs for `[ReticulumSidecar]` `call start role=incoming`, `call failed` / `call terminated`, and renderer `[reticulumVoice] voice.error message=…` / `answer failed`. Generic UI toast **Voice call failed** hides the raw rsLXST reason — the log line is definitive.
-- **Interop:** Peer must run LXST telephony (Sideband, Ratspeak, Columba, or mesh-client with rsLXST). This is not an LXMF voice-note clip.
+- **Inbound accept fails (Columba / Python LXST):** sarmesh→peer may work while peer→sarmesh fails on Answer. Current builds defer mic/TX until Established and soft-drop pre-establish PCM (older packages could fatal-error lxst with `active call is not established` on Answer). Rebuild sidecar + app, then retry. If it still fails, check developer-bundle logs for `[ReticulumSidecar]` `call start role=incoming`, `call failed` / `call terminated`, and renderer `[reticulumVoice] voice.error message=…` / `answer failed`. Generic UI toast **Voice call failed** hides the raw rsLXST reason — the log line is definitive.
+- **Interop:** Peer must run LXST telephony (Sideband, Ratspeak, Columba, or sarmesh with rsLXST). This is not an LXMF voice-note clip.
 
 If QR camera scanning fails with camera permission denied:
 
-- **macOS:** System Settings → Privacy & Security → Camera — allow Mesh-client (packaged builds include `NSCameraUsageDescription`). `media:ensureCameraAccess` opens the privacy pane when denied.
-- **Windows:** Settings → Privacy & security → Camera — allow desktop apps / Mesh-client.
+- **macOS:** System Settings → Privacy & Security → Camera — allow SARMesh (packaged builds include `NSCameraUsageDescription`). `media:ensureCameraAccess` opens the privacy pane when denied.
+- **Windows:** Settings → Privacy & security → Camera — allow desktop apps / SARMesh.
 - **Linux:** Chromium/portal behavior; no separate Electron privacy deep link.
 - Streams are stopped after a successful decode, Stop camera, and component unmount (no orphaned tracks).
 
@@ -288,11 +288,11 @@ If QR camera scanning fails with camera permission denied:
 
 Installers, Flatpak, Gatekeeper, and first-launch failures.
 
-### Windows: installed files present but `Mesh-client.exe` is missing (Windows 11 ARM)
+### Windows: installed files present but `SARMesh.exe` is missing (Windows 11 ARM)
 
 **Symptoms**
 
-- After running the NSIS installer, `%LOCALAPPDATA%\Programs\Mesh-client\` contains `resources\`, `locales\`, DLLs, and a Start Menu shortcut, but **`Mesh-client.exe` is absent**.
+- After running the NSIS installer, `%LOCALAPPDATA%\Programs\SARMesh\` contains `resources\`, `locales\`, DLLs, and a Start Menu shortcut, but **`SARMesh.exe` is absent**.
 - The app does not appear under **Settings → Apps → Installed apps**, so there is no uninstall entry (registry `DisplayIcon` points at the missing exe).
 - Windows Security **Protection history** shows no quarantine.
 
@@ -304,9 +304,9 @@ Older releases also shipped a **universal** NSIS installer (x64 + arm64 in one `
 
 **Fix**
 
-1. Delete the broken install folder: `%LOCALAPPDATA%\Programs\Mesh-client\`
-2. Download the **arm64** installer from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases): `Mesh-client-Setup-{version}-arm64.exe` (not the x64-only `Mesh-client-Setup-{version}.exe`). Older releases may show dotted GitHub names (`Mesh-client.Setup.{version}-arm64.exe`) — use that file if the hyphenated name is missing.
-3. Re-run the installer. Confirm `Mesh-client.exe` exists in the install folder and the app appears in **Installed apps**.
+1. Delete the broken install folder: `%LOCALAPPDATA%\Programs\SARMesh\`
+2. Download the **arm64** installer from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases): `SARMesh-Setup-{version}-arm64.exe` (not the x64-only `SARMesh-Setup-{version}.exe`). Older releases may show dotted GitHub names (`SARMesh.Setup.{version}-arm64.exe`) — use that file if the hyphenated name is missing.
+3. Re-run the installer. Confirm `SARMesh.exe` exists in the install folder and the app appears in **Installed apps**.
 
 **Diagnostic checklist (if the exe is still missing)**
 
@@ -314,35 +314,35 @@ Capture this before opening a GitHub issue — it helps isolate NSIS extract vs 
 
 1. **NSIS install log** — run the installer from Command Prompt or PowerShell with logging:
    ```bat
-   "Mesh-client-Setup-{version}-arm64.exe" /LOG=%USERPROFILE%\Desktop\mesh-install.log
+   "SARMesh-Setup-{version}-arm64.exe" /LOG=%USERPROFILE%\Desktop\mesh-install.log
    ```
-   After failure, open `mesh-install.log` and search for `Mesh-client.exe`, `CopyFiles`, or `error`.
+   After failure, open `mesh-install.log` and search for `SARMesh.exe`, `CopyFiles`, or `error`.
 2. **Event Viewer** — **Windows Logs → Application** during the install window; note any errors from `MsiInstaller`, `Application Error`, or antivirus agents.
 3. **Controlled folder access** — **Windows Security → Virus & threat protection → Ransomware protection**; if enabled, try temporarily allowing the installer or install to a short path such as `C:\mc-test` (see step 5).
 4. **Install path** — confirm `%LOCALAPPDATA%` is on a local NTFS volume, not OneDrive-redirected or sync-rooted.
 5. **Custom install directory** — test a short path:
    ```bat
-   "Mesh-client-Setup-{version}-arm64.exe" /D=C:\mc-test /LOG=%USERPROFILE%\Desktop\mesh-install.log
+   "SARMesh-Setup-{version}-arm64.exe" /D=C:\mc-test /LOG=%USERPROFILE%\Desktop\mesh-install.log
    ```
-6. **Clean tree** — ensure no leftover `Mesh-client` folder or running `Mesh-client.exe` from a prior partial install before re-running the installer.
+6. **Clean tree** — ensure no leftover `SARMesh` folder or running `SARMesh.exe` from a prior partial install before re-running the installer.
 
 **Workaround before a fixed release**
 
-Download a CI or release artifact's `win-arm64-unpacked` folder and run `Mesh-client.exe` directly (portable, no installer).
+Download a CI or release artifact's `win-arm64-unpacked` folder and run `SARMesh.exe` directly (portable, no installer).
 
 ### macOS: File is damaged and cannot be opened
 
 **Official releases (v5.22.0+):** macOS artifacts from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) are **Developer ID signed and notarized** (`notarize: true` in [`electron-builder.yml`](../electron-builder.yml); signing secrets in [`release.yaml`](../.github/workflows/release.yaml)). They should open from **Applications** without `xattr`. If macOS still blocks a signed build, check **System Settings → Privacy & Security** for an **Allow** entry first.
 
-**Unsigned builds** (local `pnpm run dist:mac` without `CSC_*` / `APPLE_*` env vars, fork CI artifacts, or older pre-notarization releases): macOS tags downloads with **`com.apple.quarantine`**. Gatekeeper may show **"File is damaged and cannot be opened"** (or **"Mesh-client" is damaged and can't be opened**) instead of the usual unidentified-developer prompt — common on **Apple silicon**, not a corrupt file.
+**Unsigned builds** (local `pnpm run dist:mac` without `CSC_*` / `APPLE_*` env vars, fork CI artifacts, or older pre-notarization releases): macOS tags downloads with **`com.apple.quarantine`**. Gatekeeper may show **"File is damaged and cannot be opened"** (or **"SARMesh" is damaged and can't be opened**) instead of the usual unidentified-developer prompt — common on **Apple silicon**, not a corrupt file.
 
 **Fix (unsigned / quarantined downloads):**
 
-1. Open **System Settings → Privacy & Security** and scroll to the bottom. If you see "Mesh-client was blocked from use", click **Allow** to run the app.
-2. If you don't see the Mesh-client entry in Privacy & Security, or the app still won't open after clicking Allow, strip the quarantine attribute; adjust the path if the app is still under **Downloads** or another folder:
+1. Open **System Settings → Privacy & Security** and scroll to the bottom. If you see "SARMesh was blocked from use", click **Allow** to run the app.
+2. If you don't see the SARMesh entry in Privacy & Security, or the app still won't open after clicking Allow, strip the quarantine attribute; adjust the path if the app is still under **Downloads** or another folder:
 
 ```bash
-xattr -r -d com.apple.quarantine /Applications/Mesh-client.app
+xattr -r -d com.apple.quarantine /Applications/SARMesh.app
 ```
 
 After running `xattr`, check Privacy & Security again (scroll to the bottom); the entry should now appear with an **Allow** button.
@@ -357,7 +357,7 @@ After running `xattr`, check Privacy & Security again (scroll to the bottom); th
 
 ### macOS: Library not loaded: Squirrel.framework after ZIP extract
 
-**Symptom:** Mesh-client crashes immediately on launch (often on macOS 26 / Tahoe). Crash Reporter or Console shows:
+**Symptom:** SARMesh crashes immediately on launch (often on macOS 26 / Tahoe). Crash Reporter or Console shows:
 
 ```text
 Termination Reason: Namespace DYLD, Code 1, Library missing
@@ -371,21 +371,21 @@ Similar errors may mention `Mantle.framework` or `ReactiveObjC.framework`. Elect
 
 **Fix:**
 
-1. Delete the broken copy (for example `/Applications/Mesh-client.app`).
+1. Delete the broken copy (for example `/Applications/SARMesh.app`).
 2. Reinstall using one of these (preferred first):
-   - **`.dmg` (recommended):** open the arm64 DMG, drag **Mesh-client** to **Applications**, launch from there.
+   - **`.dmg` (recommended):** open the arm64 DMG, drag **SARMesh** to **Applications**, launch from there.
    - **`.zip` with [Keka](https://www.keka.io/en/)** or Terminal:
      ```bash
-     ditto -xk Mesh-client-*-arm64-mac.zip ~/Desktop/mesh-extract
+     ditto -xk SARMesh-*-arm64-mac.zip ~/Desktop/mesh-extract
      ```
-     Then move `Mesh-client.app` to `/Applications`.
+     Then move `SARMesh.app` to `/Applications`.
 3. **Do not** re-extract the macOS ZIP with **7-Zip**.
 
 **Optional check** after a good install:
 
 ```bash
-ls -la /Applications/Mesh-client.app/Contents/Frameworks/Squirrel.framework
-file /Applications/Mesh-client.app/Contents/Frameworks/Squirrel.framework/Versions/A/Squirrel
+ls -la /Applications/SARMesh.app/Contents/Frameworks/Squirrel.framework
+file /Applications/SARMesh.app/Contents/Frameworks/Squirrel.framework/Versions/A/Squirrel
 ```
 
 Expect `Squirrel` and `Versions/Current` to be **symlinks**; `Versions/A/Squirrel` should report a Mach-O dylib (not a tiny text file).
@@ -397,8 +397,8 @@ Official releases also ship `00-READ-ME-BEFORE-EXTRACTING-macOS-ZIP.txt` on the 
 **Symptom:** Gatekeeper / `spctl --assess` accepts the app as **Notarized Developer ID**, but:
 
 ```bash
-codesign --verify --deep --strict --verbose=4 /path/to/Mesh-client.app
-# Mesh-client.app: invalid signature (code or signature have been modified)
+codesign --verify --deep --strict --verbose=4 /path/to/SARMesh.app
+# SARMesh.app: invalid signature (code or signature have been modified)
 ```
 
 Nested Electron / Squirrel frameworks or Helper apps may report the same error.
@@ -410,17 +410,17 @@ Nested Electron / Squirrel frameworks or Helper apps may report the same error.
 ```bash
 mkdir -p /tmp/mesh-dmg
 trap 'hdiutil detach /tmp/mesh-dmg 2>/dev/null || true' EXIT
-hdiutil attach -readonly -nobrowse -mountpoint /tmp/mesh-dmg Mesh-client-*-arm64.dmg
-codesign --verify --deep --strict --verbose=4 /tmp/mesh-dmg/Mesh-client.app
-spctl --assess --type execute --verbose=4 /tmp/mesh-dmg/Mesh-client.app
-xcrun stapler validate /tmp/mesh-dmg/Mesh-client.app
+hdiutil attach -readonly -nobrowse -mountpoint /tmp/mesh-dmg SARMesh-*-arm64.dmg
+codesign --verify --deep --strict --verbose=4 /tmp/mesh-dmg/SARMesh.app
+spctl --assess --type execute --verbose=4 /tmp/mesh-dmg/SARMesh.app
+xcrun stapler validate /tmp/mesh-dmg/SARMesh.app
 ```
 
-Or extract the ZIP with `ditto -xk` (not 7-Zip) and verify that tree. If the mounted DMG / `ditto` extract passes but `/Applications/Mesh-client.app` fails, reinstall from the DMG and delete the broken copy. See [Library not loaded: Squirrel.framework](#macos-library-not-loaded-squirrelframework-after-zip-extract) above.
+Or extract the ZIP with `ditto -xk` (not 7-Zip) and verify that tree. If the mounted DMG / `ditto` extract passes but `/Applications/SARMesh.app` fails, reinstall from the DMG and delete the broken copy. See [Library not loaded: Squirrel.framework](#macos-library-not-loaded-squirrelframework-after-zip-extract) above.
 
 ### Flatpak: `vmwgfx: driver missing` (VMware on macOS)
 
-**Symptom**: `flatpak run org.coloradomesh.MeshClient` fails or exits after Mesa logs `vmwgfx: driver missing` (use `flatpak -v run ...` to see it). Common on **Linux guests in VMware Fusion or Workstation with a macOS host**, including **aarch64** Ubuntu/ARM VMs.
+**Symptom**: `flatpak run io.github.w9mdm.SARMesh` fails or exits after Mesa logs `vmwgfx: driver missing` (use `flatpak -v run ...` to see it). Common on **Linux guests in VMware Fusion or Workstation with a macOS host**, including **aarch64** Ubuntu/ARM VMs.
 
 **Cause**: The Flatpak uses the same GPU stack as the x86_64 bundle (`--device=all`, Wayland/X11). It expects a working virtual GPU in the guest. On macOS-hosted VMware, **3D acceleration / `vmwgfx` is often off or unsupported** unless you enable it in the VM settings — without that, Mesa cannot open the VMware DRI driver and Electron’s GPU process fails.
 
@@ -434,28 +434,28 @@ Or extract the ZIP with `ditto -xk` (not 7-Zip) and verify that tree. If the mou
    ```
 4. Reinstall or rerun the Flatpak:
    ```bash
-   flatpak run org.coloradomesh.MeshClient
+   flatpak run io.github.w9mdm.SARMesh
    ```
 
 **Workaround** (software rendering when the host cannot expose `vmwgfx`):
 
 ```bash
-MESH_CLIENT_DISABLE_GPU=1 flatpak run org.coloradomesh.MeshClient
+SARMESH_DISABLE_GPU=1 flatpak run io.github.w9mdm.SARMesh
 ```
 
-When `/sys/class/drm` is visible inside the sandbox, the wrapper may auto-detect `vmwgfx` and set `MESH_CLIENT_DISABLE_GPU=1` if DRI is unreliable there. Opt out of auto-detection: `MESH_CLIENT_DISABLE_GPU=0 flatpak run ...`. Force GPU despite detection: `MESH_CLIENT_ENABLE_GPU=1 flatpak run ...`.
+When `/sys/class/drm` is visible inside the sandbox, the wrapper may auto-detect `vmwgfx` and set `SARMESH_DISABLE_GPU=1` if DRI is unreliable there. Opt out of auto-detection: `SARMESH_DISABLE_GPU=0 flatpak run ...`. Force GPU despite detection: `SARMESH_ENABLE_GPU=1 flatpak run ...`.
 
 **Reinstall a release bundle** after downloading a new `.flatpak` from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases):
 
 ```bash
-flatpak uninstall --user org.coloradomesh.MeshClient
-flatpak install --user ./org.coloradomesh.MeshClient-aarch64.flatpak # or -x86_64
-flatpak run org.coloradomesh.MeshClient
+flatpak uninstall --user io.github.w9mdm.SARMesh
+flatpak install --user ./io.github.w9mdm.SARMesh-aarch64.flatpak # or -x86_64
+flatpak run io.github.w9mdm.SARMesh
 ```
 
 ### Flatpak: immediate exit on Arch / CachyOS / Wayland (#598)
 
-**Symptom**: `flatpak run org.coloradomesh.MeshClient` prints `Command failed` right after `Running 'bwrap … -- mesh-client'` with no window. Common on **Arch, CachyOS, KDE Plasma 6, and Hyprland** (pure Wayland). The AppImage from the same release often works.
+**Symptom**: `flatpak run io.github.w9mdm.SARMesh` prints `Command failed` right after `Running 'bwrap … -- sarmesh'` with no window. Common on **Arch, CachyOS, KDE Plasma 6, and Hyprland** (pure Wayland). The AppImage from the same release often works.
 
 **Cause**: The Flatpak sandbox mounts an empty `/tmp/.X11-unix`, so Electron cannot fall back to X11 unless the wrapper passes Wayland/Ozone flags. Older bundles also omitted Chromium sandbox flags and `TMPDIR` setup that zypak expects. A different immediate exit with `No usable sandbox!` on hardened hosts is covered in [Flatpak: "No usable sandbox!" on Ubuntu 23.10+ / hardened Linux](#flatpak-no-usable-sandbox-on-ubuntu-2310--hardened-linux).
 
@@ -466,34 +466,34 @@ The log line `F: /lib32 does not exist in runtime` is **harmless** on x86_64-onl
 1. Reinstall the latest `.flatpak` from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) (bundles after the #598 fix include an updated wrapper).
 2. Run with debug logging if it still fails:
    ```bash
-   ZYPAK_DEBUG=1 flatpak run org.coloradomesh.MeshClient
+   ZYPAK_DEBUG=1 flatpak run io.github.w9mdm.SARMesh
    ```
 3. Inspect the installed payload:
    ```bash
-   flatpak run --command=sh org.coloradomesh.MeshClient
+   flatpak run --command=sh io.github.w9mdm.SARMesh
    # inside sandbox:
-   ls -l /app/lib/mesh-client/electron/electron
-   ls -l /app/lib/mesh-client/resources/reticulum-sidecar/mesh-client-reticulum
-   /app/bin/mesh-client --help 2>&1 | head
+   ls -l /app/lib/sarmesh/electron/electron
+   ls -l /app/lib/sarmesh/resources/reticulum-sidecar/mesh-client-reticulum
+   /app/bin/sarmesh --help 2>&1 | head
    ```
 
 **Workarounds**:
 
 ```bash
-MESH_CLIENT_DISABLE_GPU=1 flatpak run org.coloradomesh.MeshClient
+SARMESH_DISABLE_GPU=1 flatpak run io.github.w9mdm.SARMesh
 ```
 
 **Reinstall**:
 
 ```bash
-flatpak uninstall --user org.coloradomesh.MeshClient
-flatpak install --user ./org.coloradomesh.MeshClient-x86_64.flatpak
-flatpak run org.coloradomesh.MeshClient
+flatpak uninstall --user io.github.w9mdm.SARMesh
+flatpak install --user ./io.github.w9mdm.SARMesh-x86_64.flatpak
+flatpak run io.github.w9mdm.SARMesh
 ```
 
 ### Flatpak: "No usable sandbox!" on Ubuntu 23.10+ / hardened Linux
 
-**Symptom**: `flatpak run org.coloradomesh.MeshClient` exits immediately with no window. The terminal may show `zypak-helper` lines (for example `Wait found events, but sd-event found none`) followed by:
+**Symptom**: `flatpak run io.github.w9mdm.SARMesh` exits immediately with no window. The terminal may show `zypak-helper` lines (for example `Wait found events, but sd-event found none`) followed by:
 
 ```text
 FATAL:content/browser/zygote_host/zygote_host_impl_linux.cc:129] No usable sandbox!
@@ -506,7 +506,7 @@ FATAL:content/browser/zygote_host/zygote_host_impl_linux.cc:129] No usable sandb
 **Workaround** (skip the probe, force `--no-sandbox` on first launch):
 
 ```bash
-MESH_CLIENT_NO_SANDBOX=1 flatpak run org.coloradomesh.MeshClient
+SARMESH_NO_SANDBOX=1 flatpak run io.github.w9mdm.SARMesh
 ```
 
 The **outer Flatpak bubblewrap sandbox** still isolates the app when Chromium runs with `--no-sandbox`; only the inner Chromium namespace sandbox is relaxed.
@@ -521,20 +521,20 @@ The **outer Flatpak bubblewrap sandbox** still isolates the app when Chromium ru
 
 **Cause**: This build’s `user_version` is higher than the existing profile database.
 
-**Fix**: Choose **Upgrade** to migrate (cannot roll back with an older app against the same profile), or **Quit** and restore a backup / use a fresh profile. CI/E2E may set `MESH_CLIENT_ACCEPT_SCHEMA_UPGRADE=1` to skip the dialog (dev/unpackaged only when restricted). See [release-process.md](release-process.md) for installer notice text.
+**Fix**: Choose **Upgrade** to migrate (cannot roll back with an older app against the same profile), or **Quit** and restore a backup / use a fresh profile. CI/E2E may set `SARMESH_ACCEPT_SCHEMA_UPGRADE=1` to skip the dialog (dev/unpackaged only when restricted). See [release-process.md](release-process.md) for installer notice text.
 
 ### Database schema newer than this app (downgrade blocked)
 
-**Symptom**: On launch, a **Startup Error** dialog says the database was upgraded by a newer Mesh-Client, or **Import blocked** when merging a `.db` file.
+**Symptom**: On launch, a **Startup Error** dialog says the database was upgraded by a newer SARMesh, or **Import blocked** when merging a `.db` file.
 
 **Cause**: The local SQLite database `user_version` is higher than this build supports — usually after installing a **newer** release, then opening an **older** build against the same profile.
 
 **Fix**:
 
-1. Install the **latest** Mesh-Client release from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) (do not downgrade the app after your database has been migrated).
+1. Install the **latest** SARMesh release from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) (do not downgrade the app after your database has been migrated).
 2. If you must use an older build, restore a `.db` backup exported **before** the upgrade, or start with a fresh profile (export first if you need data from the newer schema).
 
-**Log**: Details are in `mesh-client.log` under the app `userData` folder (macOS `~/Library/Application Support/mesh-client/`, Windows `%APPDATA%\mesh-client\`, Linux `~/.config/mesh-client/`).
+**Log**: Details are in `sarmesh.log` under the app `userData` folder (macOS `~/Library/Application Support/sarmesh/`, Windows `%APPDATA%\sarmesh\`, Linux `~/.config/sarmesh/`).
 
 ### Database directory is not writable
 
@@ -544,8 +544,8 @@ The **outer Flatpak bubblewrap sandbox** still isolates the app when Chromium ru
 
 **Fix**:
 
-- **Mac/Linux**: `chmod 755 ~/Library/Application\ Support/mesh-client` (or `~/.config/mesh-client` on Linux)
-- **Windows**: Right-click `%APPDATA%\mesh-client` → Properties → Security → grant your user Full Control
+- **Mac/Linux**: `chmod 755 ~/Library/Application\ Support/sarmesh` (or `~/.config/sarmesh` on Linux)
+- **Windows**: Right-click `%APPDATA%\sarmesh` → Properties → Security → grant your user Full Control
 
 ## Bluetooth (BLE)
 
@@ -643,9 +643,9 @@ After **Disconnect** then **Connect** (or auto-reconnect), the connection panel 
 
 `Failed to execute 'open' on 'SerialPort': The port is already open.`
 
-This means Chromium still holds the previous Web Serial session (locked streams). mesh-client ships patched `@meshtastic/core` and `@meshtastic/transport-web-serial` to tear down pipes on disconnect; if you still see this on an older build:
+This means Chromium still holds the previous Web Serial session (locked streams). sarmesh ships patched `@meshtastic/core` and `@meshtastic/transport-web-serial` to tear down pipes on disconnect; if you still see this on an older build:
 
-1. **Quit mesh-client completely** (not only Disconnect) and reopen the app, then connect again.
+1. **Quit sarmesh completely** (not only Disconnect) and reopen the app, then connect again.
 2. Or **unplug and replug** the USB cable, then connect.
 3. Open the **Log** panel, enable **debug**, reproduce once, and click **Analyze** — look for **USB Serial Reconnect** recommendations.
 
@@ -653,7 +653,7 @@ BLE or Wi‑Fi/HTTP avoids this USB serial path when you need a reliable reconne
 
 ### MeshCore / Meshtastic USB serial: app frozen or stuck on "Reconnecting…"
 
-If the UI stops updating but the radio is still powered, Chromium may be holding a **zombie Web Serial session** (streams stalled with no error). mesh-client now:
+If the UI stops updating but the radio is still powered, Chromium may be holding a **zombie Web Serial session** (streams stalled with no error). sarmesh now:
 
 1. Times out serial `open` / reconnect after **15 seconds** instead of hanging forever.
 2. Treats **3 minutes** without inbound traffic as a dead link (serial watchdog) and starts auto-reconnect.
@@ -661,7 +661,7 @@ If the UI stops updating but the radio is still powered, Chromium may be holding
 
 If auto-recovery does not help:
 
-1. **Quit mesh-client completely** (not only Disconnect), unplug/replug USB if needed, reopen, and use **Select serial port**.
+1. **Quit sarmesh completely** (not only Disconnect), unplug/replug USB if needed, reopen, and use **Select serial port**.
 2. Open **Log → Analyze** after enabling **debug** — look for **USB Serial Reconnect** patterns.
 
 This applies on **Windows, macOS, and Linux** (same Web Serial stack). Linux **permission denied** before the first connect is a separate issue — see [Linux: serial port access denied](#linux-serial-port-access-denied).
@@ -723,24 +723,24 @@ Local/private targets include RFC1918 IPv4 (`10.x`, `172.16–31.x`, `192.168.x`
 
 ### macOS sleep / wake and auto-reconnect
 
-After the lid closes or the Mac sleeps, mesh-client pauses reconnect backoff and MQTT I/O until the OS resumes. Recovery is **Meshtastic-first**: expect roughly **4 seconds** after wake before Meshtastic RF auto-reconnect runs, then MeshCore about **8 seconds** later. When both protocols use Noble BLE, MeshCore's auto-reconnect additionally waits (up to **30 seconds**) for the Meshtastic BLE link's GATT connection + protocol handshake to settle — not for full device configure — before it starts its own connect.
+After the lid closes or the Mac sleeps, sarmesh pauses reconnect backoff and MQTT I/O until the OS resumes. Recovery is **Meshtastic-first**: expect roughly **4 seconds** after wake before Meshtastic RF auto-reconnect runs, then MeshCore about **8 seconds** later. When both protocols use Noble BLE, MeshCore's auto-reconnect additionally waits (up to **30 seconds**) for the Meshtastic BLE link's GATT connection + protocol handshake to settle — not for full device configure — before it starts its own connect.
 
 - **Noble BLE:** The client tries an immediate connect (main-process peripheral cache) before scanning up to **30 seconds** for a new advertisement.
 - **Stuck “reconnecting” banner:** During sleep the UI may show disconnected with connection loss until wake recovery runs. If reconnect never progresses after wake, use **Disconnect & Quit** from the Connection tab or quit the app and reconnect manually.
 - **Dual-protocol BLE (Meshtastic + MeshCore):** Auto-reconnect is already staggered Meshtastic-first (see above); manually forcing MeshCore to reconnect before Meshtastic is not necessary and does not match the recovery order. If both protocols are still down after ~30 seconds, use **Connect** on each tab in the same Meshtastic-then-MeshCore order. Concurrent Noble scans from both tabs can block recovery.
-- **BLE stack stuck after wake** (`unknown peripheral`, `connectAsync timed out`, `peripheral not found` in the app log): **Quit mesh-client fully** (Cmd+Q), toggle **Bluetooth off → on** in System Settings (or power-cycle the radios), reopen the app, wait ~5 seconds, then use **Connect** on the Connection tab.
+- **BLE stack stuck after wake** (`unknown peripheral`, `connectAsync timed out`, `peripheral not found` in the app log): **Quit sarmesh fully** (Cmd+Q), toggle **Bluetooth off → on** in System Settings (or power-cycle the radios), reopen the app, wait ~5 seconds, then use **Connect** on the Connection tab.
 - **MQTT-only:** Transient errors such as `ENETDOWN` or `ENETUNREACH` after wake should recover automatically.
-- **Renderer hung after wake:** If the log shows `[main] System resumed` followed by `[main] renderer unresponsive after system resume (no heartbeat within 30s)` and **no** `[usePowerRecovery]` lines, the renderer event loop was already dead before wake recovery ran. **Quit mesh-client fully** and relaunch — do not rely on Disconnect alone.
+- **Renderer hung after wake:** If the log shows `[main] System resumed` followed by `[main] renderer unresponsive after system resume (no heartbeat within 30s)` and **no** `[usePowerRecovery]` lines, the renderer event loop was already dead before wake recovery ran. **Quit sarmesh fully** and relaunch — do not rely on Disconnect alone.
 
 ### Windows sleep / wake and auto-reconnect
 
-After sleep or hibernate, mesh-client uses the same resume path as macOS: reconnect backoff and MQTT I/O pause until the OS resumes. Recovery is **Meshtastic-first**: expect roughly **4 seconds** after wake before Meshtastic RF auto-reconnect runs, then MeshCore about **8 seconds** later. When both protocols use Noble BLE over Noble IPC, MeshCore's auto-reconnect additionally waits (up to **30 seconds**) for the Meshtastic BLE link's GATT connection + protocol handshake to settle — not for full device configure — before it starts its own connect.
+After sleep or hibernate, sarmesh uses the same resume path as macOS: reconnect backoff and MQTT I/O pause until the OS resumes. Recovery is **Meshtastic-first**: expect roughly **4 seconds** after wake before Meshtastic RF auto-reconnect runs, then MeshCore about **8 seconds** later. When both protocols use Noble BLE over Noble IPC, MeshCore's auto-reconnect additionally waits (up to **30 seconds**) for the Meshtastic BLE link's GATT connection + protocol handshake to settle — not for full device configure — before it starts its own connect.
 
 - **Noble BLE:** Same immediate-connect-then-scan behavior as macOS (peripheral cache, then up to **30 seconds** scanning for a new advertisement).
 - **Stuck “reconnecting” banner:** During sleep the UI may show disconnected with connection loss until wake recovery runs. If reconnect never progresses after wake, use **Disconnect & Quit** from the Connection tab or exit the app fully and reconnect manually.
 - **Dual-protocol BLE (Meshtastic + MeshCore):** Auto-reconnect is already staggered Meshtastic-first (see above); manually forcing MeshCore to reconnect before Meshtastic is not necessary and does not match the recovery order. If both protocols are still down after ~30 seconds, use **Connect** on each tab in the same Meshtastic-then-MeshCore order. Concurrent Noble scans from both tabs can block recovery.
-- **MeshCore pairing after wake:** If BLE appears connected but the MeshCore handshake or GATT notify never completes, confirm the radio is **paired in Settings → Bluetooth & devices** before using **Connect** in mesh-client (MeshCore requires OS-level pairing on Windows).
-- **BLE stuck after wake** (`connectAsync timed out`, `peripheral not found`, or GATT notify watchdog messages in the app log): **Exit mesh-client fully**, toggle **Bluetooth off → on** in **Settings → Bluetooth & devices** (or disable/enable the adapter in **Device Manager**), wait a few seconds, reopen the app, then use **Connect**. If disconnects persist, update the Bluetooth driver in Device Manager.
+- **MeshCore pairing after wake:** If BLE appears connected but the MeshCore handshake or GATT notify never completes, confirm the radio is **paired in Settings → Bluetooth & devices** before using **Connect** in sarmesh (MeshCore requires OS-level pairing on Windows).
+- **BLE stuck after wake** (`connectAsync timed out`, `peripheral not found`, or GATT notify watchdog messages in the app log): **Exit sarmesh fully**, toggle **Bluetooth off → on** in **Settings → Bluetooth & devices** (or disable/enable the adapter in **Device Manager**), wait a few seconds, reopen the app, then use **Connect**. If disconnects persist, update the Bluetooth driver in Device Manager.
 - **MQTT-only:** Transient errors such as `ENETDOWN` or `ENETUNREACH` after wake should recover automatically.
 - **Renderer hung after wake:** Same as macOS — if you see `[main] renderer unresponsive after system resume (no heartbeat within 30s)` without `[usePowerRecovery]` logs, quit fully and relaunch.
 
@@ -750,16 +750,16 @@ After sleep or hibernate, mesh-client uses the same resume path as macOS: reconn
 
 ### Long-running sessions (multi-day uptime)
 
-If mesh-client stays open for **days** on a busy mesh (especially **MeshCore BLE-only** with hundreds of repeaters):
+If sarmesh stays open for **days** on a busy mesh (especially **MeshCore BLE-only** with hundreds of repeaters):
 
 - **Restart the app every 1–2 days** to limit main-process uptime (reduces risk of native BLE / V8 edge cases after ~72h).
-- After **4 days** with **Noble BLE connected** on **macOS or Windows**, mesh-client shows a **persistent restart banner** plus an OS notification (Dock badge on macOS, taskbar flash on Windows). Restart relaunches the process; Dismiss hides the nudge for 12 hours. Linux uses Web Bluetooth (different stack) and does not show this prompt. Serial/TCP-only sessions are not prompted.
-- Mid-session `EXC_BREAKPOINT` / SIGTRAP after multi-day Noble BLE is **confirmed on macOS**; the same failure class on Windows is **unconfirmed**, so the day-4 prompt there is precautionary. The mechanism is **suspected** to be a native Noble / Electron main-process teardown race (working hypothesis: a timer tick intersecting V8 GC firing into freed CoreBluetooth state) — not established. What is certain is that it is **outside mesh-client’s JavaScript control** — not a corrupt database and not catchable with `try/catch`. Mitigation is process recycle (restart) and preferring Serial/TCP for always-on desks. Tracked upstream as [stoprocent/noble#140](https://github.com/stoprocent/noble/issues/140) — attach your `.ips` crash report there if you can reproduce it.
+- After **4 days** with **Noble BLE connected** on **macOS or Windows**, sarmesh shows a **persistent restart banner** plus an OS notification (Dock badge on macOS, taskbar flash on Windows). Restart relaunches the process; Dismiss hides the nudge for 12 hours. Linux uses Web Bluetooth (different stack) and does not show this prompt. Serial/TCP-only sessions are not prompted.
+- Mid-session `EXC_BREAKPOINT` / SIGTRAP after multi-day Noble BLE is **confirmed on macOS**; the same failure class on Windows is **unconfirmed**, so the day-4 prompt there is precautionary. The mechanism is **suspected** to be a native Noble / Electron main-process teardown race (working hypothesis: a timer tick intersecting V8 GC firing into freed CoreBluetooth state) — not established. What is certain is that it is **outside sarmesh’s JavaScript control** — not a corrupt database and not catchable with `try/catch`. Mitigation is process recycle (restart) and preferring Serial/TCP for always-on desks. Tracked upstream as [stoprocent/noble#140](https://github.com/stoprocent/noble/issues/140) — attach your `.ips` crash report there if you can reproduce it.
 - **MeshCore:** default contact cap is **10,000** (App settings); enable **auto-prune by age** if you want SQLite trimmed below that. Avoid bulk repeater status/neighbors refresh when not needed — thousands of `syncNextMessage timed out` lines in the log usually mean the companion radio is overloaded.
 - **Meshtastic:** default node cap is **10,000**; enable **auto-prune** in App settings as needed.
 - **Reticulum:** restart the sidecar/stack periodically on always-on nodes; message retention prunes run at startup and every 6 hours while the app is open.
-- If the app crashes, save **`~/Library/Logs/DiagnosticReports/Mesh-client-*.ips`** (macOS) before relaunching. Main-process crashes often show `EXC_BREAKPOINT` during a timer/GC; include the `.ips` and exported log when reporting.
-- **Reporting a crash or lockup:** Prefer **Export for Developer / GitHub before restart** if the UI still responds. After a forced restart, export anyway — startup preserves the previous session log as `mesh-client.log.1` (also included in support bundles). Note app version, OS, uptime (`[main] long-session health` / snapshot `mainLiveness`), whether MeshCore BLE was connected, and any `[main] renderer heartbeat stalled` / `webContents unresponsive` lines. Upgrade to the latest release when convenient — crashes on very old builds are harder to reproduce.
+- If the app crashes, save **`~/Library/Logs/DiagnosticReports/SARMesh-*.ips`** (macOS) before relaunching. Main-process crashes often show `EXC_BREAKPOINT` during a timer/GC; include the `.ips` and exported log when reporting.
+- **Reporting a crash or lockup:** Prefer **Export for Developer / GitHub before restart** if the UI still responds. After a forced restart, export anyway — startup preserves the previous session log as `sarmesh.log.1` (also included in support bundles). Note app version, OS, uptime (`[main] long-session health` / snapshot `mainLiveness`), whether MeshCore BLE was connected, and any `[main] renderer heartbeat stalled` / `webContents unresponsive` lines. Upgrade to the latest release when convenient — crashes on very old builds are harder to reproduce.
 
 After **24 hours** of uptime, the main process logs periodic **long-session health** lines (`[main] long-session health …`) with memory, per-session BLE timer state, and Noble connection age. While the window is visible, missing renderer heartbeats for ~90s also log `[main] renderer heartbeat stalled`.
 
@@ -791,7 +791,7 @@ After **24 hours** of uptime, the main process logs periodic **long-session heal
 - Check your WiFi/signal strength
 - Verify the broker is online
 - Expect **exponential reconnect backoff** (60s base, capped at 45 minutes per `src/shared/mqttReconnectSchedule.ts`); connack timeouts retry faster (~250ms)
-- For device-signing brokers (LetsMesh / MeshMapper / Colorado Mesh / Waev / Meshat.se / MeshCore.CA / EastMesh): mesh-client refreshes the JWT automatically when MeshCore identity is already cached (including after a successful MeshCore radio session). If you never imported identity and have not connected a MeshCore radio yet, import under **Radio** or use **Custom** credentials; if refresh still fails, try re-importing MeshCore config JSON to replace a corrupt cache
+- For device-signing brokers (LetsMesh / MeshMapper / Colorado Mesh / Waev / Meshat.se / MeshCore.CA / EastMesh): sarmesh refreshes the JWT automatically when MeshCore identity is already cached (including after a successful MeshCore radio session). If you never imported identity and have not connected a MeshCore radio yet, import under **Radio** or use **Custom** credentials; if refresh still fails, try re-importing MeshCore config JSON to replace a corrupt cache
 - Enable debug logs to see the disconnect reason
 
 ### MQTT connected but no messages from other nodes
@@ -871,19 +871,19 @@ If a module section stays on **Waiting for … settings from the device** with A
 - If channel 0 still fails, capture the log and verify whether the pending request was cleared by timeout/reset or by an unexpected routing/admin response.
 - Retry from the Radio tab once path quality improves (multi-hop latency and retries can be significant on congested links).
 
-### Meshtastic MQTT: decrypt works on other clients but not mesh-client
+### Meshtastic MQTT: decrypt works on other clients but not sarmesh
 
 **Cause**: Older builds used an incorrect AES-CTR nonce layout for Meshtastic MQTT channel crypto. Private brokers with AES-128 or AES-256 channel PSKs need the Meshtastic packet-id nonce (fixed in recent releases).
 
 **Fix**:
 
-- Update to the latest mesh-client release.
+- Update to the latest sarmesh release.
 - Confirm **Channel PSKs** on the Connection tab match the channel (16- or 32-byte base64 per line; `ChannelName=base64` for MQTT-only names).
 - Enable **Enable TLS (mqtts / wss)** when the broker requires TLS on a non-standard port.
 
 ### Meshtastic SDK routing failures mark chat rows failed
 
-When the Meshtastic SDK logs a routing / queue failure, mesh-client intercepts matched `console.error` / `console.warn` lines via `meshtasticSdkRoutingErrorConsoleHook.ts`, logs them at `console.debug`, and applies `applyMeshtasticOutboundRoutingErrorFromLog` (or `FromRejection`) so the outbound Chat row shows **Failed**. Unmatched queue rejections may still appear as `[meshtasticSdkRoutingErrorLog]`.
+When the Meshtastic SDK logs a routing / queue failure, sarmesh intercepts matched `console.error` / `console.warn` lines via `meshtasticSdkRoutingErrorConsoleHook.ts`, logs them at `console.debug`, and applies `applyMeshtasticOutboundRoutingErrorFromLog` (or `FromRejection`) so the outbound Chat row shows **Failed**. Unmatched queue rejections may still appear as `[meshtasticSdkRoutingErrorLog]`.
 
 ## MeshCore
 
@@ -944,7 +944,7 @@ Startup maintenance can delete stale MeshCore contacts by age. Important details
 1. Stay on **Nodes** or **Chat** for day-to-day use; open **Repeaters** only when you need bulk repeater admin.
 2. Avoid repeated **Neighbors** / **Status** clicks on the same repeater while a request is in progress; use **Load more** when the heading total exceeds the listed rows.
 3. After **sleep or hibernate**, if MeshCore does not reconnect automatically, use **Disconnect → Connect** on the Connection panel.
-4. If the UI freezes completely on USB serial, **quit mesh-client** (not only Disconnect), unplug/replug USB if needed, reopen, and **Select serial port**. See also [USB serial frozen](#meshcore--meshtastic-usb-serial-app-frozen-or-stuck-on-reconnecting).
+4. If the UI freezes completely on USB serial, **quit sarmesh** (not only Disconnect), unplug/replug USB if needed, reopen, and **Select serial port**. See also [USB serial frozen](#meshcore--meshtastic-usb-serial-app-frozen-or-stuck-on-reconnecting).
 
 ### MeshCore reply misquote / duplicate chat messages
 
@@ -952,7 +952,7 @@ Startup maintenance can delete stale MeshCore contacts by age. Important details
 
 The client deduplicates overlapping RF and MQTT hears within **5 minutes** (cross-transport and channel RF replay). Room posts and tapbacks use a **60 second** window. A second MQTT-only copy may still appear if both hears arrive via MQTT without RF — that can be expected.
 
-**Reactions on other clients:** By default mesh-client sends tapbacks and text replies as keyless `@[Display Name] …` (official companion wire). Inbound keyed `@[Name#key]` and emoji-only replies render locally as tapback badges via [`meshcorePromoteEmojiOnlyReplyToTapback`](../src/renderer/lib/meshcoreChannelText.ts). Inbound MeshCore Open wire (`r:HASH:INDEX`, `g:GIFID`) is always parsed for display.
+**Reactions on other clients:** By default sarmesh sends tapbacks and text replies as keyless `@[Display Name] …` (official companion wire). Inbound keyed `@[Name#key]` and emoji-only replies render locally as tapback badges via [`meshcorePromoteEmojiOnlyReplyToTapback`](../src/renderer/lib/meshcoreChannelText.ts). Inbound MeshCore Open wire (`r:HASH:INDEX`, `g:GIFID`) is always parsed for display.
 
 **MeshCore Open compatibility (optional):** In **Radio → MeshCore Open wire (experimental)**, enable **MeshCore Open compatibility** to send keyed text replies (`@[Name#key] body`), compact `r:` reactions (fallback to keyless tapback when the emoji is not in the Open index), and `g:` Giphy GIFs (paste URL/ID or use the **GIF** button in Chat). Default off — use only when other nodes on your mesh run MeshCore Open-aware clients. Details: [meshcore-meshtastic-parity.md — MeshCore emoji reactions](meshcore-meshtastic-parity.md#meshcore-emoji-reactions-tapbacks) and [GIF wire](meshcore-meshtastic-parity.md#meshcore-open-gif-wire-ggifid).
 
@@ -982,7 +982,7 @@ The client deduplicates overlapping RF and MQTT hears within **5 minutes** (cros
 - The device must be **paired** with your computer before connecting:
   - **Windows**: Pair first in **Settings → Bluetooth & devices → Add device**, then connect from the app.
   - **Linux**: Use **`bluetoothctl pair <MAC>`** first, or let the app handle the pairing prompt. See [BLE known issues](#ble-known-issues) for detailed steps.
-- **Try in the official MeshCore app first**: if the device connects there, it will work in Mesh-Client.
+- **Try in the official MeshCore app first**: if the device connects there, it will work in SARMesh.
 - If Bluetooth fails, try serial (USB) or HTTP as alternatives.
 
 **USB (Serial):**
@@ -997,7 +997,7 @@ The client deduplicates overlapping RF and MQTT hears within **5 minutes** (cros
 
 ### MeshCore: Room server login, posts, and Windows 10
 
-**Minimum Windows**: Mesh-Client (Electron 44) supports **Windows 10 version 1809+** and Windows 11. Windows 10 22H2 is supported; issues reported only on Win10 are usually MeshCore protocol or app regressions, not an unsupported OS. See [System requirements](#system-requirements) for the full platform table (including **macOS 13 Ventura+**).
+**Minimum Windows**: SARMesh (Electron 44) supports **Windows 10 version 1809+** and Windows 11. Windows 10 22H2 is supported; issues reported only on Win10 are usually MeshCore protocol or app regressions, not an unsupported OS. See [System requirements](#system-requirements) for the full platform table (including **macOS 13 Ventura+**).
 
 **Rooms vs Chat**: Official MeshCore room clients use the **Rooms** tab BBS login path. Room-server posts appear there (`SignedPlain` / channel `-2`), **not** in Chat channel pills. Admin traffic sent as normal **channel text** shows in **Chat** only.
 
@@ -1008,20 +1008,20 @@ The client deduplicates overlapping RF and MQTT hears within **5 minutes** (cros
 - **Room admin CLI** (**Repeaters** tab → room row CLI; needs the room **admin** password via SendLogin ACL, not guest BBS login): many stock room servers use **`hello`** as the default admin password when none was configured. Save the admin password under Repeaters → password for that room.
 - Logs showing push **`0x86`** (frame 134) mean **LoginFail** (wrong password or ACL denied). **Room login** rejects immediately on a prefix-matched LoginFail. **Repeater admin login** keeps waiting for a possible LoginSuccess (meshcore.js behavior on congested links); timeout after LoginFail alone is reported as timeout, not wrong password.
 - **Admin password** working while guest/read-only fails usually means the guest password on the server does not match what the client sent, or ACL denies read-only login.
-- If the room **changed its password** and mesh-client keeps trying to log in, open the **Rooms** tab: expand **Saved passwords** in the sidebar (or use the login overlay for the selected room). Use **Stop auto-login** to stop connect-time retries while keeping the old password stored, or **Forget saved password** to clear the stored guest/admin password and turn off auto-login and auto-sync. After a wrong-password failure, auto-login is turned off automatically until you log in again with **Remember password** or re-enable it.
+- If the room **changed its password** and sarmesh keeps trying to log in, open the **Rooms** tab: expand **Saved passwords** in the sidebar (or use the login overlay for the selected room). Use **Stop auto-login** to stop connect-time retries while keeping the old password stored, or **Forget saved password** to clear the stored guest/admin password and turn off auto-login and auto-sync. After a wrong-password failure, auto-login is turned off automatically until you log in again with **Remember password** or re-enable it.
 
 **MeshCore repeater saved passwords**:
 
 - Per-repeater admin passwords are stored in SQLite as `meshcoreRepeaterCredential:<nodeId>` when you check **Remember** on the repeater auth dialog. Open **Repeaters** → expand **Saved repeater passwords** (sidebar label) to **Forget** a stale entry, or use **Change password** / **Save password** on the node detail modal for a single repeater.
-- If **Remember** fails silently, the password still works for the current session (ephemeral secret) but will not survive restart — check the app log for `appSettings:set` errors and retry after updating mesh-client.
+- If **Remember** fails silently, the password still works for the current session (ephemeral secret) but will not survive restart — check the app log for `appSettings:set` errors and retry after updating sarmesh.
 
 **Room post fails with "unsupported on this firmware"**:
 
-- The **companion radio** only accepts **`TXT_TYPE_PLAIN` (0)** for outbound `CMD_SEND_TXT_MSG`. mesh-client sends plain UTF-8 post text after a successful room login. **`TXT_TYPE_SIGNED_PLAIN` (2)** is for **inbound** room-server pushes (author prefix in the wire body); using it for outbound posts returns `ERR_CODE_UNSUPPORTED_CMD` (1). Log out and log in again, then post from the **Rooms** tab while connected over BLE/serial/TCP.
+- The **companion radio** only accepts **`TXT_TYPE_PLAIN` (0)** for outbound `CMD_SEND_TXT_MSG`. sarmesh sends plain UTF-8 post text after a successful room login. **`TXT_TYPE_SIGNED_PLAIN` (2)** is for **inbound** room-server pushes (author prefix in the wire body); using it for outbound posts returns `ERR_CODE_UNSUPPORTED_CMD` (1). Log out and log in again, then post from the **Rooms** tab while connected over BLE/serial/TCP.
 
 **Garbled prefix (e.g. `ÑÇÕ0`) on inbound room posts**:
 
-- Inbound **SignedPlain** pushes include the **first four bytes of the author public key** before the message body. mesh-client strips that prefix in the **Rooms** UI. If another client shows those characters, it is displaying the raw wire body from the room server.
+- Inbound **SignedPlain** pushes include the **first four bytes of the author public key** before the message body. sarmesh strips that prefix in the **Rooms** UI. If another client shows those characters, it is displaying the raw wire body from the room server.
 
 **Room unread badges**:
 
@@ -1031,15 +1031,15 @@ The client deduplicates overlapping RF and MQTT hears within **5 minutes** (cros
 
 **No room history after login**:
 
-- Room servers keep a **short ring buffer** of recent posts and push anything newer than your companion’s `sync_since` watermark after LoginSuccess. mesh-client resets that watermark (remove+re-add contact) when this device has **no local last-post watermark** yet, then drains waiting messages after login.
+- Room servers keep a **short ring buffer** of recent posts and push anything newer than your companion’s `sync_since` watermark after LoginSuccess. sarmesh resets that watermark (remove+re-add contact) when this device has **no local last-post watermark** yet, then drains waiting messages after login.
 - Posts older than the ring (or already past `sync_since`) will not appear. Enable **Auto-sync** on the Rooms tab to periodically re-login while connected so you stay current.
-- mesh-client stores posts received while you are logged in on **this device**. Quitting the app or staying logged out for days means posts from that period will not appear later unless they were persisted locally. See the **Rooms** tab history note under Auto-sync.
+- sarmesh stores posts received while you are logged in on **this device**. Quitting the app or staying logged out for days means posts from that period will not appear later unless they were persisted locally. See the **Rooms** tab history note under Auto-sync.
 
 **pyMC / server console shows posts but Rooms tab does not (cross-client)**:
 
-- The room **server log** (e.g. pyMC) lists everything the BBS stored. mesh-client and the official app only show posts **pushed to your radio while you are logged in** to that room (see above). Posts made before your login, or while you were logged out, will not appear until someone posts again after you re-login (or use **Auto-sync** to periodically re-login).
+- The room **server log** (e.g. pyMC) lists everything the BBS stored. sarmesh and the official app only show posts **pushed to your radio while you are logged in** to that room (see above). Posts made before your login, or while you were logged out, will not appear until someone posts again after you re-login (or use **Auto-sync** to periodically re-login).
 - For a fair test: keep **both** clients logged into the **same room** while connected, then post from one side and confirm the other receives it within ~30 seconds on RF.
-- mesh-client sends outbound room posts as **`TXT_TYPE_PLAIN`**; inbound BBS pushes use **`TXT_TYPE_SIGNED_PLAIN`** (author prefix stripped in the Rooms UI).
+- sarmesh sends outbound room posts as **`TXT_TYPE_PLAIN`**; inbound BBS pushes use **`TXT_TYPE_SIGNED_PLAIN`** (author prefix stripped in the Rooms UI).
 
 **Room bot stats or system lines in Chat as a DM like `!ac200e59`**:
 
@@ -1051,21 +1051,21 @@ The client deduplicates overlapping RF and MQTT hears within **5 minutes** (cros
 
 **Long room posts show as `[1/2]`, `[2/2]`…**:
 
-- MeshCore room wire limit is ~160 bytes per post. **mesh-client no longer splits outbound MeshCore posts** (chat, DM, or room) into `[i/N]` parts: on a busy mesh repeaters routinely drop some parts, so the recipient would silently get an incomplete message. Over-limit text is blocked in the composer with an explanatory notice — shorten it or send a few separate shorter messages (see [Limitations; MeshCore single-packet messages](../README.md#limitations)). **Inbound** multi-part posts from other clients are still merged: the **Rooms** tab merges consecutive `[i/N]` chunks from the same sender for display, though other clients may show them as separate lines.
+- MeshCore room wire limit is ~160 bytes per post. **sarmesh no longer splits outbound MeshCore posts** (chat, DM, or room) into `[i/N]` parts: on a busy mesh repeaters routinely drop some parts, so the recipient would silently get an incomplete message. Over-limit text is blocked in the composer with an explanatory notice — shorten it or send a few separate shorter messages (see [Limitations; MeshCore single-packet messages](../README.md#limitations)). **Inbound** multi-part posts from other clients are still merged: the **Rooms** tab merges consecutive `[i/N]` chunks from the same sender for display, though other clients may show them as separate lines.
 
 **Queue badge stuck at `Q: 255/256`**:
 
 - Usually means the companion radio outbound queue is nearly full. Enable debug logging and export logs if the badge stays red for minutes with no traffic; look for `[useMeshcoreRuntime] high queue depth=`.
-- Some **HTTP/TCP** companions pad the legacy 7-byte STATS CORE frame to 9 bytes with `raw[7]=0` and `raw[8]=0xff` (padding sentinel) or `raw[8]=0x18` (`RESP_CODE_STATS` framing leak). mesh-client treats those signatures as 7-byte layout (`queue_len` at byte 6). If chat send/receive works but the badge shows a stuck non-zero depth (e.g. `Q: 24/256` with `rawHex` ending in `000018`), upgrade to a build that includes this fix ([#600](https://github.com/Colorado-Mesh/mesh-client/issues/600)).
+- Some **HTTP/TCP** companions pad the legacy 7-byte STATS CORE frame to 9 bytes with `raw[7]=0` and `raw[8]=0xff` (padding sentinel) or `raw[8]=0x18` (`RESP_CODE_STATS` framing leak). sarmesh treats those signatures as 7-byte layout (`queue_len` at byte 6). If chat send/receive works but the badge shows a stuck non-zero depth (e.g. `Q: 24/256` with `rawHex` ending in `000018`), upgrade to a build that includes this fix ([#600](https://github.com/Colorado-Mesh/mesh-client/issues/600)).
 - On older builds, CORE stats could also be mis-parsed (false `Q: 255/256` with normal traffic).
 
 **Windows packaged updater: `Cannot find module 'semver'`**:
 
 - Fixed by declaring `semver` as a direct production dependency (same class of issue as `builder-util-runtime` on hoisted `dist:win` builds). Updater falls back to GitHub Releases API until you install a build with the fix.
 
-**Windows packaged updater: `Cannot download … Mesh-client-Setup-….exe status:404` (crash dialog)**:
+**Windows packaged updater: `Cannot download … SARMesh-Setup-….exe status:404` (crash dialog)**:
 
-- `latest.yml` asks for hyphenated Setup names. GitHub stored dotted names when CI uploaded spaced NSIS filenames (`Mesh-client Setup {version}.exe` → `Mesh-client.Setup.{version}.exe`). Download the installer from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) manually (dotted or hyphenated name). Repair steps for a published release: [release-process.md](release-process.md#repair-windows-updater-assets-on-an-already-published-release).
+- `latest.yml` asks for hyphenated Setup names. GitHub stored dotted names when CI uploaded spaced NSIS filenames (`SARMesh Setup {version}.exe` → `SARMesh.Setup.{version}.exe`). Download the installer from [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) manually (dotted or hyphenated name). Repair steps for a published release: [release-process.md](release-process.md#repair-windows-updater-assets-on-an-already-published-release).
 
 **Retest checklist (after upgrading from a known-good build)**:
 
@@ -1080,11 +1080,11 @@ The client deduplicates overlapping RF and MQTT hears within **5 minutes** (cros
 
 **Cause**: Nodes you only **hear** on the mesh; but that do **not** have **your** node in **their** contact list; are sometimes called foreign or one-way contacts. MeshCore firmware may not answer **Trace Route** (node detail) or **Ping trace** (Repeaters panel) for those peers, so the app waits until the trace/ping timeout with no TraceData response. You may see **Trace route timed out** in the node detail modal or an error toast from **Ping trace**.
 
-**Parallel pings**: MeshCore does **not** allow parallel traceroutes on one radio. mesh-client queues them, but two back-to-back pings can take up to **180s** each (including 0-hop direct-retry). **Status/Neighbors/Telemetry** use **120s** timeouts and wait for the active trace (TraceData) and same-node ping wrapper to finish first. Prefer **one ping at a time** when troubleshooting. See [meshcore-meshtastic-parity.md — Serialized traceroutes](meshcore-meshtastic-parity.md#serialized-traceroutes-protocol-requirement).
+**Parallel pings**: MeshCore does **not** allow parallel traceroutes on one radio. sarmesh queues them, but two back-to-back pings can take up to **180s** each (including 0-hop direct-retry). **Status/Neighbors/Telemetry** use **120s** timeouts and wait for the active trace (TraceData) and same-node ping wrapper to finish first. Prefer **one ping at a time** when troubleshooting. See [meshcore-meshtastic-parity.md — Serialized traceroutes](meshcore-meshtastic-parity.md#serialized-traceroutes-protocol-requirement).
 
-**Multi-hop route priming / no route**: When outbound path bytes are missing but the UI shows multi-hop, ping/trace first waits passively for PathUpdated (129) and contact refresh (**15s + 5s × hops**, capped at **45s**). For **2+ hops**, if that still yields no usable hash-segment path, mesh-client may run up to **two** flood-advert priming rounds before `SendTracePath` (listener registered **before** each advert). **1-hop** targets may use a synthesized `[relayPrefix, destPrefix]` path when a direct 0-hop repeater is known. If priming and synthesis still fail, ping may fail fast with **No route from radio yet** instead of waiting the full trace timeout. One-way contacts may still time out with no TraceData after priming.
+**Multi-hop route priming / no route**: When outbound path bytes are missing but the UI shows multi-hop, ping/trace first waits passively for PathUpdated (129) and contact refresh (**15s + 5s × hops**, capped at **45s**). For **2+ hops**, if that still yields no usable hash-segment path, sarmesh may run up to **two** flood-advert priming rounds before `SendTracePath` (listener registered **before** each advert). **1-hop** targets may use a synthesized `[relayPrefix, destPrefix]` path when a direct 0-hop repeater is known. If priming and synthesis still fail, ping may fail fast with **No route from radio yet** instead of waiting the full trace timeout. One-way contacts may still time out with no TraceData after priming.
 
-**Fix**: When possible, exchange contact adds so the remote node lists you as a contact. If you cannot add them (or they never add you), treat the timeout as expected, not a Mesh-Client defect when the radio never returns a result. For multi-hop repeaters, wait for contact/path updates or run **Ping trace** once before CLI (Repeaters panel auto-pings on first multi-hop CLI when no trace exists this session).
+**Fix**: When possible, exchange contact adds so the remote node lists you as a contact. If you cannot add them (or they never add you), treat the timeout as expected, not a SARMesh defect when the radio never returns a result. For multi-hop repeaters, wait for contact/path updates or run **Ping trace** once before CLI (Repeaters panel auto-pings on first multi-hop CLI when no trace exists this session).
 
 ## Reticulum
 
@@ -1142,10 +1142,10 @@ AGPL Rust sidecar (`mesh-client-reticulum`), interfaces, LXMF, RRC, and RNode Wi
 0. **Identity wizard**: click **Start stack** at the top of the Reticulum Connection panel before generating or importing a mnemonic. The sidecar must be running for `reticulum:proxyGet` / `proxyPost` identity routes.
 1. **Dev — binary missing**: build once from repo root: `pnpm run reticulum:sidecar:build` (requires [Rust](https://rustup.rs/); see [development-environment.md](development-environment.md#reticulum-sidecar-optional)). Electron **Start stack** can auto-run `cargo build` on first click, but you need `cargo` on `PATH`. Error text `sidecar binary not found` means `reticulum-sidecar/target/debug/mesh-client-reticulum` does not exist yet.
 2. **Dev — run / health**: `pnpm run reticulum:sidecar:dev` or confirm `curl http://127.0.0.1:19437/api/v1/status` after **Start stack** (`status` should be `ok`; `rns_ready`/`lxmf_ready` may still be `false` for a short window).
-3. **Packaged app — sidecar missing from installer**: older Electron releases (before CI bundled the sidecar) ship without `mesh-client-reticulum` under `resources/reticulum-sidecar/`; the UI shows a message about a missing bundled sidecar — **upgrade to a newer release** (or use Flatpak on Linux). WoA needs the **arm64** installer (`Mesh-client-Setup-{version}-arm64.exe`) with an **arm64** sidecar inside, not the x64 binary.
+3. **Packaged app — sidecar missing from installer**: older Electron releases (before CI bundled the sidecar) ship without `mesh-client-reticulum` under `resources/reticulum-sidecar/`; the UI shows a message about a missing bundled sidecar — **upgrade to a newer release** (or use Flatpak on Linux). WoA needs the **arm64** installer (`SARMesh-Setup-{version}-arm64.exe`) with an **arm64** sidecar inside, not the x64 binary.
 4. **Packaged app — verify install**: confirm `mesh-client-reticulum` (or `.exe` on Windows) exists under the app resources (`reticulum-sidecar/` beside the executable).
 5. **macOS Gatekeeper**: unsigned local sidecar builds may need `xattr -cr` on the binary or ad-hoc signing for dev.
-6. **Port conflict**: sidecar picks an ephemeral port; stale processes under `~/Library/Application Support/mesh-client/reticulum/` are rare — quit the app fully and retry.
+6. **Port conflict**: sidecar picks an ephemeral port; stale processes under `~/Library/Application Support/sarmesh/reticulum/` are rare — quit the app fully and retry.
 
 Keep Rust current with `pnpm run update` (runs `rustup update` and rebuilds the sidecar when `cargo` is available).
 
@@ -1167,13 +1167,13 @@ Keep Rust current with `pnpm run update` (runs `rustup update` and rebuilds the 
 
 ### Reticulum sidecar cargo build fails (`register_packet_tap` / `RETICULUM_CARGO_BUILD_FAILED`)
 
-**Symptoms**: **Start stack** fails; logs show `RETICULUM_CARGO_BUILD_FAILED` or Rust errors such as `method not found in ReticulumHandle`, `register_packet_tap`, or `PacketTapEvent`. Electron may surface `RETICULUM_RNS_PATCH_MISSING` after upgrading mesh-client.
+**Symptoms**: **Start stack** fails; logs show `RETICULUM_CARGO_BUILD_FAILED` or Rust errors such as `method not found in ReticulumHandle`, `register_packet_tap`, or `PacketTapEvent`. Electron may surface `RETICULUM_RNS_PATCH_MISSING` after upgrading sarmesh.
 
 **Cause**: Full-stack (`rns-stack`) dev builds call `register_packet_tap` in the sidecar, but that API lives in a local rsReticulum overlay ([`reticulum-sidecar/patches/rsReticulum-packet-tap.patch`](../reticulum-sidecar/patches/rsReticulum-packet-tap.patch)) until [ratspeak/rsReticulum#10](https://github.com/ratspeak/rsReticulum/pull/10) merges. CI applies overlays via `clone-ratspeak-stack.sh`; a `.rsstack/rsReticulum` checkout without the overlay fails to compile.
 
 **Fix** (canonical recover path):
 
-1. From mesh-client repo root, re-float the `.rsstack/` workspace and re-apply overlays:
+1. From sarmesh repo root, re-float the `.rsstack/` workspace and re-apply overlays:
    ```bash
    ./scripts/clone-ratspeak-stack.sh
    pnpm run reticulum:sidecar:build
@@ -1187,17 +1187,17 @@ Keep Rust current with `pnpm run update` (runs `rustup update` and rebuilds the 
    ```
 4. On **newer rsReticulum** checkouts that already include the auto-beacon utun fix upstream, only the packet-tap patch is required — `apply-rsReticulum-auto-beacon-utun.sh` is a no-op.
 
-Quit mesh-client fully, reopen, and click **Start stack** again.
+Quit sarmesh fully, reopen, and click **Start stack** again.
 
 ### Reticulum AutoInterface log spam on macOS (VPN utun / ENOBUFS)
 
 **Symptoms**: Log panel floods with `[ReticulumSidecar] auto: beacon TX failed` on `utun0`, `utun4`, or similar every ~1.6 s. Error text may include `No buffer space available (os error 55)`. Diagnostics may show an **AutoInterface beacon** info row for VPN tunnel interfaces.
 
-**Cause**: Reticulum **AutoInterface** discovers link-local IPv6 on macOS VPN tunnel interfaces (`utun*`). Those interfaces often cannot transmit IPv6 multicast beacons, so the sidecar retries indefinitely and fills `mesh-client.log`.
+**Cause**: Reticulum **AutoInterface** discovers link-local IPv6 on macOS VPN tunnel interfaces (`utun*`). Those interfaces often cannot transmit IPv6 multicast beacons, so the sidecar retries indefinitely and fills `sarmesh.log`.
 
 **Fix**:
 
-1. **Update mesh-client** to a build that includes the rsReticulum overlay `rsReticulum-auto-beacon-utun.patch` (skips `utun*` during enumeration and backs off repeated TX failures).
+1. **Update sarmesh** to a build that includes the rsReticulum overlay `rsReticulum-auto-beacon-utun.patch` (skips `utun*` during enumeration and backs off repeated TX failures).
 2. **Dev rebuild**: from repo root, prefer the canonical recover path, then rebuild:
    ```bash
    ./scripts/clone-ratspeak-stack.sh
@@ -1208,7 +1208,7 @@ Quit mesh-client fully, reopen, and click **Start stack** again.
 4. **Physical NIC failures** (`en0`, `wlan0`, …): restart the stack; check firewall/multicast permissions — that indicates real LAN discovery failure, not VPN noise.
 5. **Local DMs hang with Auto + LAN TCP hub** — see [Reticulum local DMs hang with AutoInterface + private TCP hub](#reticulum-local-dms-hang-with-autointerface--private-tcp-hub).
 
-Log path: `~/Library/Application Support/mesh-client/mesh-client.log` (macOS).
+Log path: `~/Library/Application Support/sarmesh/sarmesh.log` (macOS).
 
 ### Reticulum local DMs hang with AutoInterface + private TCP hub
 
@@ -1216,7 +1216,7 @@ Log path: `~/Library/Application Support/mesh-client/mesh-client.log` (macOS).
 
 **Cause**: AutoInterface peers are normal Reticulum **0-hop** neighbors. Transport prefers fewest hops; Auto and TCP are both `network` medium. A fresher Auto path can stay **active** even when a private hub path to the same peer is also 0-hop (equal-hop tie / learn order). If that Auto link is unhealthy (multicast, carrier, beacon issues), Direct waits on Auto while the private hub path sits unused as a backup. A 0-hop path **to the hub itself** does not mean Direct already chose the hub for the peer.
 
-**Automatic recovery** (mesh-client sidecar):
+**Automatic recovery** (sarmesh sidecar):
 
 1. **Health preempt** — If Auto looks degraded for delivery (beacon/carrier/status) and a live **private** path exists (RFC1918 / IPv6 ULA or link-local / `.local` TCP/UDP), suppress Auto and open Direct on that private path before waiting out a full Auto link hang.
 2. **Failure failover** — If Direct still fails or times out on Auto, exhaust backups **private non-Auto → public hubs → preferred PN** (does not preempt healthy Auto to the internet).
@@ -1229,19 +1229,19 @@ Healthy Auto is left preferred (RNS default). Public hubs are never chosen by th
 
 **Symptoms**: A public TCP hub (e.g. **Ratspeak**, **RMAP World**) shows **down** in Connection → Interfaces. The amber Connection banner says **TCP hub unreachable** (the remote instance may be offline **or blocking connections**, including after frequent app/stack restarts) or, after five stack starts in 12 hours, **hub likely blocked your IP after frequent stack restarts**. Sidecar logs may show `TCP read: EOF`, `Connection reset by peer`, and `reconnecting in 5s name = …` in a loop. A host TCP probe can still succeed while the RNS session is rejected.
 
-**Cause**: Reticulum **1.4.0+** `BackboneInterface` listeners block client IPs that **fast-flap** — by default, **five TCP sessions shorter than ~20 seconds within 12 hours** triggers a **12-hour IP block** ([Interfaces manual](https://reticulum.network/manual/interfaces.html)). Hubs upgraded to 1.4.0 (RMAP World mid-2025; Ratspeak more recently) enforce this policy. Common mesh-client triggers:
+**Cause**: Reticulum **1.4.0+** `BackboneInterface` listeners block client IPs that **fast-flap** — by default, **five TCP sessions shorter than ~20 seconds within 12 hours** triggers a **12-hour IP block** ([Interfaces manual](https://reticulum.network/manual/interfaces.html)). Hubs upgraded to 1.4.0 (RMAP World mid-2025; Ratspeak more recently) enforce this policy. Common sarmesh triggers:
 
-- **Quick mesh-client or stack restarts** — each restart drops the RNS TCP session; if the hub saw a short session, it counts as one flap.
+- **Quick sarmesh or stack restarts** — each restart drops the RNS TCP session; if the hub saw a short session, it counts as one flap.
 - **Share instance / duplicate Reticulum apps** — competing sessions connect and drop.
 - **Reconnect or auto-recovery loops** — repeated stack restarts while the hub is already rejecting make it worse.
 
-mesh-client counts **stack starts** (persisted across app restarts), not sidecar log timestamps and not whether each run lasted under 20 seconds. Testers who restart the client often still hit the notice. After five stack starts in 12 hours it shows the lockout banner, hides **Restart stack** on that alert, and skips auto stack restart. Host TCP probes run only before the sidecar is ready.
+sarmesh counts **stack starts** (persisted across app restarts), not sidecar log timestamps and not whether each run lasted under 20 seconds. Testers who restart the client often still hit the notice. After five stack starts in 12 hours it shows the lockout banner, hides **Restart stack** on that alert, and skips auto stack restart. Host TCP probes run only before the sidecar is ready.
 
 **What to do**:
 
 1. **Stop restarting** the app or stack — more restarts add flaps and extend the block.
 2. Connection → Interfaces → **disable** the affected hub temporarily.
-3. Fully quit mesh-client and any other Reticulum apps (MeshChatX, Ratspeak, standalone `rnsd`) if **Share instance** is enabled.
+3. Fully quit sarmesh and any other Reticulum apps (MeshChatX, Ratspeak, standalone `rnsd`) if **Share instance** is enabled.
 4. **Wait up to 12 hours** before re-enabling the hub (matches default hub `fast_flapping_block_time`).
 5. If you need connectivity sooner, use a different network path (another hub, LAN transport, or RF) — the block is per **source IP**, not identity.
 
@@ -1257,7 +1257,7 @@ mesh-client counts **stack starts** (persisted across app restarts), not sidecar
 2. In a **Developer** support bundle: `debug-snapshot.json` → `propagationClient` shows each side's `mode`, `preferredId`, `resolvedSyncTargetId`, `autoTarget`, and `lastSyncError`; `reticulum/lxmf-outbound.log` shows `propagation-deposit … pn_hash=… cascade_step=… delivery_method=…` (the **actual deposit island**) and `propagation-retrieve` lines for what sync pulled.
 3. Compare the sender's deposit `pn_hash` against the recipient's `resolvedSyncTargetId`. A mismatch with non-peered PNs is the island gap.
 
-**Fix**: Put both peers on a **shared** propagation node (same Preferred hash, or PNs known to peer/replicate), or switch mode to **Auto** so each side tracks the best commonly-reachable PN. When testing against external apps, record their preferred PN hash and align it with mesh-client's Preferred.
+**Fix**: Put both peers on a **shared** propagation node (same Preferred hash, or PNs known to peer/replicate), or switch mode to **Auto** so each side tracks the best commonly-reachable PN. When testing against external apps, record their preferred PN hash and align it with sarmesh's Preferred.
 
 **Repro matrix** (sender deposit island vs recipient sync target):
 
@@ -1279,7 +1279,7 @@ Force the propagated path (peer offline / Direct disabled) and compare the sende
 **Fix**:
 
 1. From repo root: `pnpm run reticulum:sidecar:build`
-2. Quit mesh-client fully, reopen, **Connection → Start stack**
+2. Quit sarmesh fully, reopen, **Connection → Start stack**
 3. Confirm with `curl` against the sidecar port from logs: `/api/v1/nomadnetwork/nodes` and `/api/v1/topology` return JSON 200
 
 In dev, **Start stack** now rebuilds when `reticulum-sidecar/src/**/*.rs` or `Cargo.toml` is newer than the debug binary.
@@ -1294,7 +1294,7 @@ In dev, **Start stack** now rebuilds when `reticulum-sidecar/src/**/*.rs` or `Ca
 
 1. Open **My Pages**, click **Choose folder**, and select the site root (directory with `pages/`) or the `pages/` directory.
 2. Click **Start serving** if it did not auto-resume (Start stays disabled until a folder is chosen).
-3. Check **Log → Analyze** (Reticulum protocol) for **Nomad Page Hosting Issues** (`[nomad-serving]` / `[NomadHosting]`), or **Export for GitHub** — those lines are in `mesh-client.log`.
+3. Check **Log → Analyze** (Reticulum protocol) for **Nomad Page Hosting Issues** (`[nomad-serving]` / `[NomadHosting]`), or **Export for GitHub** — those lines are in `sarmesh.log`.
 
 ### Nomad Network pages hang or almost never load
 
@@ -1328,7 +1328,7 @@ TCP/network Nomad Links use path-scaled initiator hops (`link_hops = clamp(path_
 1. Ensure `.rsstack/rsReticulum` is on floated `origin/main` — handler-free `resolve_destination_on_transport` in `crates/rns-runtime/src/link_client.rs` supersedes the retired `rsReticulum-link-client-nomad` overlay (see [patches/README.md](../reticulum-sidecar/patches/README.md)).
 2. Rebuild sidecar: `pnpm run reticulum:sidecar:build`, restart stack.
 3. Prefer low-hop nodes while testing; hop count is shown in the Nomad list.
-4. Match the humanized message to the table above — `path_timeout` / high hops often mean RF reachability limits, not a mesh-client bug.
+4. Match the humanized message to the table above — `path_timeout` / high hops often mean RF reachability limits, not a sarmesh bug.
 5. For TCP `link_timeout`, check log fields `tried_interfaces` / `failover_rounds` / `iface` first (primary signal after path failover), then `path_hops` / `link_hops` / `proof_budget_secs` / `raw=` — UI hop counts can lag the path table; trust `path_hops`. Persistent fails after the full proof budget usually mean the peer/hub did not return LRPROOF.
 
 ### Reticulum sidecar stops during dev (Vite HMR)
@@ -1367,7 +1367,7 @@ TCP/network Nomad Links use path-scaled initiator hops (`link_hops = clamp(path_
 
 **Symptoms**: UI shows a configured identity hash that does not match Ratspeak/rsReticulum on disk, or LXMF peers cannot reach you.
 
-**Cause**: The stub stack can mark identity configured in `mesh_client_stack.json` before `config/identity` exists; the live bridge may spawn a fresh RNS identity until the identity file is written.
+**Cause**: The stub stack can mark identity configured in `sarmesh_stack.json` before `config/identity` exists; the live bridge may spawn a fresh RNS identity until the identity file is written.
 
 **Fix**: Generate or import identity with the stack running; restart the stack after identity changes. Compare `GET /api/v1/identity/status` with your Ratspeak identity file.
 
@@ -1378,9 +1378,9 @@ TCP/network Nomad Links use path-scaled initiator hops (`link_hops = clamp(path_
 **Cause / fix**:
 
 1. **`.rsi` PIN** — use the same PIN (≥6 characters) chosen at export; wrong PIN or a tampered vault fails closed. Raw identity export also requires this PIN gate on the sidecar API.
-2. **mesh-client.identity.v1** — metadata-only backups are no longer supported; re-export from a current build (`.rsi` or raw 64-byte identity).
+2. **sarmesh.identity.v1** — metadata-only backups are no longer supported; re-export from a current build (`.rsi` or raw 64-byte identity).
 3. **Private key text vs file picker** — the Network panel textarea accepts **hex / base64 / URL-safe base64 / base32** text. `reticulum:showIdentityImportDialog` accepts only a **raw binary 64-byte** identity file (not a text file of hex/base64).
-4. **Oversized `.rsi`** — import is size-capped; use a normal Ratspeak/mesh-client backup, not an unrelated huge JSON dump.
+4. **Oversized `.rsi`** — import is size-capped; use a normal Ratspeak/sarmesh backup, not an unrelated huge JSON dump.
 
 ### Reticulum Map empty or no markers
 
@@ -1402,7 +1402,7 @@ TCP/network Nomad Links use path-scaled initiator hops (`link_hops = clamp(path_
 
 **Symptoms**: Reticulum stack is running with an enabled BLE RNode; Meshtastic or MeshCore BLE scan/connect fails with “Bluetooth scan in progress (reticulum)” or Noble sessions stay disconnected.
 
-**Cause**: On macOS/Windows, sidecar start **yields Noble BLE** so btleplug can pair the RNode. While the yield holds `scanOwner === 'reticulum'`, Meshtastic/MeshCore Noble connect is rejected. After grace, yield stops re-contending so an offline RNode cannot thrash LoRa BLE. mesh-client releases the scan mutex when the RNode connects, the grace window expires, prepare fails closed after Noble disconnect timeout, or the stack stops. When Reticulum **Auto-start** is on, Meshtastic/MeshCore BLE autostart also waits `awaitReticulumBleCoexistenceClear` (default max ~**65 s**).
+**Cause**: On macOS/Windows, sidecar start **yields Noble BLE** so btleplug can pair the RNode. While the yield holds `scanOwner === 'reticulum'`, Meshtastic/MeshCore Noble connect is rejected. After grace, yield stops re-contending so an offline RNode cannot thrash LoRa BLE. sarmesh releases the scan mutex when the RNode connects, the grace window expires, prepare fails closed after Noble disconnect timeout, or the stack stops. When Reticulum **Auto-start** is on, Meshtastic/MeshCore BLE autostart also waits `awaitReticulumBleCoexistenceClear` (default max ~**65 s**).
 
 **Fix**:
 
@@ -1536,19 +1536,19 @@ Bond-stale **TX queue full** hints (`txQueueDropsHintBleBondStale`) point at the
 
 **Symptoms**: After upgrade, a dialog asks whether you are in Colorado when MQTT is set to Colorado Mesh. MQTT Auto-connect is deferred until you answer.
 
-**Cause**: Colorado Mesh is a **regional** broker. mesh-client prompts existing Colorado-preset (or Colorado host) users once so non-Colorado users can switch to **LetsMesh**. Auto-launch will not connect to Colorado until that choice is stored.
+**Cause**: Colorado Mesh is a **regional** broker. sarmesh prompts existing Colorado-preset (or Colorado host) users once so non-Colorado users can switch to **LetsMesh**. Auto-launch will not connect to Colorado until that choice is stored.
 
 **Fix**: Choose **I am in Colorado** to keep the preset (Auto-connect resumes if enabled), or **Switch to LetsMesh**. The choice is stored in `mesh-client:coloradoMqttRegionAck-v1` and is not shown again. Selecting Colorado Mesh later shows a confirm that the preset is for Colorado-area users and publishes under `meshcore/DEN`.
 
 ### Reticulum: announces / Nomad / RRC work but Chat fails both ways
 
-**Symptoms**: Both mesh-client instances hear announces, Nomad pages and RRC work, probes look reachable, but Chat DMs never arrive either way. Developer bundles show outbound `to_hash` values that are **not** the peer’s Network **LXMF** hash. Pasting the peer’s **identity** hash and their **LXMF** hash opens **two** Chat tabs. Diagnostics may list **Direct LXMF link … timed out** against a hash that identity activity marks as `lxst.telephony` (or against the RNS identity hash). When **MeshChatX** (or another RNS app) runs on one side, the other may briefly show **Delivered** via RF — that Complete is for MeshChatX’s LXMF identity, not mesh-client Chat. Peers may appear in the list (announce heard) while Network topology shows **no** RF edge (`hops` null / no path). Prefer **RF** is not the same as disabling TCP hubs.
+**Symptoms**: Both sarmesh instances hear announces, Nomad pages and RRC work, probes look reachable, but Chat DMs never arrive either way. Developer bundles show outbound `to_hash` values that are **not** the peer’s Network **LXMF** hash. Pasting the peer’s **identity** hash and their **LXMF** hash opens **two** Chat tabs. Diagnostics may list **Direct LXMF link … timed out** against a hash that identity activity marks as `lxst.telephony` (or against the RNS identity hash). When **MeshChatX** (or another RNS app) runs on one side, the other may briefly show **Delivered** via RF — that Complete is for MeshChatX’s LXMF identity, not sarmesh Chat. Peers may appear in the list (announce heard) while Network topology shows **no** RF edge (`hops` null / no path). Prefer **RF** is not the same as disabling TCP hubs.
 
-**Cause**: The RNS path table lists **every** destination aspect. Opening **Peers → Message** (or a stale DM) on an `lxst.telephony` row, or pasting the peer’s **RNS identity** hash, used to send LXMF Chat to a non-`lxmf.delivery` destination. mesh-client remaps identity and telephony to the peer’s `lxmf.delivery` hash when identity activity knows it; without an LXMF announce it refuses send. A peer coming online after the other side’s hourly announce can miss the reverse LXMF path until **Announce now**. With Propagation **Off**, Direct timeout has no PN cascade. A prior link-timeout failure bridge could also leave later Sends stuck on **Sending** for the same dest until a new outbound clears that dedupe.
+**Cause**: The RNS path table lists **every** destination aspect. Opening **Peers → Message** (or a stale DM) on an `lxst.telephony` row, or pasting the peer’s **RNS identity** hash, used to send LXMF Chat to a non-`lxmf.delivery` destination. sarmesh remaps identity and telephony to the peer’s `lxmf.delivery` hash when identity activity knows it; without an LXMF announce it refuses send. A peer coming online after the other side’s hourly announce can miss the reverse LXMF path until **Announce now**. With Propagation **Off**, Direct timeout has no PN cascade. A prior link-timeout failure bridge could also leave later Sends stuck on **Sending** for the same dest until a new outbound clears that dedupe.
 
 **Fix / retest checklist**:
 
-1. **Fully quit** MeshChatX / other Reticulum apps on both machines during a mesh-client ↔ mesh-client test.
+1. **Fully quit** MeshChatX / other Reticulum apps on both machines during a sarmesh ↔ sarmesh test.
 2. On **Network**, confirm each side’s **LXMF** hash (not only the identity hash). Example pair: upstairs `ac978c…` ↔ downstairs `e3359f…`.
 3. Both sides **Announce now**, then wait until each sees the peer’s **LXMF** row with a path (hops ≥ 0) or Probe succeeds.
 4. Open Chat from Peers **Message** (or paste the peer’s 32-character **LXMF** hash — not the identity hash). The DM header shows a copyable **LXMF** prefix — it must match Network, not identity-only or a Voice-only row.
@@ -1559,21 +1559,21 @@ Bond-stale **TX queue full** hints (`txQueueDropsHintBleBondStale`) point at the
 
 **Symptoms**: Outbound Reticulum DMs stay **Sending**; Device log shows `link delivery timed out` with `link establishment timeout`, and many `failed to queue path request for LXMF delivery` lines. **Diagnostics** may list per-peer **Direct LXMF link … timed out** rows (warning). Connection may show **sidecar interface issues** only for stack health (TX queue drops, transport saturated, TCP hub failures) — not single-peer link timeouts. Sniffer may show a **Link Request** that never completes.
 
-**Cause**: Usually **RNS transport overload**, not a missing mesh-client chat handshake. Common triggers:
+**Cause**: Usually **RNS transport overload**, not a missing sarmesh chat handshake. Common triggers:
 
-1. **Shared instance conflict** — `share_instance = Yes` with another Reticulum app still running (MeshChatX, Ratspeak, standalone `rnsd`) fighting the same IPC socket. mesh-client may attach as `SharedInstanceClient` and **not spawn** local TCP hubs (Connection then shows misleading “TCP hub unreachable”).
+1. **Shared instance conflict** — `share_instance = Yes` with another Reticulum app still running (MeshChatX, Ratspeak, standalone `rnsd`) fighting the same IPC socket. sarmesh may attach as `SharedInstanceClient` and **not spawn** local TCP hubs (Connection then shows misleading “TCP hub unreachable”).
 2. **Dead TCP hub still enabled** — outbound queue fills; path requests fail with _no available capacity_.
 3. **No PN cascade capacity** — when Direct fails and there are no enabled cascade candidates (preferred/other remotes or local-prop), the row fails with no store-and-forward retry. With remotes (and/or enabled local-prop), the sidecar cascades after Direct exhausts (see **Stale path + Failed via TCP** below). Developer bundles include `reticulum/lxmf-outbound.log` (filtered LXMF outbound / PN cascade lines).
 
 **Fix**:
 
 1. **Fully quit** other Reticulum apps (MeshChatX, Ratspeak, any `rnsd` tray process) — not just close the window — **or** turn off **Share Reticulum instance** (Connection banner / Network → stack settings) and restart the stack.
-2. **Stop and restart** the mesh-client Reticulum stack (Connection → **Restart stack** or stop/start). Stopping (or an unexpected sidecar exit) clears the interface-issue tracker immediately.
+2. **Stop and restart** the sarmesh Reticulum stack (Connection → **Restart stack** or stop/start). Stopping (or an unexpected sidecar exit) clears the interface-issue tracker immediately.
 3. Disable unreachable TCP interfaces on Connection → Interfaces (only when not in shared-instance client mode). Disabling or removing a hub drops that name from the TCP/TX latch **immediately** (and keeps it from reappearing while logs catch up); each latch also ages out after a **5-minute** per-entry TTL (`RETICULUM_INTERFACE_ISSUE_ALERT_STALE_MS`), not a single global timestamp.
 4. Retry the DM; use **Peers → Request path / Probe** if the peer is reachable but the path is stale.
 5. Configure a **propagation node** on Network → Propagation for offline delivery.
 
-New/incomplete configs default to `share_instance = No` and `instance_name = mesh-client` so mesh-client does not attach to system `\0rns/default`. **Upgrades are not auto-migrated** when Share is already `Yes` or `instance_name` is already `default` — turn Share off (banner / Network / Diagnostics repair) and restart, or fully quit the other RNS app. Use Network → **Check config** (or `pnpm run reticulum:config:check`) to lint the on-disk INI.
+New/incomplete configs default to `share_instance = No` and `instance_name = sarmesh` so sarmesh does not attach to system `\0rns/default`. **Upgrades are not auto-migrated** when Share is already `Yes` or `instance_name` is already `default` — turn Share off (banner / Network / Diagnostics repair) and restart, or fully quit the other RNS app. Use Network → **Check config** (or `pnpm run reticulum:config:check`) to lint the on-disk INI.
 
 Export for GitHub (`reticulum.sidecar.interfaceIssueAlert`, link-timeout counts) helps confirm transport saturation vs. a single peer outage.
 
@@ -1581,7 +1581,7 @@ Export for GitHub (`reticulum.sidecar.interfaceIssueAlert`, link-timeout counts)
 
 **Symptoms**: Chat shows a persistent amber **propagation** notice; send failures toast _No propagation node configured_; offline peers never receive LXMF.
 
-**Cause**: Direct LXMF links require a live path. When the peer is offline or unreachable, mesh-client needs a **remote propagation node** (lxmd store-and-forward) — not a TCP transport hub.
+**Cause**: Direct LXMF links require a live path. When the peer is offline or unreachable, sarmesh needs a **remote propagation node** (lxmd store-and-forward) — not a TCP transport hub.
 
 **Fix**:
 
@@ -1590,22 +1590,22 @@ Export for GitHub (`reticulum.sidecar.interfaceIssueAlert`, link-timeout counts)
 3. Pick a **Propagation mode** in the same section. Fresh installs default to **Off** (no automatic Preferred, no periodic sync). **Upgrades keep any saved mode** (including legacy **Auto**). Set **Preferred** manually and use **Manual** to sync that pin (or the closest added node when none is preferred), or use **Auto** to one-time sync the best **Discovered** node by hash (**without** adding it or changing Preferred), then configured remotes, then the local inbox. Set preferred / Add & prefer stay available in Auto. See [PN island / preferred mismatch](#reticulum-dm-shows-stored-at-propagation-node-but-the-reply-never-arrives-pn-island--preferred-mismatch) if both peers use different PNs.
 4. **Local propagation hosting** is a full LXMF Propagation Node (announce, admit deposits, peer `/offer` sync, client `/get`) — wire-compatible with official Python/`lxmd`. Clients **need not Prefer you**; Auto discovering your announce is enough. It is **last** in the sender’s Direct→PN cascade (`stored_locally` = deposited on your hosted node, amber house badge — not “outbox only”). Fabric delivery to peers who sync other PNs depends on **peering / PN↔PN propagation health**, not on recipients Preferring your local hash. Preferring Local still shows a warning toast (you become the Prefer pin for _your_ outbound cascade).
 
-**Stale path + Failed via TCP:** When a path exists, mesh-client tries **Direct** first. If Direct fails, the sidecar **cascades** preferred remote → other enabled remotes (hop-sorted) → in **Auto** only, up to 3 heard-but-not-added **Discovered** PNs (hop-sorted) → local-prop last. Remote deposits Complete as `delivered` (**Stored at propagation node**); local-prop Completes as `stored_locally` (hosted on your PN; peer sync may still propagate). Prefer PN link timeouts **advance** the cascade when other candidates remain (they do not hammer the same Prefer hash until `syncTimedOut`). The renderer link-timeout Failed bridge skips while cascade capacity remains. Without any cascade candidates, the row stays **Failed**. Check developer-bundle `reticulum/lxmf-outbound.log` for cascade lines. Persistent `proxyGet`/`proxyPost` storms may hit the shared **900/min** proxy ceiling (LXMF recent catch-up uses a dedicated **120/min** bucket; renderer backs off on rate-limit errors).
+**Stale path + Failed via TCP:** When a path exists, sarmesh tries **Direct** first. If Direct fails, the sidecar **cascades** preferred remote → other enabled remotes (hop-sorted) → in **Auto** only, up to 3 heard-but-not-added **Discovered** PNs (hop-sorted) → local-prop last. Remote deposits Complete as `delivered` (**Stored at propagation node**); local-prop Completes as `stored_locally` (hosted on your PN; peer sync may still propagate). Prefer PN link timeouts **advance** the cascade when other candidates remain (they do not hammer the same Prefer hash until `syncTimedOut`). The renderer link-timeout Failed bridge skips while cascade capacity remains. Without any cascade candidates, the row stays **Failed**. Check developer-bundle `reticulum/lxmf-outbound.log` for cascade lines. Persistent `proxyGet`/`proxyPost` storms may hit the shared **900/min** proxy ceiling (LXMF recent catch-up uses a dedicated **120/min** bucket; renderer backs off on rate-limit errors).
 
-**Not the same as transport:** Ratspeak TCP hubs (e.g. `rns.ratspeak.org:4242`) and [rathole](https://github.com/ratspeak/rathole) are **connectivity / transport** tools, not LXMF propagation. mesh-client does not ship a default community propagation hash.
+**Not the same as transport:** Ratspeak TCP hubs (e.g. `rns.ratspeak.org:4242`) and [rathole](https://github.com/ratspeak/rathole) are **connectivity / transport** tools, not LXMF propagation. sarmesh does not ship a default community propagation hash.
 
-### Reticulum: Ratspeak DMs work but mesh-client stays silent
+### Reticulum: Ratspeak DMs work but sarmesh stays silent
 
-**Symptoms**: Another Reticulum client (Ratspeak, Sideband, MeshChat, **Columba**, **Retichat**) exchanges DMs with a mobile peer after both sides announce; mesh-client shows outbound stuck **Sending** / **Queued** / **Failed**, **zero inbound**, or a Chat contact that never appears under **Peers**.
+**Symptoms**: Another Reticulum client (Ratspeak, Sideband, MeshChat, **Columba**, **Retichat**) exchanges DMs with a mobile peer after both sides announce; sarmesh shows outbound stuck **Sending** / **Queued** / **Failed**, **zero inbound**, or a Chat contact that never appears under **Peers**.
 
-**First reply Ack’d, second shows**: After mesh-client sends a **Direct** DM, the peer’s first reply often shows **Ack** on their client but never appears in mesh-client Chat/SQLite; a second reply usually lands. That reply rides the **outbound-initiated reusable Direct link**. The sidecar must wire `LinkDeliveryManager::set_inbound_packet_sender` (live stack start → `spawn_lxmf_outbound_backchannel`) so plaintext reaches the same unpack path as peer-initiated `lxmf.delivery` links — otherwise rsLXMF still sends **LinkProof** (Ack) and drops the payload. Upgrade / rebuild the sidecar and **Restart stack**. Developer bundles: look for `LXMF outbound-link backchannel packet` after the peer’s first reply; inbound ring catch-up cannot recover messages that never entered the ring.
+**First reply Ack’d, second shows**: After sarmesh sends a **Direct** DM, the peer’s first reply often shows **Ack** on their client but never appears in sarmesh Chat/SQLite; a second reply usually lands. That reply rides the **outbound-initiated reusable Direct link**. The sidecar must wire `LinkDeliveryManager::set_inbound_packet_sender` (live stack start → `spawn_lxmf_outbound_backchannel`) so plaintext reaches the same unpack path as peer-initiated `lxmf.delivery` links — otherwise rsLXMF still sends **LinkProof** (Ack) and drops the payload. Upgrade / rebuild the sidecar and **Restart stack**. Developer bundles: look for `LXMF outbound-link backchannel packet` after the peer’s first reply; inbound ring catch-up cannot recover messages that never entered the ring.
 
 **Cause**: LXMF requires (1) an **`lxmf.delivery` announce** so peers learn a path _to_ this identity and (2) inbound destination registration (`RegisterDestination` + LinkManager) so link payloads reach Chat. Older sidecars stored announce interval in config without scheduling announces; current builds send startup + periodic delivery announces and register `lxmf.delivery`. Short messages from Python clients (Sideband/Columba) often use **opportunistic** DATA — current sidecars wire `set_inbound_raw_channel` (lxmd parity) so those packets are not dropped after proof.
 
 **Checks**:
 
 1. Upgrade / rebuild the sidecar (`pnpm run reticulum:sidecar:build`) and **Restart stack**.
-2. On Network, use **Announce now**; on the other client, confirm mesh-client’s **LXMF** hash (Network identity → LXMF destination, not only the identity hash) appears after the announce.
+2. On Network, use **Announce now**; on the other client, confirm sarmesh’s **LXMF** hash (Network identity → LXMF destination, not only the identity hash) appears after the announce.
 3. Same fabric: enable the same TCP hub / Auto / RNode paths on both clients when A/B testing.
 4. Contact named in Chat but missing from Peers → path dead; use **Peers → Request path / Probe**, or wait for the peer’s announce on that fabric.
 5. **Auto interface up ≠ Auto peers.** Auto “up” means LAN multicast carrier works; peer rows appear only when another RNS node announces onto that Auto group (or paths are owned by that interface). Multi-hop peers labeled with a TCP hub name and a shared `via` are hub fanout, not LAN neighbors.
@@ -1634,12 +1634,12 @@ For bulk fixes, use Network **Config import** (merge) instead of hand-editing in
 
 ### Reticulum I2P interface stays down
 
-**Symptoms**: Connection → Interfaces shows an enabled I2P row (e.g. **RNS I2P Hub A**) as **down**; Diagnostics may list `reticulum/interface-down`. The I2P router appears running and “clients” look ready, but mesh-client never comes up.
+**Symptoms**: Connection → Interfaces shows an enabled I2P row (e.g. **RNS I2P Hub A**) as **down**; Diagnostics may list `reticulum/interface-down`. The I2P router appears running and “clients” look ready, but sarmesh never comes up.
 
 **Checks**:
 
 1. **Interface enabled**: default hub presets (including **RNS I2P Hub A**) are added **disabled**. Enable the row after configuring SAM, then let the UI restart the stack (or Stop/Start).
-2. **SAM application bridge**, not I2PTunnel: HTTP/HTTPS proxies on `127.0.0.1:4444` / `4445` (and similar “Client ready” lines) are classic I2PTunnel clients. Reticulum needs the **SAM** bridge (default **`127.0.0.1:7656`** on the mesh-client machine). In the I2P Router Console → **Clients**, enable **SAM application bridge** (Run on load). The Connection ⓘ tooltip on I2P rows covers the local case.
+2. **SAM application bridge**, not I2PTunnel: HTTP/HTTPS proxies on `127.0.0.1:4444` / `4445` (and similar “Client ready” lines) are classic I2PTunnel clients. Reticulum needs the **SAM** bridge (default **`127.0.0.1:7656`** on the sarmesh machine). In the I2P Router Console → **Clients**, enable **SAM application bridge** (Run on load). The Connection ⓘ tooltip on I2P rows covers the local case.
 3. **Remote SAM (optional)**: if I2P runs on another LAN host, do **not** put that IP in the typed Host field (that field is hub **peers** / `.b32.i2p`). Edit the I2P interface → **Advanced** and set:
 
    ```ini
@@ -1647,7 +1647,7 @@ For bulk fixes, use Network **Config import** (merge) instead of hand-editing in
    i2p_sam_port = 7656
    ```
 
-   Use rsReticulum keys `i2p_sam_host` / `i2p_sam_port` (not Python RNS `sam_address` / `sam_port`). On the I2P router, bind SAM to the LAN address or `0.0.0.0` (localhost-only SAM is unreachable remotely). Confirm from the mesh-client host: `nc -z <sam-host> 7656`. See [reticulum.md — Interface management](reticulum.md#interface-management-connection-tab).
+   Use rsReticulum keys `i2p_sam_host` / `i2p_sam_port` (not Python RNS `sam_address` / `sam_port`). On the I2P router, bind SAM to the LAN address or `0.0.0.0` (localhost-only SAM is unreachable remotely). Confirm from the sarmesh host: `nc -z <sam-host> 7656`. See [reticulum.md — Interface management](reticulum.md#interface-management-connection-tab).
 
 4. **Restart I2P after enabling SAM**: flipping SAM on while the router is already running often does not open `7656` until you fully restart I2P. Confirm something listens on the configured SAM address/port. SAM may also delay ~2 minutes after router boot (`delay=120` in the SAM client config).
 5. **Restart the Reticulum stack** after SAM is listening (stack restart alone cannot help while SAM is refused).
@@ -1659,7 +1659,7 @@ For bulk fixes, use Network **Config import** (merge) instead of hand-editing in
 
 **Checks**:
 
-1. **Refresh model**: opening Peers uses the sidecar’s short-lived soft cache. Click **Refresh** to force a live path-table read (`?refresh=1`). mesh-client virtualizes peer rows above 100 entries (never mounts the full DOM when the virtualizer is not ready), prepares labels once before filter/sort, and does **not** reload the full path table on high-frequency `stats_update` / `interface.state` WS events. The sidecar still maintains the full RNS path table (often 3k–10k rows on busy hubs). Background peer refresh runs every 30 s while the stack is configured (60 s above 2,000 peers), plus announce/`peers_updated` debounced updates.
+1. **Refresh model**: opening Peers uses the sidecar’s short-lived soft cache. Click **Refresh** to force a live path-table read (`?refresh=1`). sarmesh virtualizes peer rows above 100 entries (never mounts the full DOM when the virtualizer is not ready), prepares labels once before filter/sort, and does **not** reload the full path table on high-frequency `stats_update` / `interface.state` WS events. The sidecar still maintains the full RNS path table (often 3k–10k rows on busy hubs). Background peer refresh runs every 30 s while the stack is configured (60 s above 2,000 peers), plus announce/`peers_updated` debounced updates.
 2. **Reduce noise**: disable unused TCP/community hub interfaces on **Connection → Interfaces** and restart the stack so RNS drops stale TCP clients. The Amsterdam official testnet hub remains decommissioned (red **decommissioned** badge; **Enable** is blocked) and is auto-disabled on stack start and by **Add default backbones** — focus remaining noise on community hubs you enabled. If an old Amsterdam row keeps turning off, that is expected; use the picker or **Directory ↗** for live hubs.
 3. **History vs Contacts**: messaging stamps **History** (`last_heard`) only. Peers you DM show under **History** until you open peer details and choose **Save as contact** (**Contacts** = `is_contact`). **Favorites** pins a short list. Removing a contact keeps History/chat messages.
 4. **Search**: the peer search box debounces input and filters the full prepared list (not only the visible window) — wait a moment after typing before judging filter performance on very large lists.
@@ -1674,7 +1674,7 @@ For bulk fixes, use Network **Config import** (merge) instead of hand-editing in
 1. **Interface type**: use **RNode** with transport **Wi-Fi** (`tcp://192.168.x.x:7633`), not **TCP Client** (mesh upstream on port **4242**).
 2. **Provisioning**: Wi-Fi is disabled after flashing until you configure station or AP mode (**Admin → Wi-Fi**, AP + `http://10.0.0.1`, or `rnodeconf`).
 3. **IP address**: DHCP may change the RNode IP — update the host on Connection → Interfaces, or set a static IP in Admin → Wi-Fi advanced.
-4. **LAN reachability**: the computer running mesh-client must be on the same network as the RNode; check firewall rules for outbound TCP to port **7633**.
+4. **LAN reachability**: the computer running sarmesh must be on the same network as the RNode; check firewall rules for outbound TCP to port **7633**.
 5. **Sidecar build**: packaged builds include `rns-rnode-tcp`; dev builds need `pnpm run reticulum:sidecar:build` with `rns-stack,rns-ble,rns-rnode-tcp` features.
 
 See [reticulum.md — RNode over Wi-Fi](reticulum.md#rnode-over-wi-fi).
@@ -1705,7 +1705,7 @@ See [reticulum.md — RNode over Wi-Fi](reticulum.md#rnode-over-wi-fi).
 2. For `path_constrained`, prefer a faster interface or wait for a better path; large files over slow links may not be attempted.
 3. Check sidecar logs for `rnsh`/`rncp` link errors; the `reticulum:rncpSend` / `rncpFetch` IPC returns the reason key surfaced in the toast.
 
-**Chat DM note**: the destination field is the peer's **`rncp.receive`** hash, not their LXMF/Chat hash. Prefer **Request enable** (mesh-client peers share the receive hash after they accept) or paste from their Remote → **My rncp receive destination**.
+**Chat DM note**: the destination field is the peer's **`rncp.receive`** hash, not their LXMF/Chat hash. Prefer **Request enable** (sarmesh peers share the receive hash after they accept) or paste from their Remote → **My rncp receive destination**.
 
 **Request enable / 422**: `sendRncpRequestEnable` must POST LXMF with a `text` field (not `content`) — wrong key → HTTP **422**. After you send request-enable, the peer's `mesh-client:rncp-receive-dest:v1:<hash>` reply is applied when present (prefer a pending mark from `rncpReceiveDestSharePending` in this session; shares without that mark are still applied so older peers / pasted hashes autofill). Inbound enable-request modal enqueue and dest-share apply are deduped by LXMF `message_hash` so periodic catch-up / WS duplicates do not re-open the modal or re-toast; when the peer is already listening, dest is auto-shared at most once per peer per outbound request-enable cooldown.
 
@@ -1721,7 +1721,7 @@ See [reticulum.md — RNode over Wi-Fi](reticulum.md#rnode-over-wi-fi).
 
 1. **Reticulum → Remote → settings**: set the inbound mode and review the allow/block list.
 2. In **Ask** mode, respond to the enable-request prompt; a blocked identity stays blocked until you change its policy row.
-3. The listener config persists in `mesh_client_stack.json` (`rncp_listener_*`) and restores on live stack start — re-enable after a factory reset.
+3. The listener config persists in `sarmesh_stack.json` (`rncp_listener_*`) and restores on live stack start — re-enable after a factory reset.
 
 ### Reticulum hung-sidecar watchdog restart
 
@@ -1735,7 +1735,7 @@ See [reticulum.md — RNode over Wi-Fi](reticulum.md#rnode-over-wi-fi).
 
 ### Unread messages but no app-icon badge
 
-On **macOS**, allow notifications for Mesh Client and enable **Badge application icon** in **System Settings → Notifications → Mesh Client**. The app initializes macOS notification authorization when unread messages exist and reapplies the current badge when its window regains focus. Reading the remaining unread messages clears the badge. macOS notification settings still control whether the badge is visible; the app does not override a denied permission.
+On **macOS**, allow notifications for SARMesh and enable **Badge application icon** in **System Settings → Notifications → SARMesh**. The app initializes macOS notification authorization when unread messages exist and reapplies the current badge when its window regains focus. Reading the remaining unread messages clears the badge. macOS notification settings still control whether the badge is visible; the app does not override a denied permission.
 
 On **Windows**, unread messages use a red taskbar overlay. On **Linux**, launcher counts depend on desktop support for the LauncherEntry D-Bus API. Tray indicators remain separate from the app-icon badge.
 
@@ -1978,9 +1978,9 @@ With **Wi‑Fi off** or **airplane mode** on, using a **packaged** build if poss
 
 **Fix**: Open the **App** tab → **Clear Database**, then restart. If the window never loads at all, delete the SQLite file manually:
 
-- **Mac**: `~/Library/Application Support/mesh-client/`
-- **Windows**: `%APPDATA%\mesh-client\`
-- **Linux**: `~/.config/mesh-client/`
+- **Mac**: `~/Library/Application Support/sarmesh/`
+- **Windows**: `%APPDATA%\sarmesh\`
+- **Linux**: `~/.config/sarmesh/`
 
 ### macOS: "representedObject is not a WeakPtrToElectronMenuModelAsNSObject" when typing in chat
 

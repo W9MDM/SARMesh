@@ -23,8 +23,8 @@ import {
 } from './verify-mac-packaging.mjs';
 
 const DEVELOPER_ID_CODESIGN_DV = [
-  'Executable=/Applications/Mesh-client.app/Contents/MacOS/Mesh-client',
-  'Identifier=com.mesh-client.app',
+  'Executable=/Applications/SARMesh.app/Contents/MacOS/SARMesh',
+  'Identifier=com.sarmesh.app',
   'Format=app bundle with Mach-O thin (arm64)',
   'Authority=Developer ID Application: Example Developer (ABCD123456)',
   'Authority=Developer ID Certification Authority',
@@ -34,13 +34,13 @@ const DEVELOPER_ID_CODESIGN_DV = [
 ].join('\n');
 
 const ADHOC_CODESIGN_DV = [
-  'Executable=/tmp/Mesh-client.app/Contents/MacOS/Mesh-client',
-  'Identifier=com.mesh-client.app',
+  'Executable=/tmp/SARMesh.app/Contents/MacOS/SARMesh',
+  'Identifier=com.sarmesh.app',
   'Signature=adhoc',
   'TeamIdentifier=not set',
 ].join('\n');
 
-const UNSIGNED_CODESIGN_DV = '/tmp/Mesh-client.app: code object is not signed at all\n';
+const UNSIGNED_CODESIGN_DV = '/tmp/SARMesh.app: code object is not signed at all\n';
 
 describe('verify-mac-packaging helpers', () => {
   it('fail throws VerificationFailure for finally detach cleanup', () => {
@@ -74,50 +74,41 @@ describe('verify-mac-packaging helpers', () => {
   });
 
   it('classifyMacArchiveArch uses path and file-name markers', () => {
-    expect(classifyMacArchiveArch('/r/mac-arm64/Mesh-client-1.0.0-arm64.dmg')).toBe('arm64');
-    expect(classifyMacArchiveArch('/r/mac-x64/Mesh-client-1.0.0-x64.dmg')).toBe('x64');
-    expect(classifyMacArchiveArch('/r/Mesh-client-1.0.0-arm64-mac.zip')).toBe('arm64');
-    expect(classifyMacArchiveArch('/r/Mesh-client-1.0.0-x64-mac.zip')).toBe('x64');
-    expect(classifyMacArchiveArch('/r/mac-universal/Mesh-client-1.0.0-universal.dmg')).toBe(
+    expect(classifyMacArchiveArch('/r/mac-arm64/SARMesh-1.0.0-arm64.dmg')).toBe('arm64');
+    expect(classifyMacArchiveArch('/r/mac-x64/SARMesh-1.0.0-x64.dmg')).toBe('x64');
+    expect(classifyMacArchiveArch('/r/SARMesh-1.0.0-arm64-mac.zip')).toBe('arm64');
+    expect(classifyMacArchiveArch('/r/SARMesh-1.0.0-x64-mac.zip')).toBe('x64');
+    expect(classifyMacArchiveArch('/r/mac-universal/SARMesh-1.0.0-universal.dmg')).toBe(
       'universal',
     );
-    expect(classifyMacArchiveArch('/r/Mesh-client-1.0.0.dmg')).toBe('unknown');
+    expect(classifyMacArchiveArch('/r/SARMesh-1.0.0.dmg')).toBe('unknown');
   });
 
   it('assertDualArchMacArchives requires both arches', () => {
     expect(() =>
       assertDualArchMacArchives(
-        [
-          '/r/mac-arm64/Mesh-client-1.0.0-arm64.dmg',
-          '/r/mac-arm64/Mesh-client-1.0.0-arm64-mac.zip',
-        ],
+        ['/r/mac-arm64/SARMesh-1.0.0-arm64.dmg', '/r/mac-arm64/SARMesh-1.0.0-arm64-mac.zip'],
         '.dmg',
       ),
     ).toThrow(/Expected both x64 and arm64 macOS \.dmg/);
 
     expect(() =>
       assertDualArchMacArchives(
-        ['/r/mac-arm64/Mesh-client-1.0.0-arm64.dmg', '/r/mac-x64/Mesh-client-1.0.0-x64.dmg'],
+        ['/r/mac-arm64/SARMesh-1.0.0-arm64.dmg', '/r/mac-x64/SARMesh-1.0.0-x64.dmg'],
         '.dmg',
       ),
     ).not.toThrow();
 
     expect(() =>
       assertDualArchMacArchives(
-        [
-          '/r/mac-arm64/Mesh-client-1.0.0-arm64-mac.zip',
-          '/r/mac-x64/Mesh-client-1.0.0-x64-mac.zip',
-        ],
+        ['/r/mac-arm64/SARMesh-1.0.0-arm64-mac.zip', '/r/mac-x64/SARMesh-1.0.0-x64-mac.zip'],
         '.zip',
       ),
     ).not.toThrow();
 
     // Unscoped Intel name counts as x64 when arm64 sibling exists.
     expect(() =>
-      assertDualArchMacArchives(
-        ['/r/Mesh-client-1.0.0-arm64.dmg', '/r/Mesh-client-1.0.0.dmg'],
-        '.dmg',
-      ),
+      assertDualArchMacArchives(['/r/SARMesh-1.0.0-arm64.dmg', '/r/SARMesh-1.0.0.dmg'], '.dmg'),
     ).not.toThrow();
   });
 
@@ -125,22 +116,22 @@ describe('verify-mac-packaging helpers', () => {
     // A mixed release (arm64 DMG + x64 ZIP only) looks dual-arch if lists are combined,
     // but each format must be dual-arch on its own.
     expect(() =>
-      assertDualArchMacArchives(['/r/mac-arm64/Mesh-client-1.0.0-arm64.dmg'], '.dmg'),
+      assertDualArchMacArchives(['/r/mac-arm64/SARMesh-1.0.0-arm64.dmg'], '.dmg'),
     ).toThrow(/Expected both x64 and arm64 macOS \.dmg/);
 
     expect(() =>
-      assertDualArchMacArchives(['/r/mac-x64/Mesh-client-1.0.0-x64-mac.zip'], '.zip'),
+      assertDualArchMacArchives(['/r/mac-x64/SARMesh-1.0.0-x64-mac.zip'], '.zip'),
     ).toThrow(/Expected both x64 and arm64 macOS \.zip/);
 
     expect(() =>
-      assertDualArchMacArchives(['/r/mac-arm64/Mesh-client-1.0.0-arm64-mac.zip'], '.zip'),
+      assertDualArchMacArchives(['/r/mac-arm64/SARMesh-1.0.0-arm64-mac.zip'], '.zip'),
     ).toThrow(/Expected both x64 and arm64 macOS \.zip/);
   });
 
   it('resolveExpectedMacArch maps labels and defaults unscoped to x64', () => {
-    expect(resolveExpectedMacArch('/r/mac-arm64/Mesh-client.app')).toBe('arm64');
-    expect(resolveExpectedMacArch('/r/Mesh-client-1.0.0-x64.dmg')).toBe('x64');
-    expect(resolveExpectedMacArch('/r/Mesh-client-1.0.0.dmg')).toBe('x64');
+    expect(resolveExpectedMacArch('/r/mac-arm64/SARMesh.app')).toBe('arm64');
+    expect(resolveExpectedMacArch('/r/SARMesh-1.0.0-x64.dmg')).toBe('x64');
+    expect(resolveExpectedMacArch('/r/SARMesh-1.0.0.dmg')).toBe('x64');
     expect(expectedLipoArchsForMacArch('arm64')).toEqual(['arm64']);
     expect(expectedLipoArchsForMacArch('x64')).toEqual(['x86_64']);
     expect(expectedLipoArchsForMacArch('universal')).toEqual(['arm64', 'x86_64']);
@@ -149,21 +140,21 @@ describe('verify-mac-packaging helpers', () => {
   it('assertLipoArchsMatch rejects filename/binary architecture disagreement', () => {
     // arm64-labeled archive whose launcher is actually Intel.
     expect(() =>
-      assertLipoArchsMatch('zip:Mesh-client-1.0.0-arm64-mac.zip', 'launcher', ['x86_64'], 'arm64'),
+      assertLipoArchsMatch('zip:SARMesh-1.0.0-arm64-mac.zip', 'launcher', ['x86_64'], 'arm64'),
     ).toThrow(/launcher Mach-O archs \[x86_64\] do not match expected arm64 \[arm64\]/);
 
     // x64-labeled archive whose framework is arm64-only.
     expect(() =>
-      assertLipoArchsMatch('dmg:Mesh-client-1.0.0-x64.dmg', 'Electron Framework', ['arm64'], 'x64'),
+      assertLipoArchsMatch('dmg:SARMesh-1.0.0-x64.dmg', 'Electron Framework', ['arm64'], 'x64'),
     ).toThrow(/Electron Framework Mach-O archs \[arm64\] do not match expected x64 \[x86_64\]/);
 
     expect(() =>
-      assertLipoArchsMatch('zip:Mesh-client-1.0.0-x64-mac.zip', 'launcher', ['x86_64'], 'x64'),
+      assertLipoArchsMatch('zip:SARMesh-1.0.0-x64-mac.zip', 'launcher', ['x86_64'], 'x64'),
     ).not.toThrow();
 
     expect(() =>
       assertLipoArchsMatch(
-        'zip:Mesh-client-1.0.0-universal-mac.zip',
+        'zip:SARMesh-1.0.0-universal-mac.zip',
         'launcher',
         ['x86_64', 'arm64'],
         'universal',
@@ -172,7 +163,7 @@ describe('verify-mac-packaging helpers', () => {
   });
 
   it('isCompleteAppBundle returns false for missing launcher paths', () => {
-    expect(isCompleteAppBundle('/nonexistent/Mesh-client.app')).toBe(false);
+    expect(isCompleteAppBundle('/nonexistent/SARMesh.app')).toBe(false);
   });
 
   it('assertApplicationsSymlink accepts Applications → /Applications', () => {
@@ -214,7 +205,7 @@ describe('verify-mac-packaging helpers', () => {
 
   it('assertMacMinimumSystemVersion requires LSMinimumSystemVersion >= 13.0.0', () => {
     const dir = mkdtempSync(join(tmpdir(), 'verify-mac-min-os-'));
-    const bundle = join(dir, 'Mesh-client.app');
+    const bundle = join(dir, 'SARMesh.app');
     const plistPath = join(bundle, 'Contents', 'Info.plist');
     try {
       mkdirSync(join(bundle, 'Contents'), { recursive: true });
@@ -255,7 +246,7 @@ describe('verify-mac-packaging helpers', () => {
 
   it('assertSiblingFrameworkSymlinks rejects flattened Squirrel.framework root link', () => {
     const dir = mkdtempSync(join(tmpdir(), 'verify-mac-squirrel-'));
-    const bundle = join(dir, 'Mesh-client.app');
+    const bundle = join(dir, 'SARMesh.app');
     const fwRoot = join(bundle, 'Contents', 'Frameworks', 'Squirrel.framework');
     try {
       mkdirSync(join(fwRoot, 'Versions', 'A'), { recursive: true });
@@ -301,10 +292,10 @@ describe('verify-mac-packaging helpers', () => {
     };
 
     expect(() =>
-      assertMacCodeSignatureIfDeveloperId('/tmp/Mesh-client.app', 'unsigned', skipDeps),
+      assertMacCodeSignatureIfDeveloperId('/tmp/SARMesh.app', 'unsigned', skipDeps),
     ).not.toThrow();
     expect(() =>
-      assertMacCodeSignatureIfDeveloperId('/tmp/Mesh-client.app', 'adhoc', {
+      assertMacCodeSignatureIfDeveloperId('/tmp/SARMesh.app', 'adhoc', {
         ...skipDeps,
         readDisplay: () => ({ status: 0, text: ADHOC_CODESIGN_DV }),
       }),
@@ -319,7 +310,7 @@ describe('verify-mac-packaging helpers', () => {
     const seen = /** @type {string[]} */ ([]);
     try {
       expect(() =>
-        assertMacCodeSignatureIfDeveloperId('/tmp/Mesh-client.app', 'signed', {
+        assertMacCodeSignatureIfDeveloperId('/tmp/SARMesh.app', 'signed', {
           readDisplay: () => ({ status: 0, text: DEVELOPER_ID_CODESIGN_DV }),
           verifyDeepStrict: (target) => {
             seen.push(`deep:${target}`);
@@ -337,13 +328,13 @@ describe('verify-mac-packaging helpers', () => {
         }),
       ).not.toThrow();
       expect(seen).toEqual([
-        'deep:/tmp/Mesh-client.app',
-        'staple:/tmp/Mesh-client.app',
+        'deep:/tmp/SARMesh.app',
+        'staple:/tmp/SARMesh.app',
         `sidecar:${sidecarPath}`,
       ]);
 
       expect(() =>
-        assertMacCodeSignatureIfDeveloperId('/tmp/Mesh-client.app', 'broken', {
+        assertMacCodeSignatureIfDeveloperId('/tmp/SARMesh.app', 'broken', {
           readDisplay: () => ({ status: 0, text: DEVELOPER_ID_CODESIGN_DV }),
           verifyDeepStrict: () => ({
             status: 1,
@@ -356,7 +347,7 @@ describe('verify-mac-packaging helpers', () => {
       ).toThrow(/codesign --verify --deep --strict failed/);
 
       expect(() =>
-        assertMacCodeSignatureIfDeveloperId('/tmp/Mesh-client.app', 'unstapled', {
+        assertMacCodeSignatureIfDeveloperId('/tmp/SARMesh.app', 'unstapled', {
           readDisplay: () => ({ status: 0, text: DEVELOPER_ID_CODESIGN_DV }),
           verifyDeepStrict: () => ({ status: 0, text: '' }),
           staplerValidate: () => ({ status: 1, text: 'Error: no ticket\n' }),
@@ -366,7 +357,7 @@ describe('verify-mac-packaging helpers', () => {
       ).toThrow(/stapler validate failed/);
 
       expect(() =>
-        assertMacCodeSignatureIfDeveloperId('/tmp/Mesh-client.app', 'bad-sidecar', {
+        assertMacCodeSignatureIfDeveloperId('/tmp/SARMesh.app', 'bad-sidecar', {
           readDisplay: () => ({ status: 0, text: DEVELOPER_ID_CODESIGN_DV }),
           verifyDeepStrict: () => ({ status: 0, text: '' }),
           staplerValidate: () => ({ status: 0, text: '' }),

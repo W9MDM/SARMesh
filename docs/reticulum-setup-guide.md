@@ -4,7 +4,7 @@ Open **Reticulum → Connection → Open setup guide**. You can get started with
 
 **Hide guide** removes the whole guide and its banner from Connection, including after restarting the app. To use it again, select **Network → Open setup guide**. This opens the guide on Connection without resetting your dismissal preference.
 
-1. **Start here:** start Reticulum inside mesh-client. Opening the guide itself does not change your settings.
+1. **Start here:** start Reticulum inside sarmesh. Opening the guide itself does not change your settings.
 2. **Your identity:** choose a name or callsign. The guide keeps an existing identity. For a new identity, save the recovery words before continuing. These words are private; your messaging address is what you share with friends. Already have an identity? Open the restore controls in Network instead of generating a replacement.
 3. **Get connected:** select one public internet hub, configure your RNode through the existing connection controls, or check your existing setup. Internet setup adds or enables only the selected hub and restarts Reticulum. It leaves your other connections intact. A failed restart does not remove the saved connection; retrying reuses it.
 4. **Try it out:** copy your LXMF messaging address, find a friend in Peers, or open RRC for group chat. The guide explains the main tabs and the difference between delivery and storage at an intermediary.
@@ -32,7 +32,7 @@ For radio setup, use RNode-compatible hardware and the settings provided by your
 
 You can explore Remote, Admin, and the other tools later. If a guide destination is hidden, enable that tab in App settings.
 
-For background on interfaces and internet connections, see the official [Reticulum getting-started guide](https://reticulum.network/manual/gettingstartedfast.html). For advanced mesh-client settings, see [Reticulum in mesh-client](reticulum.md).
+For background on interfaces and internet connections, see the official [Reticulum getting-started guide](https://reticulum.network/manual/gettingstartedfast.html). For advanced sarmesh settings, see [Reticulum in sarmesh](reticulum.md).
 
 ## Maintenance
 

@@ -5,7 +5,7 @@ import type { TAKClientInfo, TAKServerStatus, TAKSettings } from '@/shared/tak-t
 const DEFAULT_SETTINGS: TAKSettings = {
   enabled: false,
   port: 8089,
-  serverName: 'mesh-client',
+  serverName: 'sarmesh',
   requireClientCert: true,
   autoStart: false,
 };

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsReticulum multi-path / medium-preference overlay.
+# Apply sarmesh rsReticulum multi-path / medium-preference overlay.
 # Keeps up to 3 ranked path slots per destination and RF/network preference.
 set -euo pipefail
 

@@ -23,7 +23,7 @@ describe('extractDocLinkTargets', () => {
 });
 
 describe('findBrokenDocLinks', () => {
-  it('all mesh-client documentation links resolve to existing repo files', () => {
+  it('all sarmesh documentation links resolve to existing repo files', () => {
     const broken = findBrokenDocLinks(repoRoot);
     expect(broken).toEqual([]);
   });

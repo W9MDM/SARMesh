@@ -1,7 +1,7 @@
-appId: com.mesh-client.app
-productName: Mesh-client
+appId: com.sarmesh.app
+productName: SARMesh
 protocols:
-  - name: Mesh Client LXMF
+  - name: SARMesh LXMF
     schemes:
       - lxm
 directories:
@@ -18,7 +18,7 @@ asarUnpack:
 publish:
   provider: github
   owner: Colorado-Mesh
-  repo: mesh-client
+  repo: sarmesh
   # Keep GitHub Releases as drafts until a maintainer publishes manually.
   releaseType: draft
 beforePack: scripts/electron-builder-before-pack.mjs
@@ -44,11 +44,11 @@ mac:
   # Hardened runtime improves tamper resistance; required for notarized distribution.
   hardenedRuntime: true
   preAutoEntitlements: true
-  helperBundleId: com.mesh-client.app.helper
+  helperBundleId: com.sarmesh.app.helper
   extendInfo:
-    NSBluetoothAlwaysUsageDescription: 'Mesh-client needs Bluetooth to communicate with Meshtastic devices.'
-    NSMicrophoneUsageDescription: 'Mesh-client needs the microphone for Reticulum LXST voice calls.'
-    NSCameraUsageDescription: 'Mesh-client needs the camera to scan QR codes for channel and contact sharing.'
+    NSBluetoothAlwaysUsageDescription: 'SARMesh needs Bluetooth to communicate with Meshtastic devices.'
+    NSMicrophoneUsageDescription: 'SARMesh needs the microphone for Reticulum LXST voice calls.'
+    NSCameraUsageDescription: 'SARMesh needs the camera to scan QR codes for channel and contact sharing.'
   target:
     - dmg
     - zip
@@ -93,11 +93,11 @@ linux:
   icon: resources/icons/linux/
   desktop:
     entry:
-      StartupWMClass: 'com.mesh-client.app'
+      StartupWMClass: 'com.sarmesh.app'
       Categories: 'Utility;Network;'
   extraResources:
     - from: ./copyright
-      to: usr/share/doc/mesh-client/copyright
+      to: usr/share/doc/sarmesh/copyright
 deb:
 rpm:
 win:

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsReticulum discovery-announce egress overlay for rns-stack builds.
+# Apply sarmesh rsReticulum discovery-announce egress overlay for rns-stack builds.
 # Registers rnstransport.discovery.interface as a local destination and defers
 # Announcer::register until the discoverable interface online latch is true
 # (BLE RNode late bring-up). Upstream: https://github.com/ratspeak/rsReticulum/pull/19

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsReticulum inbound-raw saturation log overlay.
+# Apply sarmesh rsReticulum inbound-raw saturation log overlay.
 # LinkManager try_send drops the *newest* frame when the opportunistic raw channel
 # is full; log that instead of silently discarding.
 set -euo pipefail

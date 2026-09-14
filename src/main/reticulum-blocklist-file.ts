@@ -26,7 +26,7 @@ function dialogParent(): BrowserWindow | undefined {
 }
 
 function defaultExportName(): string {
-  return `mesh-client-blocklist-${new Date().toISOString().slice(0, 10)}.json`;
+  return `sarmesh-blocklist-${new Date().toISOString().slice(0, 10)}.json`;
 }
 
 /** Save dialog + write of the serialized blocklist. */

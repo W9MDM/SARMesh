@@ -1,6 +1,6 @@
 //! Inbound LXMF propagation admission and Resource accounting (lxmd parity).
 //!
-//! Adapted from rsLXMF `lxmf-tools` `lxmd_pn.rs` for mesh-client local PN hosting.
+//! Adapted from rsLXMF `lxmf-tools` `lxmd_pn.rs` for sarmesh local PN hosting.
 //! Reticulum request Resources share a Link with ordinary propagation Resources,
 //! so Link identity alone is not sufficient lifecycle ownership. Only the
 //! `AcceptApp` callback may create an exact `(link_id, logical_resource_id)`

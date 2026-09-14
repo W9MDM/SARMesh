@@ -26,7 +26,7 @@ const MAX_ATTEMPTS = 5;
 /** Drop outbox rows older than this from automatic drain (manual retry still allowed). */
 export const OUTBOX_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
-/** Legacy mesh-client `[i/N] ` chunk prefix on outbox payloads queued before single-packet. */
+/** Legacy sarmesh `[i/N] ` chunk prefix on outbox payloads queued before single-packet. */
 const LEGACY_MULTIPART_PREFIX_RE = /^\[\d+\/\d+\]\s/;
 const RETICULUM_RECEIPT_TIMEOUT_MS = 30_000;
 

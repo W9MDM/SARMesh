@@ -1,4 +1,4 @@
-# CodeQL config for mesh-client
+# CodeQL config for sarmesh
 #
 # js/http-to-file-access flags taint from HTTP reaching appendFile/writeFileSync data
 # arguments. Our only sinks are formatted log lines to a fixed userData path after
@@ -14,7 +14,7 @@
 #
 # https://codeql.github.com/codeql-query-help/javascript/js-http-to-file-access/
 
-name: mesh-client CodeQL config
+name: sarmesh CodeQL config
 
 query-filters:
   - exclude:

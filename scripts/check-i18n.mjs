@@ -61,8 +61,7 @@ import {
 import { collectUsedI18nKeys, DYNAMIC_T_PREFIXES } from './i18n-unused-keys.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const LOCALES_DIR =
-  process.env.MESH_CLIENT_LOCALES_DIR ?? join(__dirname, '../src/renderer/locales');
+const LOCALES_DIR = process.env.SARMESH_LOCALES_DIR ?? join(__dirname, '../src/renderer/locales');
 
 /** Log copy for opaque rooms-hello-* codes from check-i18n-quality.mjs (kept here for CodeQL). */
 const ROOMS_HELLO_FALSE_FRIEND_LOG = {

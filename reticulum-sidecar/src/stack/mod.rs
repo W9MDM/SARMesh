@@ -2374,7 +2374,7 @@ impl StackHandle {
         let nick = nickname
             .map(|n| n.trim().to_string())
             .filter(|n| !n.is_empty())
-            .unwrap_or_else(|| "mesh-client".into());
+            .unwrap_or_else(|| "sarmesh".into());
         let hops = {
             let inner = self.inner.read().await;
             inner
@@ -4441,7 +4441,7 @@ mod tests {
         assert_eq!(handle.list_propagation().await["propagation_mode"], "auto");
 
         // Directory 555 still allows rewriting an existing writable file; lock the state file.
-        let state_path = storage_dir.join("mesh_client_stack.json");
+        let state_path = storage_dir.join("sarmesh_stack.json");
         let mut perms = std::fs::metadata(&state_path)
             .expect("state meta")
             .permissions();

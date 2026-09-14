@@ -43,7 +43,7 @@ describe('validateIpcSender', () => {
     });
 
     it('accepts file: protocol', () => {
-      expect(validateIpcSender(makeEvent('file:///Applications/mesh-client.app/index.html'))).toBe(
+      expect(validateIpcSender(makeEvent('file:///Applications/sarmesh.app/index.html'))).toBe(
         true,
       );
     });

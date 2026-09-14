@@ -9,7 +9,7 @@ vi.mock('electron', () => ({
   app: {
     getAppPath: vi.fn(() => '/virtual/app'),
     isPackaged: false,
-    getPath: () => '/tmp/mesh-client-test',
+    getPath: () => '/tmp/sarmesh-test',
   },
 }));
 
@@ -76,7 +76,7 @@ describe('reticulum-sidecar-path', () => {
 
   it('resolveSidecarBinaryPath prefers resources/reticulum-sidecar under app path (Flatpak)', () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-reticulum-flatpak-'));
-    const appRoot = path.join(tmpDir, 'lib', 'mesh-client');
+    const appRoot = path.join(tmpDir, 'lib', 'sarmesh');
     const bundled = path.join(appRoot, 'resources', 'reticulum-sidecar', sidecarBinaryName());
     fs.mkdirSync(path.dirname(bundled), { recursive: true });
     fs.writeFileSync(bundled, 'flatpak-sidecar');
@@ -109,7 +109,7 @@ describe('reticulum-sidecar-path', () => {
 
   it('sidecarCargoBuildArgs uses rns-stack when the repo-local .rsstack exists', () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-reticulum-rsstack-'));
-    const meshRoot = path.join(tmpDir, 'mesh-client');
+    const meshRoot = path.join(tmpDir, 'sarmesh');
     const projectDir = path.join(meshRoot, 'reticulum-sidecar');
     const stackRoot = path.join(meshRoot, '.rsstack');
     fs.mkdirSync(path.join(stackRoot, 'rsReticulum', 'crates', 'rns-runtime'), { recursive: true });
@@ -132,7 +132,7 @@ describe('reticulum-sidecar-path', () => {
 
   it('hasRsstackWorkspace is false without repo-local .rsstack', () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-reticulum-nostack-'));
-    const projectDir = path.join(tmpDir, 'mesh-client', 'reticulum-sidecar');
+    const projectDir = path.join(tmpDir, 'sarmesh', 'reticulum-sidecar');
     fs.mkdirSync(projectDir, { recursive: true });
     expect(hasRsstackWorkspace(projectDir)).toBe(false);
     expect(sidecarCargoBuildArgs(projectDir)).toEqual(['build']);

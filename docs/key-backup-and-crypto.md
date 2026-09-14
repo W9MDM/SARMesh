@@ -1,6 +1,6 @@
 # Key backup and cryptography
 
-Mesh-Client stores **different kinds of keys in different places**. Meshtastic and MeshCore **Security** tabs each back up a **full key pair** (public + private) **per node**, indexed by **node number** (Meshtastic `nodeNum`, MeshCore `nodeId`). The **private key** restores mesh identity after factory reset; **public key alone is not enough**, but every backup payload includes both keys.
+SARMesh stores **different kinds of keys in different places**. Meshtastic and MeshCore **Security** tabs each back up a **full key pair** (public + private) **per node**, indexed by **node number** (Meshtastic `nodeNum`, MeshCore `nodeId`). The **private key** restores mesh identity after factory reset; **public key alone is not enough**, but every backup payload includes both keys.
 
 **Per-node archives are created only when you click Backup Keys** on that protocol’s Security tab. Opening Security, connecting a radio, or importing Radio JSON updates the MeshCore **MQTT active cache** only — it does **not** create a per-node backup.
 
@@ -81,7 +81,7 @@ The **active MQTT cache** is separate from per-node archives: device-signing Mes
 **How keys get into the active cache (not a per-node backup)**
 
 1. **Connect a MeshCore radio** — session export via [`tryPersistMeshcoreIdentityFromRadioExport`](../src/renderer/lib/letsMeshJwt.ts).
-2. **Security → Restore** or **Restore from backup…** — [`syncMeshcoreActiveIdentityFromBackup`](../src/renderer/lib/letsMeshJwt.ts) writes the full pair and dispatches `meshclient:meshcoreIdentityUpdated`.
+2. **Security → Restore** or **Restore from backup…** — [`syncMeshcoreActiveIdentityFromBackup`](../src/renderer/lib/letsMeshJwt.ts) writes the full pair and dispatches `sarmesh:meshcoreIdentityUpdated`.
 3. **Radio → Import config JSON** — updates MQTT cache only ([`RadioPanel.tsx`](../src/renderer/components/RadioPanel.tsx)); use **Security → Backup Keys** to create a per-node archive.
 
 **Restore pipeline**
@@ -137,11 +137,11 @@ Flashing MeshCore firmware on hardware that previously ran Meshtastic **replaces
 ### What this does **not** do
 
 - Does **not** migrate Meshtastic identity into MeshCore contacts — peers see a **new** public key after flash.
-- Does **not** replace MeshCore companion full JSON backup tools; use Security **Backup Keys** for Mesh-Client per-node archives.
+- Does **not** replace MeshCore companion full JSON backup tools; use Security **Backup Keys** for SARMesh per-node archives.
 
 ### Full companion JSON backup (evaluation, 2026)
 
-The official MeshCore companion can export/import a **full device JSON** (contacts, channels, radio params, and related fields). mesh-client today supports:
+The official MeshCore companion can export/import a **full device JSON** (contacts, channels, radio params, and related fields). sarmesh today supports:
 
 - Per-node **Security** archives (`mesh-client:meshcore-key-backup:<nodeId>`) — public + private key pairs only.
 - **Radio** JSON import for a subset of fields (`setRadioParams`, channels where APIs exist).

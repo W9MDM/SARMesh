@@ -150,10 +150,10 @@ export async function runRrcHubAutoConnectBatch(nickname: string): Promise<void>
 
 function readRrcNickname(): string {
   try {
-    return localStorage.getItem(RRC_NICKNAME_STORAGE_KEY)?.trim() || 'mesh-client';
+    return localStorage.getItem(RRC_NICKNAME_STORAGE_KEY)?.trim() || 'sarmesh';
   } catch {
     // catch-no-log-ok: localStorage may throw in private browsing / quota errors
-    return 'mesh-client';
+    return 'sarmesh';
   }
 }
 

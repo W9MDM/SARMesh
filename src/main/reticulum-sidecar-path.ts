@@ -123,7 +123,7 @@ export function formatReticulumCargoBuildError(code: number | null, stderr: stri
   if (reticulumCargoStderrMissingPacketTap(stderr)) {
     return (
       'RETICULUM_RNS_PATCH_MISSING: rsReticulum packet-tap overlay not applied. ' +
-      'From the mesh-client repo root run `pnpm run reticulum:sidecar:build` ' +
+      'From the sarmesh repo root run `pnpm run reticulum:sidecar:build` ' +
       '(applies patches automatically) or `./scripts/ensure-rsReticulum-patches.sh`.'
     );
   }
@@ -146,7 +146,7 @@ export function ensureRsReticulumPatches(projectDir: string): void {
   const scriptPath = ensureRsReticulumPatchesScriptPath(projectDir);
   if (!fs.existsSync(scriptPath)) {
     throw new Error(
-      `RETICULUM_RNS_PATCH_SCRIPT_MISSING: expected ${scriptPath}. Run \`pnpm run reticulum:sidecar:build\` from the mesh-client repo root.`,
+      `RETICULUM_RNS_PATCH_SCRIPT_MISSING: expected ${scriptPath}. Run \`pnpm run reticulum:sidecar:build\` from the sarmesh repo root.`,
     );
   }
 
@@ -316,7 +316,7 @@ export async function ensureDevSidecarBinary(
   const projectDir = opts?.projectDir ?? findReticulumSidecarProjectDir();
   if (!projectDir) {
     throw new Error(
-      'RETICULUM_SIDECAR_PROJECT_MISSING: reticulum-sidecar/ not found. Run `pnpm run reticulum:sidecar:build` from the mesh-client repo root.',
+      'RETICULUM_SIDECAR_PROJECT_MISSING: reticulum-sidecar/ not found. Run `pnpm run reticulum:sidecar:build` from the sarmesh repo root.',
     );
   }
 

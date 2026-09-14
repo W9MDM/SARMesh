@@ -120,9 +120,9 @@ export async function launchApp(options: LaunchAppOptions = {}): Promise<Launche
   env.VITE_DEV_SERVER_URL = pathToFileURL(
     path.join(repoRoot, 'dist', 'renderer', 'index.html'),
   ).href;
-  // OS-specific: disable GPU on Linux headless/Xvfb (MESH_CLIENT_DISABLE_GPU honored in main).
+  // OS-specific: disable GPU on Linux headless/Xvfb (SARMESH_DISABLE_GPU honored in main).
   if (process.platform === 'linux') {
-    env.MESH_CLIENT_DISABLE_GPU = '1';
+    env.SARMESH_DISABLE_GPU = '1';
   }
 
   const app = await electron.launch({

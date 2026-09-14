@@ -128,10 +128,10 @@ jobs:
 
       - name: Write schema upgrade installer notice
         env:
-          MESH_CLIENT_SCHEMA_BUMPED: ${{ needs.schema-release-compare.outputs.schema_bumped }}
-          MESH_CLIENT_SCHEMA_CURR: ${{ needs.schema-release-compare.outputs.curr_schema }}
-          MESH_CLIENT_SCHEMA_PREV: ${{ needs.schema-release-compare.outputs.prev_schema }}
-          MESH_CLIENT_SCHEMA_PREV_TAG: ${{ needs.schema-release-compare.outputs.prev_tag }}
+          SARMESH_SCHEMA_BUMPED: ${{ needs.schema-release-compare.outputs.schema_bumped }}
+          SARMESH_SCHEMA_CURR: ${{ needs.schema-release-compare.outputs.curr_schema }}
+          SARMESH_SCHEMA_PREV: ${{ needs.schema-release-compare.outputs.prev_schema }}
+          SARMESH_SCHEMA_PREV_TAG: ${{ needs.schema-release-compare.outputs.prev_tag }}
         run: node scripts/write-schema-upgrade-notice.mjs
 
       - name: Download READ-ME-FIRST warning
@@ -143,8 +143,8 @@ jobs:
       # Embeds buildChannel=test + Actions runUrl into the main bundle (support exports / logs).
       - name: Stamp CI build info
         env:
-          MESH_CLIENT_BUILD_CHANNEL: test
-          MESH_CLIENT_BUILD_WORKFLOW: Build Binaries (no release)
+          SARMESH_BUILD_CHANNEL: test
+          SARMESH_BUILD_WORKFLOW: Build Binaries (no release)
         run: node scripts/ci-write-build-info-env.mjs
 
       - name: Build
@@ -180,13 +180,13 @@ jobs:
           mkdir -p release
           cp release-warnings/READ-ME-FIRST-test-build.md release/READ-ME-FIRST-test-build.md
 
-      # Do not upload raw Mesh-client.app — upload-artifact@v7 dereferences framework
+      # Do not upload raw SARMesh.app — upload-artifact@v7 dereferences framework
       # symlinks (~3× Electron Framework size). DMG/ZIP preserve correct layout.
       - name: Upload macOS Artifact
         if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v7
         with:
-          name: mesh-client-macos-${{ github.sha }}
+          name: sarmesh-macos-${{ github.sha }}
           path: |
             release/mac/**/*.dmg
             release/mac/**/*.zip
@@ -206,7 +206,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v7
         with:
-          name: mesh-client-linux-${{ github.sha }}
+          name: sarmesh-linux-${{ github.sha }}
           path: |
             release/*.AppImage
             release/*.deb
@@ -220,7 +220,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v7
         with:
-          name: mesh-client-windows-${{ github.sha }}
+          name: sarmesh-windows-${{ github.sha }}
           path: |
             # Per-arch NSIS installers (test builds: …-run{N}.exe / …-run{N}-arm64.exe)
             release/*.exe
@@ -240,26 +240,26 @@ jobs:
         include:
           - os: macos-latest
             label: macOS packaging
-            artifact: mesh-client-macos-${{ github.sha }}
+            artifact: sarmesh-macos-${{ github.sha }}
             smoke_run: >-
               node scripts/assert-update-yml-artifacts.mjs --require latest-mac.yml
               && node scripts/verify-mac-packaging.mjs
           - os: ubuntu-latest
             label: Linux packaging
-            artifact: mesh-client-linux-${{ github.sha }}
+            artifact: sarmesh-linux-${{ github.sha }}
             smoke_run: >-
               node scripts/assert-update-yml-artifacts.mjs --require latest-linux.yml
               --require latest-linux-arm64.yml && node scripts/verify-linux-packaging.mjs
               && node scripts/test-linux-appimage-reticulum-sidecar.mjs
           - os: windows-latest
             label: x64 NSIS install
-            artifact: mesh-client-windows-${{ github.sha }}
+            artifact: sarmesh-windows-${{ github.sha }}
             smoke_run: >-
               node scripts/assert-update-yml-artifacts.mjs --require latest.yml
               && node scripts/test-win-nsis-install.mjs --arch x64
           - os: windows-11-vs2026-arm
             label: arm64 NSIS install (WoA)
-            artifact: mesh-client-windows-${{ github.sha }}
+            artifact: sarmesh-windows-${{ github.sha }}
             smoke_run: >-
               node scripts/assert-update-yml-artifacts.mjs --require latest.yml
               && node scripts/test-win-nsis-install.mjs --arch arm64 --probe-7z
@@ -284,9 +284,9 @@ jobs:
         if: failure() && matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v7
         with:
-          name: mesh-client-win-x64-install-logs-${{ github.sha }}
+          name: sarmesh-win-x64-install-logs-${{ github.sha }}
           path: |
-            ${{ runner.temp }}/mesh-client-install-x64.log
+            ${{ runner.temp }}/sarmesh-install-x64.log
           if-no-files-found: ignore
           retention-days: 7
 
@@ -294,9 +294,9 @@ jobs:
         if: failure() && matrix.os == 'windows-11-vs2026-arm'
         uses: actions/upload-artifact@v7
         with:
-          name: mesh-client-win-arm64-install-logs-${{ github.sha }}
+          name: sarmesh-win-arm64-install-logs-${{ github.sha }}
           path: |
-            ${{ runner.temp }}/mesh-client-install-arm64.log
-            ${{ runner.temp }}/mesh-client-7z-probe/**
+            ${{ runner.temp }}/sarmesh-install-arm64.log
+            ${{ runner.temp }}/sarmesh-7z-probe/**
           if-no-files-found: ignore
           retention-days: 7

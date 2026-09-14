@@ -40,7 +40,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 const releaseDir = path.join(projectRoot, 'release');
 
-const APP_NAME = 'Mesh-client';
+const APP_NAME = 'SARMesh';
 const MACOS_LAUNCHER = path.join('Contents', 'MacOS', APP_NAME);
 const ELECTRON_FRAMEWORK_BINARY = path.join(
   'Contents',

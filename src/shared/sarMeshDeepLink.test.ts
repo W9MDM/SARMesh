@@ -8,10 +8,10 @@ import {
   buildLxmIdentityUri,
   buildMeshcoreChannelAddUri,
   buildMeshcoreContactAddUri,
-  classifyMeshClientDeepLink,
+  classifySARMeshDeepLink,
   findLxmUrlInArgv,
-  isForwardableMeshClientOpenUrl,
-} from './meshClientDeepLink';
+  isForwardableSARMeshOpenUrl,
+} from './sarMeshDeepLink';
 
 // Official MeshCore docs fixtures (docs.meshcore.io/qr_codes) — not secrets.
 /* eslint-disable no-secrets/no-secrets -- documented public example URIs */
@@ -25,12 +25,12 @@ const LXMA_PUBKEY = 'b'.repeat(128);
 const MESHCORE_PUBKEY = 'c'.repeat(64);
 const CHANNEL_SECRET = 'd'.repeat(32);
 
-describe('meshClientDeepLink', () => {
+describe('sarMeshDeepLink', () => {
   it('builds and parses contact URIs', () => {
     const hash = 'a'.repeat(32);
     const uri = buildLxmContactUri(hash, 'Alice');
     expect(uri).toContain('lxm://contact/');
-    const parsed = classifyMeshClientDeepLink(uri);
+    const parsed = classifySARMeshDeepLink(uri);
     expect(parsed).toEqual({
       kind: 'lxmContact',
       destinationHash: hash,
@@ -44,7 +44,7 @@ describe('meshClientDeepLink', () => {
       lxmfHash: 'c'.repeat(32),
       name: 'Me',
     });
-    const parsed = classifyMeshClientDeepLink(uri);
+    const parsed = classifySARMeshDeepLink(uri);
     expect(parsed.kind).toBe('lxmIdentity');
     if (parsed.kind === 'lxmIdentity') {
       expect(parsed.identityHash).toBe('b'.repeat(32));
@@ -56,46 +56,46 @@ describe('meshClientDeepLink', () => {
   it('classifies opaque lxm:// blobs as paper messages', () => {
     const blob = 'A'.repeat(48);
     const uri = `lxm://${blob}`;
-    const parsed = classifyMeshClientDeepLink(uri);
+    const parsed = classifySARMeshDeepLink(uri);
     expect(parsed).toEqual({ kind: 'lxmPaperMessage', uri });
   });
 
   it('rejects short non-contact lxm:// hosts as unknown (not paper)', () => {
-    const parsed = classifyMeshClientDeepLink('lxm://ABCDEFGHIJKLMNOP');
+    const parsed = classifySARMeshDeepLink('lxm://ABCDEFGHIJKLMNOP');
     expect(parsed.kind).toBe('unknown');
   });
 
   it('does not treat contact/identity hosts as paper', () => {
-    expect(classifyMeshClientDeepLink(`lxm://contact/${'a'.repeat(32)}`).kind).toBe('lxmContact');
-    expect(classifyMeshClientDeepLink(`lxm://identity/${'b'.repeat(32)}`).kind).toBe('lxmIdentity');
+    expect(classifySARMeshDeepLink(`lxm://contact/${'a'.repeat(32)}`).kind).toBe('lxmContact');
+    expect(classifySARMeshDeepLink(`lxm://identity/${'b'.repeat(32)}`).kind).toBe('lxmIdentity');
   });
 
   it.each(['linux', 'darwin', 'win32'] as const)(
     'finds lxm URL in argv on %s-style process.argv',
     () => {
       const url = `lxm://contact/${'d'.repeat(32)}`;
-      expect(findLxmUrlInArgv(['/app/mesh-client', url, '--flag'])).toBe(url);
-      expect(findLxmUrlInArgv(['/app/mesh-client'])).toBeUndefined();
+      expect(findLxmUrlInArgv(['/app/sarmesh', url, '--flag'])).toBe(url);
+      expect(findLxmUrlInArgv(['/app/sarmesh'])).toBeUndefined();
     },
   );
 
   it('classifies bare Meshtastic channel payloads as forwardable', () => {
     const bare = `${'A'.repeat(40)}_-`;
-    const parsed = classifyMeshClientDeepLink(bare);
+    const parsed = classifySARMeshDeepLink(bare);
     expect(parsed).toEqual({ kind: 'meshtasticChannel', url: bare });
-    expect(isForwardableMeshClientOpenUrl(bare)).toBe(true);
+    expect(isForwardableSARMeshOpenUrl(bare)).toBe(true);
   });
 
   it('forwards Meshtastic channel URLs and drops unrelated schemes', () => {
-    expect(isForwardableMeshClientOpenUrl('https://meshtastic.org/e/#abc')).toBe(true);
-    expect(isForwardableMeshClientOpenUrl('https://example.com')).toBe(false);
+    expect(isForwardableSARMeshOpenUrl('https://meshtastic.org/e/#abc')).toBe(true);
+    expect(isForwardableSARMeshOpenUrl('https://example.com')).toBe(false);
   });
 
   describe('lxma:// Columba contact', () => {
     it('builds lowercase lxma URI and round-trips', () => {
       const uri = buildLxmaContactUri(LXMA_DEST.toUpperCase(), LXMA_PUBKEY.toUpperCase());
       expect(uri).toBe(`lxma://${LXMA_DEST}:${LXMA_PUBKEY}`);
-      expect(classifyMeshClientDeepLink(uri)).toEqual({
+      expect(classifySARMeshDeepLink(uri)).toEqual({
         kind: 'lxmaContact',
         destinationHash: LXMA_DEST,
         publicKeyHex: LXMA_PUBKEY,
@@ -104,22 +104,20 @@ describe('meshClientDeepLink', () => {
 
     it('accepts case-insensitive scheme', () => {
       const uri = `LXMA://${LXMA_DEST}:${LXMA_PUBKEY}`;
-      expect(classifyMeshClientDeepLink(uri).kind).toBe('lxmaContact');
-      expect(isForwardableMeshClientOpenUrl(uri)).toBe(true);
+      expect(classifySARMeshDeepLink(uri).kind).toBe('lxmaContact');
+      expect(isForwardableSARMeshOpenUrl(uri)).toBe(true);
     });
 
     it('rejects wrong segment count, short dest, short pubkey', () => {
-      expect(classifyMeshClientDeepLink(`lxma://${LXMA_DEST}`).kind).toBe('unknown');
-      expect(classifyMeshClientDeepLink(`lxma://${LXMA_DEST}:${LXMA_PUBKEY}:extra`).kind).toBe(
+      expect(classifySARMeshDeepLink(`lxma://${LXMA_DEST}`).kind).toBe('unknown');
+      expect(classifySARMeshDeepLink(`lxma://${LXMA_DEST}:${LXMA_PUBKEY}:extra`).kind).toBe(
         'unknown',
       );
-      expect(classifyMeshClientDeepLink(`lxma://${'a'.repeat(16)}:${LXMA_PUBKEY}`).kind).toBe(
+      expect(classifySARMeshDeepLink(`lxma://${'a'.repeat(16)}:${LXMA_PUBKEY}`).kind).toBe(
         'unknown',
       );
-      expect(classifyMeshClientDeepLink(`lxma://${LXMA_DEST}:${'b'.repeat(64)}`).kind).toBe(
-        'unknown',
-      );
-      expect(classifyMeshClientDeepLink(`lxma://${LXMA_DEST}:${'b'.repeat(127)}`).kind).toBe(
+      expect(classifySARMeshDeepLink(`lxma://${LXMA_DEST}:${'b'.repeat(64)}`).kind).toBe('unknown');
+      expect(classifySARMeshDeepLink(`lxma://${LXMA_DEST}:${'b'.repeat(127)}`).kind).toBe(
         'unknown',
       );
     });
@@ -141,7 +139,7 @@ describe('meshClientDeepLink', () => {
       expect(uri).toContain('name=Example+Contact');
       expect(uri).toContain(`public_key=${MESHCORE_PUBKEY}`);
       expect(uri).toContain('type=1');
-      expect(classifyMeshClientDeepLink(uri)).toEqual({
+      expect(classifySARMeshDeepLink(uri)).toEqual({
         kind: 'meshcoreContactAdd',
         name: 'Example Contact',
         publicKeyHex: MESHCORE_PUBKEY,
@@ -155,7 +153,7 @@ describe('meshClientDeepLink', () => {
         publicKeyHex: MESHCORE_PUBKEY,
         type: 2,
       });
-      const parsed = classifyMeshClientDeepLink(uri);
+      const parsed = classifySARMeshDeepLink(uri);
       expect(parsed).toMatchObject({ kind: 'meshcoreContactAdd', name: 'café', type: 2 });
     });
 
@@ -165,26 +163,26 @@ describe('meshClientDeepLink', () => {
         publicKeyHex: MESHCORE_PUBKEY,
         type,
       });
-      const parsed = classifyMeshClientDeepLink(uri);
+      const parsed = classifySARMeshDeepLink(uri);
       expect(parsed).toMatchObject({ kind: 'meshcoreContactAdd', type });
     });
 
     it('accepts official docs fixture and case-insensitive scheme', () => {
-      expect(classifyMeshClientDeepLink(MESHCORE_DOC_CONTACT)).toEqual({
+      expect(classifySARMeshDeepLink(MESHCORE_DOC_CONTACT)).toEqual({
         kind: 'meshcoreContactAdd',
         name: 'Example Contact',
         publicKeyHex: '9cd8fcf22a47333b591d96a2b848b73f457b1bb1a3ea2453a885f9e5787765b1',
         type: 1,
       });
       expect(
-        classifyMeshClientDeepLink(MESHCORE_DOC_CONTACT.replace('meshcore://', 'MESHCORE://')).kind,
+        classifySARMeshDeepLink(MESHCORE_DOC_CONTACT.replace('meshcore://', 'MESHCORE://')).kind,
       ).toBe('meshcoreContactAdd');
-      expect(isForwardableMeshClientOpenUrl(MESHCORE_DOC_CONTACT)).toBe(true);
+      expect(isForwardableSARMeshOpenUrl(MESHCORE_DOC_CONTACT)).toBe(true);
     });
 
     it('accepts reordered query params and ignores extras', () => {
       const uri = `meshcore://contact/add?type=3&extra=1&public_key=${MESHCORE_PUBKEY}&name=Room`;
-      expect(classifyMeshClientDeepLink(uri)).toEqual({
+      expect(classifySARMeshDeepLink(uri)).toEqual({
         kind: 'meshcoreContactAdd',
         name: 'Room',
         publicKeyHex: MESHCORE_PUBKEY,
@@ -194,27 +192,24 @@ describe('meshClientDeepLink', () => {
 
     it('rejects missing/invalid params', () => {
       expect(
-        classifyMeshClientDeepLink(`meshcore://contact/add?public_key=${MESHCORE_PUBKEY}&type=1`)
+        classifySARMeshDeepLink(`meshcore://contact/add?public_key=${MESHCORE_PUBKEY}&type=1`).kind,
+      ).toBe('unknown');
+      expect(
+        classifySARMeshDeepLink(`meshcore://contact/add?name=A&public_key=${'x'.repeat(63)}&type=1`)
           .kind,
       ).toBe('unknown');
       expect(
-        classifyMeshClientDeepLink(
-          `meshcore://contact/add?name=A&public_key=${'x'.repeat(63)}&type=1`,
-        ).kind,
-      ).toBe('unknown');
-      expect(
-        classifyMeshClientDeepLink(
+        classifySARMeshDeepLink(
           `meshcore://contact/add?name=A&public_key=${MESHCORE_PUBKEY}&type=0`,
         ).kind,
       ).toBe('unknown');
       expect(
-        classifyMeshClientDeepLink(
+        classifySARMeshDeepLink(
           `meshcore://contact/add?name=A&public_key=${MESHCORE_PUBKEY}&type=abc`,
         ).kind,
       ).toBe('unknown');
       expect(
-        classifyMeshClientDeepLink(`meshcore://contact/add?name=A&public_key=${MESHCORE_PUBKEY}`)
-          .kind,
+        classifySARMeshDeepLink(`meshcore://contact/add?name=A&public_key=${MESHCORE_PUBKEY}`).kind,
       ).toBe('unknown');
     });
 
@@ -249,7 +244,7 @@ describe('meshClientDeepLink', () => {
       expect(uri).toContain('meshcore://channel/add?');
       expect(uri).toContain(`secret=${CHANNEL_SECRET}`);
       expect(uri).toContain('region_scope=NA');
-      expect(classifyMeshClientDeepLink(uri)).toEqual({
+      expect(classifySARMeshDeepLink(uri)).toEqual({
         kind: 'meshcoreChannelAdd',
         name: 'Public',
         secretHex: CHANNEL_SECRET,
@@ -259,19 +254,18 @@ describe('meshClientDeepLink', () => {
 
     it('accepts official docs fixture', () => {
       const secretHex = new URL(MESHCORE_DOC_CHANNEL).searchParams.get('secret') ?? '';
-      expect(classifyMeshClientDeepLink(MESHCORE_DOC_CHANNEL)).toEqual({
+      expect(classifySARMeshDeepLink(MESHCORE_DOC_CHANNEL)).toEqual({
         kind: 'meshcoreChannelAdd',
         name: 'Public',
         secretHex,
       });
-      expect(isForwardableMeshClientOpenUrl(MESHCORE_DOC_CHANNEL)).toBe(true);
+      expect(isForwardableSARMeshOpenUrl(MESHCORE_DOC_CHANNEL)).toBe(true);
     });
 
     it('rejects missing/invalid secret', () => {
-      expect(classifyMeshClientDeepLink('meshcore://channel/add?name=Public').kind).toBe('unknown');
+      expect(classifySARMeshDeepLink('meshcore://channel/add?name=Public').kind).toBe('unknown');
       expect(
-        classifyMeshClientDeepLink(`meshcore://channel/add?name=Public&secret=${'a'.repeat(31)}`)
-          .kind,
+        classifySARMeshDeepLink(`meshcore://channel/add?name=Public&secret=${'a'.repeat(31)}`).kind,
       ).toBe('unknown');
     });
 
@@ -288,13 +282,13 @@ describe('meshClientDeepLink', () => {
   describe('regressions', () => {
     it('keeps lxmf:// and short hex as unknown (not lxma/meshcore)', () => {
       // 32 hex can match the Meshtastic bare-payload heuristic; short hex must not.
-      expect(classifyMeshClientDeepLink('abcdef').kind).toBe('unknown');
-      expect(classifyMeshClientDeepLink(`lxmf://${'a'.repeat(32)}`).kind).toBe('unknown');
+      expect(classifySARMeshDeepLink('abcdef').kind).toBe('unknown');
+      expect(classifySARMeshDeepLink(`lxmf://${'a'.repeat(32)}`).kind).toBe('unknown');
     });
 
     it('does not forward junk schemes', () => {
-      expect(isForwardableMeshClientOpenUrl('ftp://x')).toBe(false);
-      expect(isForwardableMeshClientOpenUrl('meshcore://other/path')).toBe(false);
+      expect(isForwardableSARMeshOpenUrl('ftp://x')).toBe(false);
+      expect(isForwardableSARMeshOpenUrl('meshcore://other/path')).toBe(false);
     });
   });
 
@@ -302,20 +296,20 @@ describe('meshClientDeepLink', () => {
     const SESSION = 'a'.repeat(16);
 
     it('classifies lxm://game/<session> and lrgp:<session>', () => {
-      expect(classifyMeshClientDeepLink(`lxm://game/${SESSION}`)).toEqual({
+      expect(classifySARMeshDeepLink(`lxm://game/${SESSION}`)).toEqual({
         kind: 'lxmGameSession',
         sessionId: SESSION,
       });
-      expect(classifyMeshClientDeepLink(`lrgp:${SESSION.toUpperCase()}`)).toEqual({
+      expect(classifySARMeshDeepLink(`lrgp:${SESSION.toUpperCase()}`)).toEqual({
         kind: 'lxmGameSession',
         sessionId: SESSION,
       });
-      expect(isForwardableMeshClientOpenUrl(`lrgp:${SESSION}`)).toBe(true);
+      expect(isForwardableSARMeshOpenUrl(`lrgp:${SESSION}`)).toBe(true);
     });
 
     it('rejects short or non-hex session ids', () => {
-      expect(classifyMeshClientDeepLink('lxm://game/abc').kind).toBe('unknown');
-      expect(classifyMeshClientDeepLink('lrgp:not-hex!!!!!!!!').kind).toBe('unknown');
+      expect(classifySARMeshDeepLink('lxm://game/abc').kind).toBe('unknown');
+      expect(classifySARMeshDeepLink('lrgp:not-hex!!!!!!!!').kind).toBe('unknown');
     });
 
     it('builds routes and finds argv entries', () => {

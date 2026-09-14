@@ -34,7 +34,7 @@
     },
     "nodeLabel": "Knooppunt: {{name}}",
     "takClientLost": "TAK client verloren",
-    "title": "Mesh-client",
+    "title": "SARMesh",
     "brandName": "Colorado Mesh",
     "meshTubeSignOff": "Schakel het Colorado Mesh-bord uit",
     "meshTubeSignOn": "Schakel het Colorado Mesh-bord in",
@@ -44,7 +44,7 @@
     "footerDiscordTitle": "Colorado Mesh Discord",
     "footerGithubTitle": "Colorado Mesh op GitHub",
     "footerWebsiteTitle": "Colorado Mesh-website",
-    "loadingApp": "Mesh-client laden",
+    "loadingApp": "SARMesh laden",
     "reticulumQueueTooltip": "TX-wachtrij voor hosts voor lokale RNode \"{{name}}\": pakketten die wachten op de radio (slechtst gevuld als er meerdere RNodes zijn). Groen onder 25%, amber onder 60%, rood bij 60% of meer.",
     "reticulumQueueTooltipGeneric": "Host TX-wachtrij voor de drukste lokale RNode: pakketten die wachten op de radio. Groen onder 25%, amber onder 60%, rood bij 60% of meer.",
     "reticulumTxBuffering": "Bufferen van uitgaande pakketten naar een lokale RNode (host TX-wachtrij leeglopen).",
@@ -194,7 +194,7 @@
     "reduceMotion": "Beweging verminderen",
     "reduceMotionDesc": "Schakelt geanimeerde pictogrammen en decoratieve effecten uit. Laadspinners en verbindingsstatusindicatoren blijven geanimeerd.",
     "roomMessages": "Berichten in de ruimte",
-    "importSchemaTooNew": "Dit databasebestand vereist een nieuwere Mesh-Client (schema {{dbVersion}}). Deze build ondersteunt schema {{appVersion}} of ouder. Installeer de nieuwste versie en probeer het opnieuw.",
+    "importSchemaTooNew": "Dit databasebestand vereist een nieuwere SARMesh (schema {{dbVersion}}). Deze build ondersteunt schema {{appVersion}} of ouder. Installeer de nieuwste versie en probeer het opnieuw.",
     "floodAdvertTypeLabel": "Advert-type",
     "floodAdvertTypeFlood": "Flood (multi-hop)",
     "floodAdvertTypeZeroHop": "Zero-hop (alleen directe buren)",
@@ -204,7 +204,7 @@
     "debugSnapshotFailed": "Kon debug-snapshot niet kopiëren",
     "meshcoreOpenWireExperimentalTitle": "MeshCore Open wire (experimenteel)",
     "meshcoreOpenWireCompatLabel": "MeshCore Open-compatibiliteit inschakelen",
-    "meshcoreOpenWireCompatHint": "Indien ingeschakeld, verzendt mesh-client tekstantwoorden met sleutel (@[Name#key]), compacte r:-reacties en g:-Giphy-GIF's. Dit komt mogelijk niet overeen met het officiële companion-wireformaat; ontvangers hebben MeshCore-Open-compatibele clients nodig.",
+    "meshcoreOpenWireCompatHint": "Indien ingeschakeld, verzendt sarmesh tekstantwoorden met sleutel (@[Name#key]), compacte r:-reacties en g:-Giphy-GIF's. Dit komt mogelijk niet overeen met het officiële companion-wireformaat; ontvangers hebben MeshCore-Open-compatibele clients nodig.",
     "meshcorePathHashExperimentalTitle": "Hashgrootte MeshCore-pad (experimenteel)",
     "meshcorePathHashModeLabel": "Standaard pad hash-grootte",
     "meshcorePathHashMode1Byte": "1 byte (legacy, tot 64 hops)",
@@ -650,7 +650,7 @@
       "requestEnable": "Aanvraag inschakelen",
       "requestEnableAria": "Vraag deze collega om bestandsontvangst in te schakelen",
       "destinationLabel": "Peer's rncp ontvangt bestemming",
-      "destinationHelp": "Niet hun Chat/LXMF-hash. Gebruik Request enable - mesh-client-peers delen dit automatisch nadat ze dit hebben geaccepteerd. Of plak vanaf hun afstandsbediening → Mijn rncp ontvangstbestemming.",
+      "destinationHelp": "Niet hun Chat/LXMF-hash. Gebruik Request enable - sarmesh-peers delen dit automatisch nadat ze dit hebben geaccepteerd. Of plak vanaf hun afstandsbediening → Mijn rncp ontvangstbestemming.",
       "activeTransfersBadgeAria_one": "{{count}} actieve bestandsoverdracht met deze collega",
       "activeTransfersBadgeAria_other": "{{count}} actieve bestandsoverdrachten met deze collega",
       "transfersTitle": "Overschrijvingen",
@@ -731,7 +731,7 @@
       "tooLargeForWire": "Spraakmemo is te groot om te verzenden. Neem een kortere clip op.",
       "tooLargeForPropagation": "Spraakbericht is groter dan de limiet van de voortplantingsnode. Het wordt alleen bezorgd wanneer de ontvanger online is. Verkort het om het op te slaan voor offline bezorging.",
       "directOnlyBadge": "Alleen direct — te groot voor offline opslag",
-      "recordTooltip": "LXMF-spraakmemo — neemt een korte Opus-clip op voor dit directe bericht. Ondersteund door mesh-client, Ratspeak en Sideband (FIELD_AUDIO). Niet hetzelfde als LXST Call.",
+      "recordTooltip": "LXMF-spraakmemo — neemt een korte Opus-clip op voor dit directe bericht. Ondersteund door sarmesh, Ratspeak en Sideband (FIELD_AUDIO). Niet hetzelfde als LXST Call.",
       "sendTooltip": "Verstuur de opgenomen LXMF-spraakmemo",
       "startFailed": "Kon opnemen van spraakmemo niet starten. Probeer het opnieuw.",
       "sendAriaWithElapsed": "Spraakmemo verzenden ({{seconds}} seconden opgenomen)",
@@ -955,7 +955,7 @@
         "accessDeniedLinuxHint": "Voeg op Linux uw gebruiker toe aan de dialout-groep: sudo usermod -aG dialout $USER (log vervolgens uit en weer in)",
         "disconnectedHint": "Zorg ervoor dat de USB-kabel is aangesloten en dat het apparaat is ingeschakeld.",
         "timeoutHint": "Als de poort even verschijnt, probeer dan de USB-kabel opnieuw aan te sluiten.",
-        "portStillOpenHint": "De USB seriële poort is niet schoon losgekomen. Sluit de mesh-client volledig af en open deze opnieuw, of trek de stekker uit het stopcontact en sluit de USB-kabel opnieuw aan."
+        "portStillOpenHint": "De USB seriële poort is niet schoon losgekomen. Sluit de sarmesh volledig af en open deze opnieuw, of trek de stekker uit het stopcontact en sluit de USB-kabel opnieuw aan."
       },
       "http": {
         "timeoutMdnsWindows": "Op Windows vereist meshtastic.local Bonjour (geïnstalleerd met iTunes). Gebruik in plaats daarvan het IP-adres van het apparaat.",
@@ -983,7 +983,7 @@
         "connectionAttemptFailedLinuxHint": "Op Linux kunt u koppelingen beheren via de Bluetooth-instellingen van het systeem of de 'bluetoothctl'-tool.",
         "meshcoreHandshakeHint": "Zorg ervoor dat uw MeshCore-apparaat in de Bluetooth Companion-modus staat en met uw computer is gekoppeld met behulp van een pincode. Verwijder eventuele bestaande koppelingen en koppel opnieuw als de verbindingsproblemen aanhouden.",
         "meshcoreHandshakeWindowsExtra": "In Windows schakelt u Bluetooth uit/aan en werkt u het adapterstuurprogramma bij in Apparaatbeheer als de verbinding blijft bestaan.",
-        "macWakeRecoveryHint": "Sluit na de slaapstand de mesh-client (Cmd+Q), schakel Bluetooth uit en in in Systeeminstellingen, wacht een paar seconden en maak vervolgens opnieuw verbinding. Verbind MeshCore met twee radio's vóór Meshtastic.",
+        "macWakeRecoveryHint": "Sluit na de slaapstand de sarmesh (Cmd+Q), schakel Bluetooth uit en in in Systeeminstellingen, wacht een paar seconden en maak vervolgens opnieuw verbinding. Verbind MeshCore met twee radio's vóór Meshtastic.",
         "dualProtocolContentionHint": "Het andere protocol maakt mogelijk nog steeds verbinding via Bluetooth. Wacht een paar seconden en probeer het opnieuw, of schakel over naar het andere protocoltabblad om de verbindingsstatus te controleren.",
         "scanBusy": "Er wordt een nieuwe Bluetooth-scan uitgevoerd. Probeer het zo nog eens.",
         "sameDeviceConflict": "Dit Bluetooth-apparaat is al verbonden met {{owner}}.",
@@ -1013,9 +1013,9 @@
     "reticulumStackHint": "Start de lokale Reticulum/LXMF-sidecar (TCP- en Auto-interfaces).",
     "reticulumStartStack": "Stack starten",
     "reticulumNetworkEmpty": "Nog geen interfaces gemeld.",
-    "reticulumSidecarMissing": "Reticulum-sidecar niet gebouwd. Voer in de mesh-client-repo `pnpm run reticulum:sidecar:build` uit (vereist Rust).",
+    "reticulumSidecarMissing": "Reticulum-sidecar niet gebouwd. Voer in de sarmesh-repo `pnpm run reticulum:sidecar:build` uit (vereist Rust).",
     "reticulumSidecarCargoMissing": "Rust-toolchain (cargo) niet gevonden. Installeer via https://rustup.rs en voer daarna `pnpm run reticulum:sidecar:build` uit.",
-    "reticulumSidecarPatchMissing": "Reticulum sidecar build heeft de rsReticulum packet-tap overlay nodig. Voer in de mesh-client-repo `pnpm run reticulum:sidecar:build` uit (past patches automatisch toe).",
+    "reticulumSidecarPatchMissing": "Reticulum sidecar build heeft de rsReticulum packet-tap overlay nodig. Voer in de sarmesh-repo `pnpm run reticulum:sidecar:build` uit (past patches automatisch toe).",
     "reticulumSidecarStartFailed": "Kon Reticulum-stack niet starten: {{message}}",
     "reticulumStopStack": "Stack stoppen",
     "reticulumAutostart": "Stack automatisch starten bij het openen van Verbinding",
@@ -1253,7 +1253,7 @@
       "advancedAria": "Geavanceerde interface key-value opties",
       "advancedKeyReserved": "Sleutel \"{{key}}\" is een bekend veld en werd genegeerd — gebruik het bovenstaande formulier.",
       "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
-      "decommissionedHubEnableBlocked": "Deze hub is buiten gebruik en kan niet ingeschakeld blijven — mesh-client zet hem bij elke stackstart uit. Gebruik «Standaard backbones toevoegen» of de backbone-directory voor actieve eindpunten.",
+      "decommissionedHubEnableBlocked": "Deze hub is buiten gebruik en kan niet ingeschakeld blijven — sarmesh zet hem bij elke stackstart uit. Gebruik «Standaard backbones toevoegen» of de backbone-directory voor actieve eindpunten.",
       "decommissionedBadge": "ontmanteld",
       "defaultHubsPickerTitle": "Standaard backbones toevoegen",
       "defaultHubsPickerConfirm": "Voeg {{count}} hubs toe",
@@ -1298,8 +1298,8 @@
       "rmapFullModeHint": "De volledige modus met RMAP-publicatie blijft vol via ignore_config_warnings. LXMF-leveringsaankondigingen verlaten deze radio op het aankondigingsinterval van de stapel (standaard 1 uur).",
       "effectiveModeBadge": "Met ingang van: {{mode}}",
       "effectiveModeAria": "Effectieve runtime-modus {{mode}}. Geconfigureerde modus verschilt van wat Reticulum draait.",
-      "effectiveModeTooltip": "Reticulum herschreef deze detecteerbare interface naar Access Point (of een andere toegestane modus) omdat detecteerbaar Gateway, Intern of Access Point vereist, tenzij ignore_config_warnings is ingesteld. Herstart de stack na mesh-client stempels die zich afmelden zodat Full (of uw geconfigureerde modus) van kracht wordt.",
-      "flowControlBleHint": "Op Bluetooth stuurt de radio vaak nooit CMD_READY. Mesh-Client beweegt nog steeds TX (wacht kort tot het KLAAR is en gaat dan verder), zodat de stroomregeling overbelasting vermindert zonder de wachtrij te bevriezen.",
+      "effectiveModeTooltip": "Reticulum herschreef deze detecteerbare interface naar Access Point (of een andere toegestane modus) omdat detecteerbaar Gateway, Intern of Access Point vereist, tenzij ignore_config_warnings is ingesteld. Herstart de stack na sarmesh stempels die zich afmelden zodat Full (of uw geconfigureerde modus) van kracht wordt.",
+      "flowControlBleHint": "Op Bluetooth stuurt de radio vaak nooit CMD_READY. SARMesh beweegt nog steeds TX (wacht kort tot het KLAAR is en gaat dan verder), zodat de stroomregeling overbelasting vermindert zonder de wachtrij te bevriezen.",
       "advancedFields": "Geavanceerde instellingen",
       "field": {
         "port": "Poort",
@@ -1365,12 +1365,12 @@
       "connectingRow": "{{name}}: verbinden via Bluetooth",
       "offlineHintWifi": "Controleer of de RNode op uw LAN staat, is ingeschakeld en bereikbaar is via het geconfigureerde IP (standaard TCP-poort 7633, niet 4242). Werk de onderstaande host bij als DHCP een nieuw adres heeft toegewezen, of voorzie wifi opnieuw in Reticulum → Admin.",
       "tcpUnreachable": "{{name}}: TCP-hub onbereikbaar ({{host}}:{{port}})",
-      "tcpUnreachableHint": "De externe Reticulum-instantie kan offline zijn of verbindingen blokkeren. Schakel deze interface uit of verifieer de host en poort. Frequente herstarts van mesh-client of de stack kunnen ervoor zorgen dat Reticulum 1.4.0+ hubs je IP 12 uur blokkeren — wacht liever dan opnieuw te herstarten.",
+      "tcpUnreachableHint": "De externe Reticulum-instantie kan offline zijn of verbindingen blokkeren. Schakel deze interface uit of verifieer de host en poort. Frequente herstarts van sarmesh of de stack kunnen ervoor zorgen dat Reticulum 1.4.0+ hubs je IP 12 uur blokkeren — wacht liever dan opnieuw te herstarten.",
       "connectingHintBle": "BLE RNode-koppelingen kunnen tot 60 seconden duren nadat de stapel is gestart (OS-wachtwoordvenster). Voer de huidige RNode-pincode in als daarom wordt gevraagd; nooit 123456. Dit is normaal en geen fout. Het apparaat verschijnt mogelijk pas in Systeeminstellingen na een succesvolle verbinding.",
       "offlineHintBle": "Om deze fout te verhelpen, moet u deze interface mogelijk verwijderen en weer toevoegen (Kies apparaat) zodat de opgeslagen Bluetooth-id wordt vernieuwd, en daarna de stack herstarten. Uw besturingssysteem kan om een 6-cijferige Bluetooth-pincode vragen (macOS, Windows of Linux). RNode genereert bij elke koppeling een nieuwe code — gebruik nooit 123456 (dat is de standaard van Meshtastic, niet van RNode). De RNode hoeft niet te verschijnen in Systeeminstellingen → Bluetooth voordat deze app verbindt; het dialoogvenster van het besturingssysteem verschijnt wanneer de stack koppelt. Radios zonder scherm: verbind USB → Reticulum Admin → Bluetooth → Koppelen starten → voer de pincode uit het Admin-paneel (niet op het radiodisplay) in het OS-dialoogvenster in. Radios met scherm: houd de knop ~7 s ingedrukt op Heltec-apparaten (timing varieert; ~10 s op veel boards activeert Wi‑Fi AP), lees de pincode op het scherm en voer die in het OS-dialoogvenster in. Wis mislukte koppelingen in de Bluetooth-instellingen van uw besturingssysteem voordat u het opnieuw probeert.",
       "offlineHintBleBondStale": "macOS toont deze RNode nog steeds als gekoppeld, maar Bluetooth-sleutels komen niet meer overeen (peer heeft koppelingsinformatie verwijderd). Vergeet het apparaat in Systeeminstellingen → Bluetooth, zet de RNode in koppelmodus (Admin → Bluetooth → Koppelen starten, of houd de knop ~7 s ingedrukt), verwijder daarna deze interface en voeg hem opnieuw toe (Kies apparaat), herstart de stack en voer de nieuwe 6-cijferige pincode in wanneer daarom wordt gevraagd.",
       "tcpFastFlap": "{{name}}: hub heeft je IP-adres waarschijnlijk geblokkeerd nadat de stack vaak opnieuw is opgestart ({{host}}:{{port}})",
-      "tcpFastFlapHint": "Reticulum 1.4.0+ openbare hubs blokkeren een IP na vijf korte TCP-sessies binnen 12 uur. Snelle herstarts van mesh-client of de stack tellen mee. Schakel deze hub uit en wacht tot 12 uur — opnieuw opstarten verlengt het blok."
+      "tcpFastFlapHint": "Reticulum 1.4.0+ openbare hubs blokkeren een IP na vijf korte TCP-sessies binnen 12 uur. Snelle herstarts van sarmesh of de stack tellen mee. Schakel deze hub uit en wacht tot 12 uur — opnieuw opstarten verlengt het blok."
     },
     "autoConnectingTo": "Automatisch verbinden met {{deviceName}}…",
     "autoReconnectInProgress": "Automatisch opnieuw verbinden bezig…",
@@ -1835,7 +1835,7 @@
         "rmap_transport_disabled": "Ontdekbare interfaces zijn geconfigureerd, maar de transportmodus is uitgeschakeld.",
         "rmap_i2p_not_connectable": "I2P-interface \"{{name}}\" is detecteerbaar, maar aansluitbaar is niet ja.",
         "shared_instance_client": "Share instance attached as a client of another app — local TCP hubs in this config are not started.",
-        "rmap_mode_autocorrect": "Interface \"{{name}}\" is detecteerbaar met een niet-AP/Gateway-modus — Reticulum zal het als toegangspunt uitvoeren, tenzij ignore_config_warnings is ingesteld. Bewerk de interface of start de stack opnieuw, zodat de mesh-client de opt-out kan afstempelen."
+        "rmap_mode_autocorrect": "Interface \"{{name}}\" is detecteerbaar met een niet-AP/Gateway-modus — Reticulum zal het als toegangspunt uitvoeren, tenzij ignore_config_warnings is ingesteld. Bewerk de interface of start de stack opnieuw, zodat de sarmesh de opt-out kan afstempelen."
       },
       "runtime": {
         "rnsNotReady": "RNS-stack is niet gereed",
@@ -1868,7 +1868,7 @@
         "announceBusPressureTipBoundaryHubs": "Ingeschakelde grens- / ruggengraathubs: {{hubs}}.",
         "announceBusPressureTipTxSaturated": "TX-wachtrij valt op: {{names}} — die interface kan verzadigd zijn.",
         "tooManyDefaultBackbones": "Je hebt {{count}} standaard backbones ingeschakeld. Overweeg om extra's uit te schakelen en er ongeveer 2 te houden voor redundantie.",
-        "decommissionedHubEnabled": "Buiten gebruik gestelde hub „{{name}}” staat nog aan — mesh-client zet hem bij elke stackstart uit. Gebruik «Standaard backbones toevoegen» of de backbone-directory voor actieve eindpunten.",
+        "decommissionedHubEnabled": "Buiten gebruik gestelde hub „{{name}}” staat nog aan — sarmesh zet hem bij elke stackstart uit. Gebruik «Standaard backbones toevoegen» of de backbone-directory voor actieve eindpunten.",
         "txQueueDropsBle": "Interface \"{{name}}\" liet {{count}} uitgaande pakketten vallen (TX-wachtrij vol) — BLE RNode-link vastgelopen; geef de voorkeur aan USB of opnieuw koppelen",
         "txQueueDropsBleBondStale": "Interface \"{{name}}\" liet {{count}} uitgaande pakketten vallen (TX-wachtrij vol) — BLE-binding verouderd; Vergeet in OS Bluetooth en koppel opnieuw",
         "txQueueDropsNeutral": "Interface \"{{name}}\" liet {{count}} uitgaande pakketten vallen (TX-wachtrij vol) — controleer de link van die interface",
@@ -2135,11 +2135,11 @@
       },
       "database-chmod": {
         "label": "Database chmod (niet-fataal)",
-        "recommendation": "Het aanpassen van de toestemming voor databasebestanden is mislukt (vaak goedaardig op Windows). Als u elders echte DB-fouten ziet, controleer dan de antivirus- en mapmachtigingen voor de mesh-client userData-map."
+        "recommendation": "Het aanpassen van de toestemming voor databasebestanden is mislukt (vaak goedaardig op Windows). Als u elders echte DB-fouten ziet, controleer dan de antivirus- en mapmachtigingen voor de sarmesh userData-map."
       },
       "database-writable": {
         "label": "Database niet beschrijfbaar",
-        "recommendation": "De app kan de databasemap niet schrijven. Herstel de machtigingen voor de mesh-client userData-directory (zie probleemoplossing: databasedirectory is niet schrijfbaar)."
+        "recommendation": "De app kan de databasemap niet schrijven. Herstel de machtigingen voor de sarmesh userData-directory (zie probleemoplossing: databasedirectory is niet schrijfbaar)."
       },
       "tak-server": {
         "label": "TAK-serverproblemen",
@@ -2642,7 +2642,7 @@
       "remoteHardwareEnabledDesc": "Staat externe knooppunten toe GPIO-pinnen op dit apparaat te lezen en schrijven.",
       "remoteHardwareAllowUndefinedPins": "Toegang tot ongedefinieerde pinnen toestaan",
       "remoteHardwareAllowUndefinedPinsDesc": "Staat het lezen/schrijven toe van pinnen die niet in de beschikbare pinconfiguratie staan.",
-      "mqttProxyGatewayHint": "Met proxy ingeschakeld, overbrugt mesh-client brokerverkeer via MqttClientProxyMessage. Schakel de downlink per kanaal in op het tabblad Radio voor→ MQTT RF-relais.",
+      "mqttProxyGatewayHint": "Met proxy ingeschakeld, overbrugt sarmesh brokerverkeer via MqttClientProxyMessage. Schakel de downlink per kanaal in op het tabblad Radio voor→ MQTT RF-relais.",
       "mapReportPublishInterval": "Rapportinterval in kaart brengen (seconden)",
       "mapReportPublishIntervalDesc": "0 gebruikt de standaardfirmware. Hoe vaak het apparaat kaartrapporten publiceert wanneer kaartrapportage is ingeschakeld.",
       "mapReportPositionPrecision": "Positieprecisie van kaartrapport",
@@ -3326,7 +3326,7 @@
       "missingIdentity": "Dit knooppunt heeft nog geen identiteit onthouden. Wacht op een Nomad-aankondiging en probeer het dan opnieuw.",
       "transportUnavailable": "Reticulum-transport is niet beschikbaar. Start de stack opnieuw en probeer het opnieuw.",
       "sidecarNotRunning": "Reticulum-sidecar draait niet. Start de stack vanuit Verbinding en probeer het opnieuw.",
-      "responseTooLarge": "The node returned more data than mesh-client will accept for this request.",
+      "responseTooLarge": "The node returned more data than sarmesh will accept for this request.",
       "nomadBusy": "Een ander Nomad-pagina- of bestandsverzoek is nog bezig. Probeer het zo opnieuw.",
       "nomadNotServing": "Dit is uw Nomad-knooppunt, maar de My Pages-hosting is niet actief. Open Mijn pagina's, kies een map en begin met het weergeven van lokale voorbeelden.",
       "networkNotReady": "Wachten tot een hub of radio-interface online komt. Probeer het opnieuw zodra Connection een interface toont.",
@@ -4702,7 +4702,7 @@
     "localHostStats": "{{count}} in wachtrij · {{bytes}} bytes",
     "localHostName": "Hostpropagatieknooppunt",
     "syncPeerCostExceedsMax": "De peeringkosten van dit propagatieknooppunt liggen boven uw maximale peeringkosten. Verhoog het maximum in Netwerk → Geavanceerde PN-hosting, of kies een ander knooppunt.",
-    "offerUnsupported": "Deze bestemming ondersteunt geen LXMF /offer-synchronisatie — mesh-client kan deze niet als propagatieknooppunt gebruiken.",
+    "offerUnsupported": "Deze bestemming ondersteunt geen LXMF /offer-synchronisatie — sarmesh kan deze niet als propagatieknooppunt gebruiken.",
     "offerProbeTimeout": "Er is een time-out opgetreden tijdens het controleren/aanbieden van ondersteuning: het knooppunt is mogelijk onbereikbaar. Probeer het opnieuw als er een pad beschikbaar is.",
     "offerProbeFailed": "Kan dit propagatieknooppunt niet verifiëren/bieden. Probeer het over enkele ogenblikken opnieuw.",
     "enableLocalHostConfirmTitle": "Hosting van lokale propagatieknooppunten inschakelen?",
@@ -4949,7 +4949,7 @@
     "legendNotSavedTooltip": "Lege cirkel — geen wachtwoord opgeslagen voor deze ruimte",
     "legendSavedTooltip": "Lichtblauwe halve cirkel — wachtwoord opgeslagen; log in om een sessie te openen",
     "legendLoggedInTooltip": "Groene stip — actieve clientsessie (verlaat de ruimte als de server offline is)",
-    "historyLocalHint": "Bij het inloggen vraagt mesh-client recente berichten op die nog in de ringbuffer van de roomserver staan (wanneer dit apparaat nog geen lokaal watermerk heeft). Schakel automatisch synchroniseren in om geabonneerd te blijven terwijl u verbonden bent.",
+    "historyLocalHint": "Bij het inloggen vraagt sarmesh recente berichten op die nog in de ringbuffer van de roomserver staan (wanneer dit apparaat nog geen lokaal watermerk heeft). Schakel automatisch synchroniseren in om geabonneerd te blijven terwijl u verbonden bent.",
     "loginAllSavedDisabledNoSavedPasswords": "Sla eerst een ruimtewachtwoord op om alles in te loggen",
     "membersHeadingWithCount": "Leden ({{count}})",
     "collapseRoomList": "Ruimtelijst samenvouwen",
@@ -5203,7 +5203,7 @@
     "restartTitle": "Opnieuw opstarten en installeren",
     "retryCheck": "Probeer de updatecontrole opnieuw",
     "updateError": "Updatefout",
-    "menuToastUpToDateTitle": "Mesh-client",
+    "menuToastUpToDateTitle": "SARMesh",
     "menuToastUpToDateBody": "Je hebt de nieuwste versie.",
     "menuToastAvailableTitle": "Güncelleme uygun",
     "menuToastAvailableBody": "Versie {{version}} is beschikbaar.",
@@ -5611,7 +5611,7 @@
       "enabled": "Bestandsontvangst is ingeschakeld.",
       "enableFailed": "Kon het ontvangen van bestanden niet inschakelen: {{error}}",
       "saveDirRequired": "Kies een opslagmap om ontvangst in te schakelen.",
-      "shareDestWarning": "Als u dit inschakelt, zal mesh-client uw rncp-ontvangstbestemming naar deze peer sturen, zodat zij het verzenden van bestanden automatisch kunnen aanvullen.",
+      "shareDestWarning": "Als u dit inschakelt, zal sarmesh uw rncp-ontvangstbestemming naar deze peer sturen, zodat zij het verzenden van bestanden automatisch kunnen aanvullen.",
       "lxmfBody": "Schakel het ontvangen van rncp-bestanden in en antwoord met de hash van uw rncp-ontvangstbestemming.",
       "lxmfShareBody": "Bestandsontvangst is ingeschakeld. Mijn rncp ontvangt bestemmingshash:",
       "identityUnknown": "Inkomend vragen is ingeschakeld, maar de identiteitshash van deze peer is nog niet bekend, dus deze is niet toegevoegd aan Altijd toestaan. U wordt nog steeds vóór elk bestand gevraagd; probeer Altijd opnieuw toestaan ​​nadat een pad of aankondiging binnenkomt."
@@ -5716,7 +5716,7 @@
     "capabilityHeardShort": "LXST",
     "capabilityUnknownShort": "?",
     "help": {
-      "interop": "LXST-spraak heeft een peer-running LXST-telefonie nodig (Sideband, Ratspeak of mesh-client). Geen voice-note clip. Python LXST is de referentie; rsLXST is experimenteel."
+      "interop": "LXST-spraak heeft een peer-running LXST-telefonie nodig (Sideband, Ratspeak of sarmesh). Geen voice-note clip. Python LXST is de referentie; rsLXST is experimenteel."
     },
     "toast": {
       "busy": "Lijn bezet",
@@ -5864,7 +5864,7 @@
   },
   "longSession": {
     "title": "Herstart aanbevolen",
-    "body": "mesh-client draait al vier dagen met Bluetooth-radio aangesloten. Start de app opnieuw om het risico op crashes tijdens lange Noble BLE-sessies te verminderen.",
+    "body": "sarmesh draait al vier dagen met Bluetooth-radio aangesloten. Start de app opnieuw om het risico op crashes tijdens lange Noble BLE-sessies te verminderen.",
     "restart": "Herstarten",
     "dismiss": "Afwijzen"
   },

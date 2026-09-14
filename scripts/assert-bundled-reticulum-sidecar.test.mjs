@@ -10,8 +10,8 @@ describe('assert-bundled-reticulum-sidecar', () => {
     expect(resolveBundledSidecarPath('linux', '/app/linux-unpacked')).toBe(
       path.join('/app/linux-unpacked/resources/reticulum-sidecar/mesh-client-reticulum'),
     );
-    expect(resolveBundledSidecarPath('darwin', '/app/Mesh-client.app')).toBe(
-      path.join('/app/Mesh-client.app/Contents/Resources/reticulum-sidecar/mesh-client-reticulum'),
+    expect(resolveBundledSidecarPath('darwin', '/app/SARMesh.app')).toBe(
+      path.join('/app/SARMesh.app/Contents/Resources/reticulum-sidecar/mesh-client-reticulum'),
     );
   });
 });

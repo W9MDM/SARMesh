@@ -6,7 +6,7 @@
     "",
     "configType MUST be one of the type names accepted by the upstream factory",
     "`synthesize_interface` in .rsstack/rsReticulum/crates/rns-runtime/src/interface_factory.rs,",
-    "except `BlePeerInterface`, which mesh-client spawns itself from live.rs",
+    "except `BlePeerInterface`, which sarmesh spawns itself from live.rs",
     "(`sync_ble_peer_interfaces`) because upstream has no config type name for it.",
     "",
     "`fields` drives generic form rendering and generic add/edit validation. Types",

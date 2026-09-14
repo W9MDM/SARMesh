@@ -44,7 +44,7 @@ describe('database schema upgrade confirm runtime', () => {
   it('leaves user_version unchanged when upgrade is declined', async () => {
     const { NodeSqliteDB } = await import('./db-compat');
     const { CURRENT_SCHEMA_VERSION } = await import('./db-schema-sync');
-    const dbPath = path.join(tmpDir, 'mesh-client.db');
+    const dbPath = path.join(tmpDir, 'sarmesh.db');
     const seedVersion = Math.max(1, CURRENT_SCHEMA_VERSION - 1);
 
     {
@@ -82,7 +82,7 @@ describe('database schema upgrade confirm runtime', () => {
   it('upgrades when confirm returns true', async () => {
     const { NodeSqliteDB } = await import('./db-compat');
     const { CURRENT_SCHEMA_VERSION } = await import('./db-schema-sync');
-    const dbPath = path.join(tmpDir, 'mesh-client.db');
+    const dbPath = path.join(tmpDir, 'sarmesh.db');
     const seedVersion = Math.max(1, CURRENT_SCHEMA_VERSION - 1);
 
     {

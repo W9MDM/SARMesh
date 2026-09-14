@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsReticulum BLE RNode bond-desync overlay (after pairing-transition debounce).
+# Apply sarmesh rsReticulum BLE RNode bond-desync overlay (after pairing-transition debounce).
 # - Halt reconnect when CoreBluetooth reports "Peer removed pairing information"
 # - Skip TX-char SMP probe on reconnect after a successful session in this task
 set -euo pipefail

@@ -77,7 +77,7 @@ describe('reticulum-blocklist-file', () => {
       await saveBlocklistToFile([]);
 
       const options = showSaveDialogMock.mock.calls[0]?.[0] as { defaultPath: string };
-      expect(options.defaultPath).toMatch(/^mesh-client-blocklist-\d{4}-\d{2}-\d{2}\.json$/);
+      expect(options.defaultPath).toMatch(/^sarmesh-blocklist-\d{4}-\d{2}-\d{2}\.json$/);
     });
   });
 

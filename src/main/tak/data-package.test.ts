@@ -76,7 +76,7 @@ const STUB_CERTS: CertBundle = {
 const STUB_SETTINGS = {
   enabled: true,
   port: 8089,
-  serverName: 'mesh-client',
+  serverName: 'sarmesh',
   requireClientCert: true,
   autoStart: false,
 };

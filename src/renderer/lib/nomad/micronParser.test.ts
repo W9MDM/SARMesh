@@ -29,7 +29,7 @@ import {
 
 const rendererDir = join(dirname(fileURLToPath(import.meta.url)), '../..');
 const stylesCss = readFileSync(join(rendererDir, 'styles.css'), 'utf8');
-const nomadFontWoff2Path = join(rendererDir, 'assets/fonts/MeshClientNomadMono.woff2');
+const nomadFontWoff2Path = join(rendererDir, 'assets/fonts/SARMeshNomadMono.woff2');
 
 describe('nomad-micron-page whitespace CSS contract', () => {
   it('preserves spaces in open-width and wraps with pre-wrap in fit-width', () => {
@@ -39,19 +39,17 @@ describe('nomad-micron-page whitespace CSS contract', () => {
 });
 
 describe('nomad-micron-page bundled Nerd Mono font contract', () => {
-  it('declares @font-face MeshClientNomadMono pointing at the bundled woff2', () => {
+  it('declares @font-face SARMeshNomadMono pointing at the bundled woff2', () => {
     expect(stylesCss).toMatch(
-      /@font-face\s*\{[^}]*font-family:\s*MeshClientNomadMono;[^}]*url\(['"]\.\/assets\/fonts\/MeshClientNomadMono\.woff2['"]\)/s,
+      /@font-face\s*\{[^}]*font-family:\s*SARMeshNomadMono;[^}]*url\(['"]\.\/assets\/fonts\/SARMeshNomadMono\.woff2['"]\)/s,
     );
     expect(existsSync(nomadFontWoff2Path)).toBe(true);
     // Non-empty woff2 (subset includes Latin + Nerd PUA).
     expect(readFileSync(nomadFontWoff2Path).byteLength).toBeGreaterThan(10_000);
   });
 
-  it('lists MeshClientNomadMono first on .nomad-micron-page font-family', () => {
-    expect(stylesCss).toMatch(
-      /\.nomad-micron-page\s*\{[^}]*font-family:\s*MeshClientNomadMono\s*,/s,
-    );
+  it('lists SARMeshNomadMono first on .nomad-micron-page font-family', () => {
+    expect(stylesCss).toMatch(/\.nomad-micron-page\s*\{[^}]*font-family:\s*SARMeshNomadMono\s*,/s);
   });
 
   it('keeps FA/Nerd PUA glyphs in mounted Micron link labels', () => {
@@ -317,7 +315,7 @@ describe('NomadNet 1.4.1 micron images and collapsibles', () => {
 
   it('marks truecolor tips that match page background for hiding', () => {
     const markup =
-      '#!bg=020617\n`FT020617Site looks odd? `[Get the mesh client`:/page/mesh-client.mu]`\n`FT86efacVisible`f';
+      '#!bg=020617\n`FT020617Site looks odd? `[Get the mesh client`:/page/sarmesh.mu]`\n`FT86efacVisible`f';
     const html = renderNomadMicronPage(markup);
     const container = document.createElement('div');
     mountNomadMicronHtml(container, html);

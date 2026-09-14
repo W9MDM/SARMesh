@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsReticulum ReplyFile + LinkClient query metadata overlay.
+# Apply sarmesh rsReticulum ReplyFile + LinkClient query metadata overlay.
 # Carries ratspeak/rsReticulum#26 on floated origin/main until upstream merges
 # (NomadNet /file + /media response Resources).
 # Upstream: https://github.com/ratspeak/rsReticulum/pull/26

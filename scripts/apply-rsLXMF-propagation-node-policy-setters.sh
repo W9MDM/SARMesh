@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsLXMF PropagationNode live policy setters for rns-stack builds.
+# Apply sarmesh rsLXMF PropagationNode live policy setters for rns-stack builds.
 # Adds set_peering_cost / set_max_storage / set_max_message_size so PN hosting
 # policy updates can mutate a running local node (upstream only has set_min_stamp_cost).
 set -euo pipefail

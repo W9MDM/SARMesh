@@ -478,7 +478,7 @@ function loadInitialRrcNickname(): string {
   } catch {
     // catch-no-log-ok localStorage may be unavailable (tests / SSR)
   }
-  return 'mesh-client';
+  return 'sarmesh';
 }
 
 const EMPTY_ACTIVE_ROOM_MESSAGES: RrcChatMessage[] = [];
@@ -533,7 +533,7 @@ export const useRrcSessionStore = create<RrcSessionStoreState>((set, get) => ({
   },
 
   setNickname: (nick) => {
-    set({ nickname: nick.trim() || 'mesh-client' });
+    set({ nickname: nick.trim() || 'sarmesh' });
   },
 
   setLocalIdentityHash: (hash) => {

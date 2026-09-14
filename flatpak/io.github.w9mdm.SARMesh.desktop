@@ -1,8 +1,8 @@
 [Desktop Entry]
-Name=Mesh Client
+Name=SARMesh
 Comment=Meshtastic, MeshCore, and Reticulum mesh network client
-Exec=mesh-client %U
-Icon=org.coloradomesh.MeshClient
+Exec=sarmesh %U
+Icon=io.github.w9mdm.SARMesh
 Type=Application
 Categories=Utility;Network;HamRadio;
-StartupWMClass=mesh-client
+StartupWMClass=sarmesh

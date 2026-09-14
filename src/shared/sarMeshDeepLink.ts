@@ -1,5 +1,5 @@
 /**
- * Classify and parse mesh-client deep-link URIs (lxm:// contact/identity cards,
+ * Classify and parse sarmesh deep-link URIs (lxm:// contact/identity cards,
  * Columba lxma://, encrypted LXMF paper blobs, MeshCore meshcore://, Meshtastic channel URLs).
  */
 
@@ -7,7 +7,7 @@ import { canonicalizeReticulumDestinationHash } from './reticulumDestinationHash
 
 export type MeshcoreContactType = 1 | 2 | 3 | 4;
 
-export type MeshClientDeepLink =
+export type SARMeshDeepLink =
   | { kind: 'meshtasticChannel'; url: string }
   | { kind: 'lxmContact'; destinationHash: string; name?: string }
   | { kind: 'lxmIdentity'; identityHash: string; lxmfHash?: string; name?: string }
@@ -125,7 +125,7 @@ export function buildMeshcoreChannelAddUri(opts: {
   return `meshcore://channel/add?${params.toString()}`;
 }
 
-function classifyLxmaUri(trimmed: string): MeshClientDeepLink {
+function classifyLxmaUri(trimmed: string): SARMeshDeepLink {
   // lxma://<dest>:<pubkey> — not a hierarchical URL; parse manually.
   const withoutScheme = trimmed.replace(/^lxma:\/\//i, '');
   const parts = withoutScheme.split(':');
@@ -136,7 +136,7 @@ function classifyLxmaUri(trimmed: string): MeshClientDeepLink {
   return { kind: 'lxmaContact', destinationHash: dest, publicKeyHex: key };
 }
 
-function classifyMeshcoreUri(trimmed: string): MeshClientDeepLink {
+function classifyMeshcoreUri(trimmed: string): SARMeshDeepLink {
   try {
     const url = new URL(trimmed);
     const host = url.hostname.toLowerCase();
@@ -189,7 +189,7 @@ export function looksLikeLxmPaperBlob(hostAndPath: string): boolean {
   return LXM_PAPER_BLOB_RE.test(blob);
 }
 
-export function classifyMeshClientDeepLink(raw: string): MeshClientDeepLink {
+export function classifySARMeshDeepLink(raw: string): SARMeshDeepLink {
   const trimmed = raw.trim();
   if (!trimmed) return { kind: 'unknown', raw };
 
@@ -289,7 +289,7 @@ export function findLxmUrlInArgv(argv: readonly string[]): string | undefined {
  * Allows `lxm://` / `lxma://` / `meshcore://` / `lrgp:` and Meshtastic channel URLs;
  * drops unrelated schemes.
  */
-export function isForwardableMeshClientOpenUrl(raw: string): boolean {
-  const kind = classifyMeshClientDeepLink(raw).kind;
+export function isForwardableSARMeshOpenUrl(raw: string): boolean {
+  const kind = classifySARMeshDeepLink(raw).kind;
   return kind !== 'unknown';
 }

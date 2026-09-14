@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ensure Ratspeak overlays required for mesh-client rns-stack builds are applied.
+# Ensure Ratspeak overlays required for sarmesh rns-stack builds are applied.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

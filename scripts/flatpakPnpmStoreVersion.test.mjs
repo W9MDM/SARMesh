@@ -381,7 +381,7 @@ patchedDependencies:
 `;
     const broken = probePnpmWorkspaceAfterStoreDirAppend(
       workspace,
-      'storeDir=/__w/mesh-client/mesh-client/.flatpak-builder/…/flatpak-node/pnpm-store',
+      'storeDir=/__w/sarmesh/sarmesh/.flatpak-builder/…/flatpak-node/pnpm-store',
       yaml,
     );
     expect(broken.ok).toBe(false);
@@ -389,13 +389,11 @@ patchedDependencies:
 
     const fixed = probePnpmWorkspaceAfterStoreDirAppend(
       workspace,
-      'storeDir: /run/build/mesh-client/flatpak-node/pnpm-store',
+      'storeDir: /run/build/sarmesh/flatpak-node/pnpm-store',
       yaml,
     );
     expect(fixed.ok).toBe(true);
-    expect(fixed.ok === true && fixed.storeDir).toBe(
-      '/run/build/mesh-client/flatpak-node/pnpm-store',
-    );
+    expect(fixed.ok === true && fixed.storeDir).toBe('/run/build/sarmesh/flatpak-node/pnpm-store');
   });
 
   it('rejects appended storeDir= even when workspace already has storeDir:', () => {
@@ -406,7 +404,7 @@ patchedDependencies:
 `;
     const withLoader = probePnpmWorkspaceAfterStoreDirAppend(
       workspace,
-      'storeDir=/__w/mesh-client/bad-store',
+      'storeDir=/__w/sarmesh/bad-store',
       yaml,
     );
     expect(withLoader.ok).toBe(false);
@@ -414,7 +412,7 @@ patchedDependencies:
     // No-loader fallback must inspect the appended line, not the existing key.
     const heuristic = probePnpmWorkspaceAfterStoreDirAppend(
       workspace,
-      'storeDir=/__w/mesh-client/bad-store',
+      'storeDir=/__w/sarmesh/bad-store',
     );
     expect(heuristic.ok).toBe(false);
     expect(heuristic.ok === false && heuristic.reason).toMatch(/storeDir=/);
@@ -424,8 +422,8 @@ patchedDependencies:
     const workspace = `
 patchedDependencies:
   usb@2.18.0: patches/usb@2.18.0.patch
-storeDir=/__w/mesh-client/bad
-storeDir: /__w/mesh-client/also-bad
+storeDir=/__w/sarmesh/bad
+storeDir: /__w/sarmesh/also-bad
 `;
     const { yaml: cleaned, removed } = stripPnpmWorkspaceStoreDirLines(workspace);
     expect(removed).toBe(2);

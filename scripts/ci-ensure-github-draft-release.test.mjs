@@ -67,7 +67,7 @@ describe('trustedGithubReleaseId', () => {
 
 describe('assertSafeReleaseAssetName', () => {
   it('accepts basename-only names', () => {
-    expect(assertSafeReleaseAssetName('mesh-client.dmg')).toBe('mesh-client.dmg');
+    expect(assertSafeReleaseAssetName('sarmesh.dmg')).toBe('sarmesh.dmg');
   });
 
   it('rejects path separators', () => {

@@ -1,7 +1,7 @@
 //! Encode NomadNet link request data (`field_*` / `var_*` map) for RNS link REQUEST payloads.
 //!
 //! Wire MessagePack encoding lives in `nomad-core` (`encode_request_fields`,
-//! `encode_media_request`). This module translates mesh-client HTTP shapes.
+//! `encode_media_request`). This module translates sarmesh HTTP shapes.
 
 use std::collections::BTreeMap;
 

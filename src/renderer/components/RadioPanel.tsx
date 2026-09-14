@@ -7,7 +7,6 @@ import { errLikeToLogString } from '@/renderer/lib/errLikeToLogString';
 import { DetailsChevron } from '@/renderer/lib/icons/detailsChevron';
 import { useIconTrigger } from '@/renderer/lib/icons/iconMotionContext';
 import { tryPersistMeshcoreIdentityFromRadioExport } from '@/renderer/lib/letsMeshJwt';
-import { applyMeshcoreContactAdd } from '@/renderer/lib/meshClientDeepLinkApply';
 import { formatMeshtasticModuleApplyError } from '@/renderer/lib/meshtastic/meshtasticApplyErrorMessage';
 import { clearMeshtasticClientNotification } from '@/renderer/lib/meshtastic/meshtasticClientNotification';
 import {
@@ -28,12 +27,9 @@ import {
   REBROADCAST_MODE_OPTIONS,
   REGION_OPTIONS,
 } from '@/renderer/lib/meshtastic/protobufEnumOptions';
+import { applyMeshcoreContactAdd } from '@/renderer/lib/sarMeshDeepLinkApply';
 import { writeClipboardText } from '@/renderer/lib/writeClipboardText';
 import { bytesToHex, hexToBytesExactOrThrow } from '@/shared/hexBytes';
-import {
-  buildMeshcoreChannelAddUri,
-  classifyMeshClientDeepLink,
-} from '@/shared/meshClientDeepLink';
 import { isMeshcorePathHashMode, type MeshcorePathHashMode } from '@/shared/meshcorePathHash';
 import {
   meshtasticDeviceRoleFromConfigSlice,
@@ -59,6 +55,7 @@ import {
   type ParsedChannelSet,
   pskFingerprint,
 } from '@/shared/meshtasticUrlEncoder';
+import { buildMeshcoreChannelAddUri, classifySARMeshDeepLink } from '@/shared/sarMeshDeepLink';
 
 import { serializeErrorLike } from '../hooks/meshcore/meshcoreHookPreamble';
 
@@ -1432,7 +1429,7 @@ export default function RadioPanel({
                   'mesh-client:meshcoreIdentity',
                   JSON.stringify({ public_key: publicKeyJson, private_key: privateKeyJson }),
                 );
-                window.dispatchEvent(new Event('meshclient:meshcoreIdentityUpdated'));
+                window.dispatchEvent(new Event('sarmesh:meshcoreIdentityUpdated'));
               }
             } catch {
               // catch-no-log-ok localStorage quota or private mode — non-critical identity cache
@@ -4362,7 +4359,7 @@ function MeshcoreChannelSection({
           <QrIngestControl
             disabled={disabled}
             onDecoded={(text) => {
-              const parsed = classifyMeshClientDeepLink(text);
+              const parsed = classifySARMeshDeepLink(text);
               if (parsed.kind === 'meshcoreChannelAdd') {
                 window.dispatchEvent(
                   new CustomEvent('mesh-client:meshcoreChannelFromQr', {

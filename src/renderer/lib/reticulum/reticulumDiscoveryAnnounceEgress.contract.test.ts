@@ -18,7 +18,7 @@ describe('reticulum discovery announce egress contracts', () => {
     expect(source).toMatch(/enable_on_network_discovery\s*\(/);
   });
 
-  it('mesh-client ships discovery announce egress overlay wiring', () => {
+  it('sarmesh ships discovery announce egress overlay wiring', () => {
     expect(existsSync(DISCOVERY_PATCH)).toBe(true);
     expect(existsSync(APPLY_SCRIPT)).toBe(true);
     const patch = readFileSync(DISCOVERY_PATCH, 'utf8');

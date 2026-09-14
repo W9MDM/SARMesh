@@ -34,7 +34,7 @@
     },
     "nodeLabel": "Вузол: {{name}}",
     "takClientLost": "Клієнт TAK втрачений",
-    "title": "Меш-клієнт",
+    "title": "SARMesh",
     "brandName": "Colorado Mesh",
     "meshTubeSignOff": "Вимкніть знак Colorado Mesh",
     "meshTubeSignOn": "Увімкніть знак Colorado Mesh",
@@ -44,7 +44,7 @@
     "footerDiscordTitle": "Colorado Mesh Discord",
     "footerGithubTitle": "Colorado Mesh на GitHub",
     "footerWebsiteTitle": "Веб-сайт Colorado Mesh",
-    "loadingApp": "Завантаження клієнта сіті",
+    "loadingApp": "Завантаження SARMesh",
     "reticulumQueueTooltip": "Host TX queue for local RNode \"{{name}}\": пакети, що очікують радіо (найгірше заповнення, коли кілька RNode). Зелений до 25%, бурштиновий до 60%, червоний до 60% і більше.",
     "reticulumQueueTooltipGeneric": "Транзитна черга хоста для найзавантаженішого локального RNode: пакети, що очікують радіо. Зелений до 25%, бурштиновий до 60%, червоний до 60% і більше.",
     "reticulumTxBuffering": "Буферизація вихідних пакетів до локального RNode (витікання черги TX хоста).",
@@ -194,7 +194,7 @@
     "reduceMotion": "Зменшити рух",
     "reduceMotionDesc": "Вимикає анімовані іконки та декоративні ефекти. Індикатори завантаження та стану з'єднання все ще анімуються.",
     "roomMessages": "Повідомлення про кімнату",
-    "importSchemaTooNew": "Для цього файлу бази даних потрібен новий Mesh-Client (схема {{dbVersion}}). Ця збірка підтримує схему {{appVersion}} або старішу. Встановіть останню версію та повторіть спробу.",
+    "importSchemaTooNew": "Для цього файлу бази даних потрібен новий SARMesh (схема {{dbVersion}}). Ця збірка підтримує схему {{appVersion}} або старішу. Встановіть останню версію та повторіть спробу.",
     "floodAdvertTypeLabel": "Тип оголошення",
     "floodAdvertTypeFlood": "Повінь (багатомагістральна)",
     "floodAdvertTypeZeroHop": "Нульовий стрибок (лише прямі сусіди)",
@@ -204,7 +204,7 @@
     "debugSnapshotFailed": "Не вдалося скопіювати знімок налагодження",
     "meshcoreOpenWireExperimentalTitle": "MeshCore Open wire (експериментально)",
     "meshcoreOpenWireCompatLabel": "Увімкнути сумісність MeshCore Open",
-    "meshcoreOpenWireCompatHint": "Якщо ввімкнено, mesh-client надсилає текстові відповіді з ключем (@[Name#key]), компактні реакції r: і GIF Giphy g:. Це може не відповідати офіційному формату wire companion; одержувачам потрібні клієнти з підтримкою MeshCore Open.",
+    "meshcoreOpenWireCompatHint": "Якщо ввімкнено, sarmesh надсилає текстові відповіді з ключем (@[Name#key]), компактні реакції r: і GIF Giphy g:. Це може не відповідати офіційному формату wire companion; одержувачам потрібні клієнти з підтримкою MeshCore Open.",
     "meshcorePathHashExperimentalTitle": "Розмір хешу шляху MeshCore (експериментальний)",
     "meshcorePathHashModeLabel": "Типовий розмір хешу шляху",
     "meshcorePathHashMode1Byte": "1 байт (застарілий, до 64 хопів)",
@@ -761,7 +761,7 @@
       "tooLargeForWire": "Голосова нотатка завелика для надсилання. Запишіть коротший кліп.",
       "tooLargeForPropagation": "Голосове повідомлення перевищує ліміт вузла розповсюдження. Він буде доставлений лише тоді, коли одержувач буде на лінії. Скоротіть його, щоб зберегти для доставки в автономному режимі.",
       "directOnlyBadge": "Тільки прямий — занадто великий для автономного сховища",
-      "recordTooltip": "Голосова пам'ять LXMF — записує короткий кліп Opus для цього прямого повідомлення. Підтримується mesh-client, Ratspeak та Sideband (FIELD_AUDIO). Не те саме, що LXST Call.",
+      "recordTooltip": "Голосова пам'ять LXMF — записує короткий кліп Opus для цього прямого повідомлення. Підтримується sarmesh, Ratspeak та Sideband (FIELD_AUDIO). Не те саме, що LXST Call.",
       "sendTooltip": "Надіслати записану голосову замітку LXMF",
       "startFailed": "Не вдалося розпочати запис голосової пам'яті. Спробуйте ще раз.",
       "sendAriaWithElapsed": "Надіслати голосову замітку ({{seconds}} секунд записано)",
@@ -994,7 +994,7 @@
         "accessDeniedLinuxHint": "У Linux додайте свого користувача до групи дозвону: sudo usermod -aG dialout $USER (потім вийдіть і знову ввійдіть)",
         "disconnectedHint": "Переконайтеся, що кабель USB під’єднано, а пристрій увімкнено.",
         "timeoutHint": "Якщо порт з’явився ненадовго, спробуйте повторно під’єднати кабель USB.",
-        "portStillOpenHint": "The USB serial port did not release cleanly. Quit mesh-client completely and reopen it, or unplug and replug the USB cable, then connect again."
+        "portStillOpenHint": "The USB serial port did not release cleanly. Quit sarmesh completely and reopen it, or unplug and replug the USB cable, then connect again."
       },
       "http": {
         "timeoutMdnsWindows": "У Windows meshtastic.local вимагає Bonjour (встановлюється разом із iTunes). Натомість використовуйте IP-адресу пристрою.",
@@ -1022,7 +1022,7 @@
         "connectionAttemptFailedLinuxHint": "У Linux ви можете керувати створенням пар через системні налаштування Bluetooth або інструмент «bluetoothctl».",
         "meshcoreHandshakeHint": "Переконайтеся, що ваш пристрій MeshCore перебуває в режимі Bluetooth Companion і з’єднано з комп’ютером за допомогою PIN-коду. Видаліть будь-яку наявну пару та повторіть сполучення, якщо проблеми з підключенням залишаться.",
         "meshcoreHandshakeWindowsExtra": "У Windows вимкніть/увімкніть Bluetooth і оновіть драйвер адаптера в диспетчері пристроїв, якщо з’єднання не припиняється.",
-        "macWakeRecoveryHint": "After sleep, quit mesh-client (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
+        "macWakeRecoveryHint": "After sleep, quit sarmesh (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
         "dualProtocolContentionHint": "Можливо, інший протокол все ще з'єднується через Bluetooth. Зачекайте кілька секунд і повторіть спробу або перейдіть на вкладку іншого протоколу, щоб перевірити стан з'єднання.",
         "scanBusy": "Виконується ще одне сканування Bluetooth. Повторіть спробу за мить.",
         "sameDeviceConflict": "Цей пристрій Bluetooth уже підключено до {{owner}}.",
@@ -1052,9 +1052,9 @@
     "reticulumStackHint": "Запускає локальний sidecar Reticulum/LXMF (інтерфейси TCP та Auto).",
     "reticulumStartStack": "Запустити стек",
     "reticulumNetworkEmpty": "Інтерфейси ще не повідомлялися.",
-    "reticulumSidecarMissing": "Sidecar Reticulum не зібрано. У репозиторії mesh-client виконайте `pnpm run reticulum:sidecar:build` (потрібен Rust).",
+    "reticulumSidecarMissing": "Sidecar Reticulum не зібрано. У репозиторії sarmesh виконайте `pnpm run reticulum:sidecar:build` (потрібен Rust).",
     "reticulumSidecarCargoMissing": "Toolchain Rust (cargo) не знайдено. Встановіть з https://rustup.rs, потім виконайте `pnpm run reticulum:sidecar:build`.",
-    "reticulumSidecarPatchMissing": "Збірка sidecar Reticulum потребує накладення rsReticulum packet-tap. У корені репозиторію mesh-client виконайте `pnpm run reticulum:sidecar:build` (застосовує патчі автоматично).",
+    "reticulumSidecarPatchMissing": "Збірка sidecar Reticulum потребує накладення rsReticulum packet-tap. У корені репозиторію sarmesh виконайте `pnpm run reticulum:sidecar:build` (застосовує патчі автоматично).",
     "reticulumSidecarStartFailed": "Не вдалося запустити стек Reticulum: {{message}}",
     "reticulumStopStack": "Зупинити стек",
     "reticulumAutostart": "Автозапуск стека при відкритті з'єднання",
@@ -1292,7 +1292,7 @@
       "advancedAria": "Розширені параметри ключа-значення інтерфейсу",
       "advancedKeyReserved": "Ключ \"{{key}}\" є відомим полем і був проігнорований — скористайтеся формою вище.",
       "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} дБм",
-      "decommissionedHubEnableBlocked": "Цей хаб виведений з експлуатації і не може залишатися ввімкненим — mesh-client вимикає його при кожному запуску стека. Використовуйте «Додати магістралі за замовчуванням» або каталог магістралей для робочих кінцевих точок.",
+      "decommissionedHubEnableBlocked": "Цей хаб виведений з експлуатації і не може залишатися ввімкненим — sarmesh вимикає його при кожному запуску стека. Використовуйте «Додати магістралі за замовчуванням» або каталог магістралей для робочих кінцевих точок.",
       "decommissionedBadge": "виведені з експлуатації",
       "defaultHubsPickerTitle": "Додати магістралі за замовчуванням",
       "defaultHubsPickerConfirm": "Додати {{count}} концентраторів",
@@ -1337,8 +1337,8 @@
       "rmapFullModeHint": "Повний режим з публікацією RMAP зберігається повним через ignore_config_warnings. Оголошення про доставку LXMF виведуть цей радіоприймач на інтервал оголошення стека (за замовчуванням 1 година).",
       "effectiveModeBadge": "Вступає в силу: {{mode}}",
       "effectiveModeAria": "Ефективний режим роботи {{mode}}. Налаштований режим відрізняється від того, що працює Reticulum.",
-      "effectiveModeTooltip": "Reticulum переписав цей інтерфейс виявлення до точки доступу (або іншого дозволеного режиму), оскільки для виявлення потрібен шлюз, внутрішній або точка доступу, якщо не встановлено ignore_config_warnings. Перезапустіть стек після того, як почнуть діяти штампи mesh-client, які відмовляються від повноцінного (або налаштованого вами режиму).",
-      "flowControlBleHint": "На Bluetooth радіо часто ніколи не надсилає CMD_READY. Mesh-Client все ще крокує TX (ненадовго чекає ГОТОВНОСТІ, а потім продовжує), тому контроль потоку зменшує перевантаження, не заморожуючи чергу.",
+      "effectiveModeTooltip": "Reticulum переписав цей інтерфейс виявлення до точки доступу (або іншого дозволеного режиму), оскільки для виявлення потрібен шлюз, внутрішній або точка доступу, якщо не встановлено ignore_config_warnings. Перезапустіть стек після того, як почнуть діяти штампи sarmesh, які відмовляються від повноцінного (або налаштованого вами режиму).",
+      "flowControlBleHint": "На Bluetooth радіо часто ніколи не надсилає CMD_READY. SARMesh все ще крокує TX (ненадовго чекає ГОТОВНОСТІ, а потім продовжує), тому контроль потоку зменшує перевантаження, не заморожуючи чергу.",
       "advancedFields": "Розширені налаштування",
       "field": {
         "port": "Порт",
@@ -1404,12 +1404,12 @@
       "connectingRow": "{{name}}: підключення через Bluetooth",
       "offlineHintWifi": "Переконайтеся, що RNode знаходиться у вашій локальній мережі, увімкнений і доступний за налаштованою IP-адресою (порт TCP за замовчуванням 7633, а не 4242). Оновіть хост нижче, якщо DHCP призначив нову адресу, або повторно надайте Wi-Fi в Reticulum → Admin.",
       "tcpUnreachable": "{{name}}: концентратор TCP недоступний ({{host}}:{{port}})",
-      "tcpUnreachableHint": "Віддалений екземпляр Reticulum може бути offline або блокувати з'єднання. Вимкніть цей інтерфейс або перевірте хост і порт. Часті перезапуски mesh-client або стека можуть призвести до того, що концентратори Reticulum 1.4.0+ заблокують вашу IP-адресу на 12 годин — краще зачекати, ніж перезапускати знову.",
+      "tcpUnreachableHint": "Віддалений екземпляр Reticulum може бути offline або блокувати з'єднання. Вимкніть цей інтерфейс або перевірте хост і порт. Часті перезапуски sarmesh або стека можуть призвести до того, що концентратори Reticulum 1.4.0+ заблокують вашу IP-адресу на 12 годин — краще зачекати, ніж перезапускати знову.",
       "connectingHintBle": "Посилання BLE RNode може зайняти до 60 секунд після запуску стека (вікно пароля ОС). Якщо буде запропоновано, введіть поточний PIN-код RNode — ніколи не 123456. Це нормально, а не помилка. Пристрій може з’явитися в налаштуваннях системи лише після успішного підключення.",
       "offlineHintBle": "Щоб усунути цю помилку, можливо, доведеться видалити цей інтерфейс і додати його знову (Вибрати пристрій), щоб оновити збережений Bluetooth‑ідентифікатор, а потім перезапустити стек. ОС може запитати 6‑цифровий Bluetooth PIN (macOS, Windows або Linux). RNode генерує новий код під час кожного сполучення — ніколи не використовуйте 123456 (це типовий код Meshtastic, не RNode). RNode не обовʼязково має зʼявлятися в Системних параметрах → Bluetooth до підключення цієї програми; діалогове вікно ОС зʼявляється, коли стек сполучається. Радіо без дисплея: підключіть USB → Reticulum Admin → Bluetooth → Почати сполучення → введіть PIN, показаний у панелі Admin (не на дисплеї радіо), у діалоговому вікні ОС. Радіо з дисплеєм: утримуйте кнопку ~7 с на пристроях Heltec (час різний; ~10 с на багатьох платах вмикає Wi‑Fi AP), прочитайте PIN на екрані та введіть його в діалоговому вікні ОС. Очистіть невдалі звʼязки в параметрах Bluetooth ОС перед повторною спробою.",
       "offlineHintBleBondStale": "macOS досі показує цей RNode як сполучений, але ключі Bluetooth більше не збігаються (одноранговий вузол видалив інформацію про сполучення). Забудьте пристрій у Системних параметрах → Bluetooth, переведіть RNode у режим сполучення (Admin → Bluetooth → Почати сполучення або утримуйте кнопку ~7 с), потім видаліть і знову додайте цей інтерфейс (Вибрати пристрій), перезапустіть стек і введіть новий 6‑цифровий PIN за запитом.",
       "tcpFastFlap": "{{name}}: концентратор, ймовірно, заблокував вашу IP-адресу після частих перезавантажень стека ({{host}}:{{port}})",
-      "tcpFastFlapHint": "Публічні концентратори Reticulum 1.4.0+ блокують IP-адресу після п'яти коротких сеансів TCP протягом 12 годин. Швидкі перезапуски mesh-client або стека враховуються. Вимкніть цей концентратор і зачекайте до 12 годин — повторний запуск подовжує блокування."
+      "tcpFastFlapHint": "Публічні концентратори Reticulum 1.4.0+ блокують IP-адресу після п'яти коротких сеансів TCP протягом 12 годин. Швидкі перезапуски sarmesh або стека враховуються. Вимкніть цей концентратор і зачекайте до 12 годин — повторний запуск подовжує блокування."
     },
     "autoConnectingTo": "Автоматичне підключення до {{deviceName}}…",
     "autoReconnectInProgress": "Триває автоматичне повторне підключення…",
@@ -1875,7 +1875,7 @@
         "rmap_transport_disabled": "Інтерфейси, які можна виявити, налаштовані, але режим транспортування вимкнено.",
         "rmap_i2p_not_connectable": "Інтерфейс I2P \"{{name}}\" можна виявити, але неможливо підключити.",
         "shared_instance_client": "Share instance attached as a client of another app — local TCP hubs in this config are not started.",
-        "rmap_mode_autocorrect": "Інтерфейс \"{{name}}\" можна виявити в режимі без AP/шлюзу — Reticulum запускатиме його як точку доступу, якщо не встановлено ignore_config_warnings. Відредагуйте інтерфейс або перезапустіть стек, щоб mesh-client міг відмітити відмову."
+        "rmap_mode_autocorrect": "Інтерфейс \"{{name}}\" можна виявити в режимі без AP/шлюзу — Reticulum запускатиме його як точку доступу, якщо не встановлено ignore_config_warnings. Відредагуйте інтерфейс або перезапустіть стек, щоб sarmesh міг відмітити відмову."
       },
       "runtime": {
         "rnsNotReady": "Стек RNS не готовий",
@@ -1908,7 +1908,7 @@
         "announceBusPressureTipBoundaryHubs": "Увімкнені граничні / магістральні концентратори: {{hubs}}.",
         "announceBusPressureTipTxSaturated": "Черга TX починається: {{names}} — цей інтерфейс може бути насиченим.",
         "tooManyDefaultBackbones": "У вас увімкнено магістралі за замовчуванням {{count}}. Розгляньте можливість вимкнення додаткових послуг і збереження близько 2 для надмірності.",
-        "decommissionedHubEnabled": "Виведений з експлуатації хаб «{{name}}» досі ввімкнений — mesh-client вимикає його при кожному запуску стека. Використовуйте «Додати магістралі за замовчуванням» або каталог магістралей для робочих кінцевих точок.",
+        "decommissionedHubEnabled": "Виведений з експлуатації хаб «{{name}}» досі ввімкнений — sarmesh вимикає його при кожному запуску стека. Використовуйте «Додати магістралі за замовчуванням» або каталог магістралей для робочих кінцевих точок.",
         "txQueueDropsBle": "Інтерфейс \"{{name}}\" відкинув вихідні пакети {{count}} (черга TX заповнена) — посилання BLE RNode застрягло; віддайте перевагу USB або повторному з'єднанню",
         "txQueueDropsBleBondStale": "Інтерфейс \"{{name}}\" скинув {{count}} вихідних пакетів (черга TX заповнена) — BLE зв'язок застарів; Забути в ОС Bluetooth і повторно з'єднати",
         "txQueueDropsNeutral": "Інтерфейс \"{{name}}\" скинув {{count}} вихідних пакетів (черга TX заповнена) — перевірте посилання цього інтерфейсу",
@@ -2187,11 +2187,11 @@
       },
       "database-chmod": {
         "label": "База даних chmod (не фатальний)",
-        "recommendation": "Database file permission tweak failed (often benign on Windows). If you see real DB errors elsewhere, check antivirus and folder permissions for the mesh-client userData directory."
+        "recommendation": "Database file permission tweak failed (often benign on Windows). If you see real DB errors elsewhere, check antivirus and folder permissions for the sarmesh userData directory."
       },
       "database-writable": {
         "label": "База даних не доступна для запису",
-        "recommendation": "The app cannot write its database folder. Fix permissions on the mesh-client userData directory (see troubleshooting: Database directory is not writable)."
+        "recommendation": "The app cannot write its database folder. Fix permissions on the sarmesh userData directory (see troubleshooting: Database directory is not writable)."
       },
       "tak-server": {
         "label": "Проблеми з сервером TAK",
@@ -2696,7 +2696,7 @@
       "remoteHardwareEnabledDesc": "Дозволяє віддаленим вузлам читати та записувати GPIO-піни на цьому пристрої.",
       "remoteHardwareAllowUndefinedPins": "Дозволити доступ до невизначених пінів",
       "remoteHardwareAllowUndefinedPinsDesc": "Дозволяє читання/запис пінів, не зазначених у конфігурації доступних пінів.",
-      "mqttProxyGatewayHint": "With proxy enabled, mesh-client bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
+      "mqttProxyGatewayHint": "With proxy enabled, sarmesh bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
       "mapReportPublishInterval": "Інтервал звіту про карту (секунди)",
       "mapReportPublishIntervalDesc": "0 використовує прошивку за замовчуванням. Як часто пристрій публікує звіти про карту, коли звіт про карту ввімкнено.",
       "mapReportPositionPrecision": "Точність позиції звіту на карті",
@@ -3402,7 +3402,7 @@
       "missingIdentity": "У цього вузла ще немає збереженої ідентичності. Дочекайтеся оголошення Nomad, потім спробуйте ще раз.",
       "transportUnavailable": "Транспорт Reticulum недоступний. Перезапустіть стек і спробуйте ще раз.",
       "sidecarNotRunning": "Sidecar Reticulum не працює. Запустіть стек із Підключення, а потім спробуйте ще раз.",
-      "responseTooLarge": "The node returned more data than mesh-client will accept for this request.",
+      "responseTooLarge": "The node returned more data than sarmesh will accept for this request.",
       "nomadBusy": "Інший запит сторінки або файлу Nomad ще виконується. Спробуйте знову за мить.",
       "nomadNotServing": "Це ваш вузол Nomad, але хостинг My Pages не працює. Відкрийте «Мої сторінки», виберіть папку та почніть показ для попереднього перегляду локально.",
       "networkNotReady": "Очікування підключення концентратора або радіоінтерфейсу. Повторіть спробу, коли підключення відобразить інтерфейс.",
@@ -4782,7 +4782,7 @@
     "localHostStats": "{{count}} в черзі · {{bytes}} байт",
     "localHostName": "Вузол поширення хоста",
     "syncPeerCostExceedsMax": "Вартість пірингу цього вузла поширення перевищує вашу максимальну вартість пірингу — підніміть максимальну вартість хостингу Network → Advanced PN або виберіть інший вузол.",
-    "offerUnsupported": "Цей пункт призначення не підтримує синхронізацію LXMF /offer — mesh-client не може використовувати його як вузол поширення.",
+    "offerUnsupported": "Цей пункт призначення не підтримує синхронізацію LXMF /offer — sarmesh не може використовувати його як вузол поширення.",
     "offerProbeTimeout": "Тайм-аут під час перевірки /пропозиції підтримки — вузол може бути недоступним. Повторіть спробу, коли буде доступний шлях.",
     "offerProbeFailed": "Не вдалося перевірити /запропонувати підтримку для цього вузла поширення — спробуйте ще раз через мить.",
     "enableLocalHostConfirmTitle": "Увімкнути хостинг локального вузла поширення?",
@@ -5029,7 +5029,7 @@
     "legendNotSavedTooltip": "Порожнє коло — для цієї кімнати не збережено пароль",
     "legendSavedTooltip": "Напівкруг неба — пароль збережено; увійдіть, щоб відкрити сеанс",
     "legendLoggedInTooltip": "Зелена крапка — активна клієнтська сесія (вийдіть із кімнати, якщо сервер не в мережі)",
-    "historyLocalHint": "Під час входу mesh-client запитує недавні дописи, що ще є в кільцевому буфері сервера кімнати (коли на цьому пристрої ще немає локальної мітки). Увімкніть автоматичну синхронізацію, щоб залишатися передплаченим під час з’єднання.",
+    "historyLocalHint": "Під час входу sarmesh запитує недавні дописи, що ще є в кільцевому буфері сервера кімнати (коли на цьому пристрої ще немає локальної мітки). Увімкніть автоматичну синхронізацію, щоб залишатися передплаченим під час з’єднання.",
     "loginAllSavedDisabledNoSavedPasswords": "Спочатку збережіть пароль кімнати, щоб увійти в усі",
     "membersHeadingWithCount": "Учасники ({{count}})",
     "collapseRoomList": "Згорнути список кімнат",
@@ -5287,7 +5287,7 @@
     "restartTitle": "Перезапустіть і встановіть",
     "retryCheck": "Повторити перевірку оновлення",
     "updateError": "Помилка оновлення",
-    "menuToastUpToDateTitle": "Mesh-Client",
+    "menuToastUpToDateTitle": "SARMesh",
     "menuToastUpToDateBody": "Ви в останній версії.",
     "menuToastAvailableTitle": "Доступне оновлення",
     "menuToastAvailableBody": "Доступна версія {{version}}.",
@@ -5705,7 +5705,7 @@
       "enabled": "Отримання файлів увімкнено.",
       "enableFailed": "Не вдалося увімкнути отримання файлу: {{error}}",
       "saveDirRequired": "Виберіть папку збереження, щоб увімкнути отримання.",
-      "shareDestWarning": "Якщо ввімкнути, mesh-client надсилатиме ваш адресат отримання rncp цьому вузлу, щоб він міг автоматично заповнювати надсилання файлів.",
+      "shareDestWarning": "Якщо ввімкнути, sarmesh надсилатиме ваш адресат отримання rncp цьому вузлу, щоб він міг автоматично заповнювати надсилання файлів.",
       "lxmfBody": "Будь ласка, увімкніть отримання файлу rncp і надішліть відповідь, вказавши свій хеш призначення rncp.",
       "lxmfShareBody": "Отримання файлів увімкнено. Мій rncp отримує хеш призначення:",
       "identityUnknown": "Вхідний запит увімкнено, але хеш-ідентифікатор цього однорангового вузла ще невідомий, тому його не було додано до Завжди дозволяти. Вас все одно запитуватимуть перед кожним файлом; спробуйте Завжди дозволяти знову після надходження шляху або оголошення."
@@ -5809,7 +5809,7 @@
     "capabilityHeardShort": "LXST",
     "capabilityUnknownShort": "?",
     "help": {
-      "interop": "Голос LXST потребує однорангової телефонії LXST (Sideband, Ratspeak або mesh-client). Не кліп голосової замітки. Python LXST є еталоном; rsLXST є експериментальним."
+      "interop": "Голос LXST потребує однорангової телефонії LXST (Sideband, Ratspeak або sarmesh). Не кліп голосової замітки. Python LXST є еталоном; rsLXST є експериментальним."
     },
     "toast": {
       "busy": "Лінія зайнята.",
@@ -5958,7 +5958,7 @@
   },
   "longSession": {
     "title": "Рекомендовано перезапустити",
-    "body": "mesh-client працює протягом чотирьох днів з підключеним Bluetooth-радіо. Перезапустіть додаток, щоб зменшити ризик аварій під час тривалих сеансів Noble BLE.",
+    "body": "sarmesh працює протягом чотирьох днів з підключеним Bluetooth-радіо. Перезапустіть додаток, щоб зменшити ризик аварій під час тривалих сеансів Noble BLE.",
     "restart": "Перезапуск",
     "dismiss": "Відпустити"
   },

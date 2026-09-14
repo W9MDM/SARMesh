@@ -13,24 +13,24 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
 function userDataConfigDir() {
-  const override = process.env.MESH_CLIENT_RETICULUM_CONFIG_DIR;
+  const override = process.env.SARMESH_RETICULUM_CONFIG_DIR;
   if (override) return override;
   if (process.platform === 'darwin') {
     return path.join(
       os.homedir(),
       'Library',
       'Application Support',
-      'mesh-client',
+      'sarmesh',
       'reticulum',
       'config',
     );
   }
   if (process.platform === 'win32') {
     const appData = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
-    return path.join(appData, 'mesh-client', 'reticulum', 'config');
+    return path.join(appData, 'sarmesh', 'reticulum', 'config');
   }
   const xdg = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
-  return path.join(xdg, 'mesh-client', 'reticulum', 'config');
+  return path.join(xdg, 'sarmesh', 'reticulum', 'config');
 }
 
 function findBinary() {

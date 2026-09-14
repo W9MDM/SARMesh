@@ -489,7 +489,7 @@ export function buildReticulumDiagnosticRows(
       id: rfRowId(homeNodeId, 'reticulum/auto-beacon-tunnel'),
       nodeId: homeNodeId,
       condition: 'reticulum/auto-beacon-tunnel',
-      cause: `AutoInterface beacon TX failing on VPN tunnel ${autoBeacon.ifaceNames.join(', ')} — update mesh-client or disable AutoInterface if log spam persists`,
+      cause: `AutoInterface beacon TX failing on VPN tunnel ${autoBeacon.ifaceNames.join(', ')} — update sarmesh or disable AutoInterface if log spam persists`,
       causeI18n: runtimeCauseI18n('autoBeaconTunnelOnly', {
         ifaces: autoBeacon.ifaceNames.join(', '),
       }),

@@ -1,10 +1,10 @@
 # rsReticulum / rsLXMF overlays
 
-Patches applied on top of [ratspeak/rsReticulum](https://github.com/ratspeak/rsReticulum) / [ratspeak/rsLXMF](https://github.com/ratspeak/rsLXMF) checkouts for mesh-client `rns-stack` builds (`.rsstack/rsNomad` from [Colorado-Mesh/rsNomad](https://github.com/Colorado-Mesh/rsNomad) is also required for Nomad hosting; no mesh-client overlay today). Checkouts live in the repo-local `.rsstack/` gitignored workspace, keeping a standalone `rsReticulum` mirror (if present) pristine.
+Patches applied on top of [ratspeak/rsReticulum](https://github.com/ratspeak/rsReticulum) / [ratspeak/rsLXMF](https://github.com/ratspeak/rsLXMF) checkouts for sarmesh `rns-stack` builds (`.rsstack/rsNomad` from [Colorado-Mesh/rsNomad](https://github.com/Colorado-Mesh/rsNomad) is also required for Nomad hosting; no sarmesh overlay today). Checkouts live in the repo-local `.rsstack/` gitignored workspace, keeping a standalone `rsReticulum` mirror (if present) pristine.
 
 By default `scripts/clone-ratspeak-stack.sh` floats the `.rsstack/` checkouts to **`origin/main`** and applies these overlays (fails loud if a patch will not apply). Use `RS_RETICULUM_REF` / `RS_LXMF_REF` / `RS_NOMAD_REF` only as a manual bisect escape hatch — CI and `pnpm run update` never pin Ratspeak SHAs. Per-overlay **Base commit** tables below record the last regeneration baseline, not a permanent pin — when regenerating, prefer floated `origin/main` and record the short SHA in the PR.
 
-Open upstream feature PRs that mesh-client needs before they land on `main` (for example [rsReticulum#26](https://github.com/ratspeak/rsReticulum/pull/26) ReplyFile, [rsLXMF#7](https://github.com/ratspeak/rsLXMF/pull/7) multi-file attachments) are carried as **overlays** below — same apply path as other patches. `pnpm run update` tracks them in `RATSPEAK_PATCH_ENTRIES` and warns when the upstream PR merges so the overlay can be removed. Colorado-Mesh/rsNomad floats `origin/main` with **no** mesh-client overlay (NomadNet `/media` is already on main).
+Open upstream feature PRs that sarmesh needs before they land on `main` (for example [rsReticulum#26](https://github.com/ratspeak/rsReticulum/pull/26) ReplyFile, [rsLXMF#7](https://github.com/ratspeak/rsLXMF/pull/7) multi-file attachments) are carried as **overlays** below — same apply path as other patches. `pnpm run update` tracks them in `RATSPEAK_PATCH_ENTRIES` and warns when the upstream PR merges so the overlay can be removed. Colorado-Mesh/rsNomad floats `origin/main` with **no** sarmesh overlay (NomadNet `/media` is already on main).
 
 ## Development — overlays/patches
 
@@ -17,7 +17,7 @@ Overlays require **git checkouts** in the repo-local `.rsstack/` workspace (not 
 **First-time setup:**
 
 ```bash
-# From mesh-client repo root — clones/floats the .rsstack workspace and applies known overlays
+# From sarmesh repo root — clones/floats the .rsstack workspace and applies known overlays
 ./scripts/clone-ratspeak-stack.sh
 # Or ensure patches on an existing .rsstack tree:
 ./scripts/ensure-rsReticulum-patches.sh
@@ -87,7 +87,7 @@ Wire packet tap API for the Reticulum Stats/Sniffer panel (`wire_packet` WebSock
 
 ### Apply locally
 
-From mesh-client repo root (`.rsstack/rsReticulum` required):
+From sarmesh repo root (`.rsstack/rsReticulum` required):
 
 ```bash
 ./scripts/apply-rsReticulum-packet-tap.sh
@@ -132,7 +132,7 @@ Skip macOS/iOS VPN tunnel interfaces (`utun*`, `ipsec*`, `ppp*`) for AutoInterfa
 
 ### Apply locally
 
-From mesh-client repo root (`.rsstack/rsReticulum` required):
+From sarmesh repo root (`.rsstack/rsReticulum` required):
 
 ```bash
 ./scripts/apply-rsReticulum-auto-beacon-utun.sh
@@ -166,7 +166,7 @@ When [ratspeak/rsReticulum#11](https://github.com/ratspeak/rsReticulum/pull/11) 
 
 ## Removed: rsReticulum-link-client-nomad.patch
 
-Sunset when floated `origin/main` moved `LinkClient::query` to handler-free `resolve_destination_on_transport` (no HasPath gate, no temporary announce handlers) — the overlay's `discover_remote_public_key` + `await_path` + announce-handler GC is fully superseded. [ratspeak/rsReticulum#14](https://github.com/ratspeak/rsReticulum/pull/14) was closed as superseded; mesh-client no longer carries the overlay or `scripts/apply-rsReticulum-link-client-nomad.sh`. Tracked entry removed from `RATSPEAK_PATCH_ENTRIES` in `scripts/update.sh` after sunset confirmation.
+Sunset when floated `origin/main` moved `LinkClient::query` to handler-free `resolve_destination_on_transport` (no HasPath gate, no temporary announce handlers) — the overlay's `discover_remote_public_key` + `await_path` + announce-handler GC is fully superseded. [ratspeak/rsReticulum#14](https://github.com/ratspeak/rsReticulum/pull/14) was closed as superseded; sarmesh no longer carries the overlay or `scripts/apply-rsReticulum-link-client-nomad.sh`. Tracked entry removed from `RATSPEAK_PATCH_ENTRIES` in `scripts/update.sh` after sunset confirmation.
 
 ## rsReticulum-link-client-proof-budget.patch
 
@@ -176,7 +176,7 @@ On current floated `origin/main`, proof wait is `timeout(time_remaining(deadline
 
 | Field | Value |
 | ----- | ----- |
-| **Upstream PR** | (mesh-client local) |
+| **Upstream PR** | (sarmesh local) |
 
 ### Apply locally
 
@@ -186,7 +186,7 @@ On current floated `origin/main`, proof wait is `timeout(time_remaining(deadline
 
 ## Removed: rsReticulum-rnode-tcp-activity-keepalive.patch
 
-Sunset when upstream landed `RNodeIdleProbe` (`88d3d38` — *rnode: restore TCP application idle probes*). [ratspeak/rsReticulum#15](https://github.com/ratspeak/rsReticulum/pull/15) was closed as superseded; mesh-client no longer carries that overlay (floated `origin/main` already includes idle probes). Tracked entry removed from `RATSPEAK_PATCH_ENTRIES` in `scripts/update.sh` after sunset confirmation.
+Sunset when upstream landed `RNodeIdleProbe` (`88d3d38` — *rnode: restore TCP application idle probes*). [ratspeak/rsReticulum#15](https://github.com/ratspeak/rsReticulum/pull/15) was closed as superseded; sarmesh no longer carries that overlay (floated `origin/main` already includes idle probes). Tracked entry removed from `RATSPEAK_PATCH_ENTRIES` in `scripts/update.sh` after sunset confirmation.
 
 ## rsReticulum-ble-rnode-pairing-transition-debounce.patch
 
@@ -203,7 +203,7 @@ Debounce BLE RNode reconnect after mid-SMP disconnect (`BLE pairing in progress`
 
 ### Apply locally
 
-From mesh-client repo root (`.rsstack/rsReticulum` required):
+From sarmesh repo root (`.rsstack/rsReticulum` required):
 
 ```bash
 ./scripts/apply-rsReticulum-ble-rnode-pairing-transition-debounce.sh
@@ -273,7 +273,7 @@ Register `rnstransport.discovery.interface` as a local destination before announ
 
 ### Apply locally
 
-From mesh-client repo root (`.rsstack/rsReticulum` required):
+From sarmesh repo root (`.rsstack/rsReticulum` required):
 
 ```bash
 ./scripts/apply-rsReticulum-discovery-announce-egress.sh
@@ -342,7 +342,7 @@ When [ratspeak/rsLXMF#7](https://github.com/ratspeak/rsLXMF/pull/7) merges and f
 
 ## rsLXMF-propagation-sync-peering.patch
 
-LinkIdentify + peering stamp before LXMF `/offer`, sticky offer/finish fields, plus Establishing diagnostics (`last_establish_error` + warn when LRPROOF is ignored for missing identity or invalid proof) so mesh-client can complete remote PN sync and surface non-generic failures.
+LinkIdentify + peering stamp before LXMF `/offer`, sticky offer/finish fields, plus Establishing diagnostics (`last_establish_error` + warn when LRPROOF is ignored for missing identity or invalid proof) so sarmesh can complete remote PN sync and surface non-generic failures.
 
 | Field | Value |
 | ----- | ----- |
@@ -355,7 +355,7 @@ LinkIdentify + peering stamp before LXMF `/offer`, sticky offer/finish fields, p
 
 ### Apply locally
 
-From mesh-client repo root (`.rsstack/rsLXMF` required):
+From sarmesh repo root (`.rsstack/rsLXMF` required):
 
 ```bash
 ./scripts/apply-rsLXMF-propagation-sync-peering.sh
@@ -381,7 +381,7 @@ When floated `origin/main` always includes identify/stamp before `/offer` (tip a
 
 ## rsLXMF-propagation-node-policy-setters.patch
 
-Live mutators for local PN hosting policy updates (`set_peering_cost`, `set_max_storage`, `set_max_message_size`). Floated rsLXMF tip only exposes `set_min_stamp_cost`; mesh-client `pn_hosting_apply` needs the others so policy edits apply without recreating the node.
+Live mutators for local PN hosting policy updates (`set_peering_cost`, `set_max_storage`, `set_max_message_size`). Floated rsLXMF tip only exposes `set_min_stamp_cost`; sarmesh `pn_hosting_apply` needs the others so policy edits apply without recreating the node.
 
 | Field | Value |
 | ----- | ----- |
@@ -394,7 +394,7 @@ Live mutators for local PN hosting policy updates (`set_peering_cost`, `set_max_
 
 ### Apply locally
 
-From mesh-client repo root (`.rsstack/rsLXMF` required):
+From sarmesh repo root (`.rsstack/rsLXMF` required):
 
 ```bash
 ./scripts/apply-rsLXMF-propagation-node-policy-setters.sh
@@ -418,12 +418,12 @@ When [ratspeak/rsLXMF#6](https://github.com/ratspeak/rsLXMF/pull/6) merges and f
 
 ## rsLXMF-propagation-node-deferred-messagestore-load.patch
 
-`PropagationNode::with_storage_unloaded` + `load_messagestore_from_disk` so mesh-client can mark live/RRC ready before scanning a large on-disk PN messagestore (tens of thousands of files). `with_storage` remains eager (loads immediately) for callers that need a full store up front.
+`PropagationNode::with_storage_unloaded` + `load_messagestore_from_disk` so sarmesh can mark live/RRC ready before scanning a large on-disk PN messagestore (tens of thousands of files). `with_storage` remains eager (loads immediately) for callers that need a full store up front.
 
 | Field | Value |
 | ----- | ----- |
 | **Base commit** | `f9ed81e` (`ratspeak/rsLXMF` `origin/main`) + `rsLXMF-propagation-node-policy-setters` overlay |
-| **Upstream PR** | (none yet — mesh-client local API) |
+| **Upstream PR** | (none yet — sarmesh local API) |
 
 **Modifies (1 file):**
 
@@ -431,7 +431,7 @@ When [ratspeak/rsLXMF#6](https://github.com/ratspeak/rsLXMF/pull/6) merges and f
 
 ### Apply locally
 
-From mesh-client repo root (`.rsstack/rsLXMF` required; apply policy-setters first):
+From sarmesh repo root (`.rsstack/rsLXMF` required; apply policy-setters first):
 
 ```bash
 ./scripts/apply-rsLXMF-propagation-node-deferred-messagestore-load.sh
@@ -450,7 +450,7 @@ Expose `LinkDeliveryManager::has_pending_to` so the sidecar can serialize packed
 | Field | Value |
 | ----- | ----- |
 | **Base commit** | tip of `ratspeak/rsLXMF` `main` (regenerated for float-to-main) |
-| **Upstream PR** | (none yet — mesh-client local API) |
+| **Upstream PR** | (none yet — sarmesh local API) |
 
 **Modifies (1 file):**
 
@@ -484,8 +484,8 @@ Ranked multi-path slots (up to 3 per destination) plus global / per-peer RF-vs-n
 
 | Field | Value |
 | ----- | ----- |
-| **Base commit** | `199eeb4` (`ratspeak/rsReticulum` `origin/main`) + prior mesh-client overlays through discovery-announce-egress |
-| **Upstream PR** | none yet (mesh-client-local) |
+| **Base commit** | `199eeb4` (`ratspeak/rsReticulum` `origin/main`) + prior sarmesh overlays through discovery-announce-egress |
+| **Upstream PR** | none yet (sarmesh-local) |
 
 **Touches:** `constants.rs`, `path_table.rs`, `messages.rs`, `actor/{inbound,mod,rpc,outbound,persistence}.rs`
 
@@ -506,7 +506,7 @@ Log when `LinkManager` opportunistic inbound-raw `try_send` fails because the bo
 | Field | Value |
 | ----- | ----- |
 | **Base commit** | floated `origin/main` (regenerate; record short SHA in PR) |
-| **Upstream PR** | none yet (mesh-client-local) |
+| **Upstream PR** | none yet (sarmesh-local) |
 
 **Touches:** `crates/rns-runtime/src/link_manager.rs`
 
@@ -522,12 +522,12 @@ When upstream logs (or otherwise surfaces) inbound-raw saturation the same way, 
 
 ## rsReticulum-interface-tx-queue-stats.patch
 
-Expose host outbound TX mpsc fill on `GetInterfaceStats` as `tx_queue_used` / `tx_queue_max` (for mesh-client header Q badge + buffering indicator).
+Expose host outbound TX mpsc fill on `GetInterfaceStats` as `tx_queue_used` / `tx_queue_max` (for sarmesh header Q badge + buffering indicator).
 
 | Field | Value |
 | ----- | ----- |
 | **Base commit** | floated `origin/main` (regenerate; record short SHA in PR) |
-| **Upstream PR** | none yet (mesh-client-local) |
+| **Upstream PR** | none yet (sarmesh-local) |
 
 **Touches:** `crates/rns-transport/src/messages.rs`, `crates/rns-transport/src/actor/rpc.rs`
 
@@ -577,7 +577,7 @@ Adds `PropagationClient::abort_transfer` so Cancel / mid-transfer abort leaves t
 | Field | Value |
 | ----- | ----- |
 | **Base commit** | `f9ed81e` (`ratspeak/rsLXMF` `origin/main`) |
-| **Upstream PR** | none yet (mesh-client-local; watch ratspeak/rsLXMF) |
+| **Upstream PR** | none yet (sarmesh-local; watch ratspeak/rsLXMF) |
 
 **Touches:** rsLXMF `PropagationClient` (abort in-flight list/get transfer → Idle)
 
@@ -600,7 +600,7 @@ Adds sticky `last_establish_error` on `PropagationClient` so client `/get` Sync 
 | Field | Value |
 | ----- | ----- |
 | **Base commit** | floated rsLXMF `origin/main` at apply time |
-| **Upstream PR** | none yet (mesh-client-local; watch ratspeak/rsLXMF) |
+| **Upstream PR** | none yet (sarmesh-local; watch ratspeak/rsLXMF) |
 
 **Touches:** rsLXMF `PropagationClient` (`drain_events` / `handle_link_proof` establish diagnostics)
 
@@ -623,7 +623,7 @@ When BLE RNode `flow_control` is on, wait up to 2s for `CMD_READY`, then release
 | Field | Value |
 | ----- | ----- |
 | **Base commit** | floated rsReticulum `origin/main` @ `5b6b5eb` after other rsReticulum overlays |
-| **Upstream PR** | none yet (mesh-client-local; watch ratspeak/rsReticulum) |
+| **Upstream PR** | none yet (sarmesh-local; watch ratspeak/rsReticulum) |
 
 **Touches:** `crates/rns-interface/src/ble_rnode.rs` (main + native bridge TX loops)
 
@@ -646,7 +646,7 @@ Promote inbound **response** Resources to `WINDOW_MAX_FAST` (75) when Link RTT i
 | Field | Value |
 | ----- | ----- |
 | **Base commit** | `9bc7ee5` (`ratspeak/rsReticulum` `origin/main`) |
-| **Upstream PR** | none yet (mesh-client-local; watch ratspeak/rsReticulum) |
+| **Upstream PR** | none yet (sarmesh-local; watch ratspeak/rsReticulum) |
 
 **Touches:** `crates/rns-protocol/src/resource.rs` (`WindowState::promote_fast`), `crates/rns-runtime/src/link_session.rs` (`inbound_transfer_from_advertisement`)
 

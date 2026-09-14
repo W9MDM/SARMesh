@@ -43,7 +43,7 @@ describe('parseReticulumDestinationInput', () => {
     expect(parseReticulumDestinationInput('lxmf://tooshort')).toBeNull();
   });
 
-  it('parses pasted mesh-client rncp receive-dest share lines', () => {
+  it('parses pasted sarmesh rncp receive-dest share lines', () => {
     expect(parseReticulumDestinationInput(`mesh-client:rncp-receive-dest:v1:${HASH}`)).toBe(HASH);
     expect(
       parseReticulumDestinationInput(

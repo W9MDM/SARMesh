@@ -1,6 +1,6 @@
 /**
  * Source contract: outbound Direct-link backchannel must be wired so peer replies
- * that arrive on mesh-client-initiated reusable links reach Chat (not only LinkProof Ack).
+ * that arrive on sarmesh-initiated reusable links reach Chat (not only LinkProof Ack).
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -45,7 +45,7 @@ describe('reticulum LXMF outbound Direct backchannel contracts', () => {
     () => {
       // Documents Ack-without-payload: LinkProof is staged after decrypt without
       // requiring the sender. Payload is published only after the proof TX succeeds
-      // (`PublishInboundPacket`). mesh-client must still wire set_inbound_packet_sender
+      // (`PublishInboundPacket`). sarmesh must still wire set_inbound_packet_sender
       // or first Direct replies are dropped.
       const source = readFileSync(LXMF_LINK, 'utf8');
       expect(source).toMatch(/pub fn set_inbound_packet_sender\s*\(/);

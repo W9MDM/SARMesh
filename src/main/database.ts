@@ -69,7 +69,7 @@ let dbClosed = false;
 export const DATABASE_CLOSED_MESSAGE = '[db] Database is closed';
 
 export function getDatabasePath(): string {
-  return path.join(app.getPath('userData'), 'mesh-client.db');
+  return path.join(app.getPath('userData'), 'sarmesh.db');
 }
 
 export function isDatabaseClosed(): boolean {

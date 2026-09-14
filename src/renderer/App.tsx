@@ -131,7 +131,6 @@ import { useConnectionView } from './hooks/useConnectionView';
 import { useContactGroups } from './hooks/useContactGroups';
 import { useProtocolDbRefresh } from './hooks/useDbRefresh';
 import { useLongSessionMaintenance } from './hooks/useLongSessionMaintenance';
-import { MeshClientDeepLinkHost } from './hooks/useMeshClientDeepLink';
 import { useMeshcoreDistanceFilterHint } from './hooks/useMeshcoreDistanceFilterHint';
 import type { useMeshcorePanelActions } from './hooks/useMeshcorePanelActions';
 import type { useMeshtasticPanelActions } from './hooks/useMeshtasticPanelActions';
@@ -144,6 +143,7 @@ import { useProtocolFacade } from './hooks/useProtocolFacade';
 import { useRendererHeartbeat } from './hooks/useRendererHeartbeat';
 import type { useReticulumPanelActions } from './hooks/useReticulumPanelActions';
 import { useRrcStartupAutoConnect } from './hooks/useRrcStartupAutoConnect';
+import { SARMeshDeepLinkHost } from './hooks/useSARMeshDeepLink';
 import { useSendMessage } from './hooks/useSendMessage';
 import { useSerialServiceListeners } from './hooks/useSerialServiceListeners';
 import { useSpellcheckReplaceSync } from './hooks/useSpellcheckReplaceSync';
@@ -2958,7 +2958,7 @@ function AppContent() {
   return (
     <>
       <GlobalInstantTooltip />
-      <MeshClientDeepLinkHost />
+      <SARMeshDeepLinkHost />
       {/* Global assertive live region for critical announcements */}
       <div aria-live="assertive" aria-atomic="true" className="sr-only" id="app-announcer" />
       {/* Passive notifications for inactive protocol activity */}

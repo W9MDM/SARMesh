@@ -1,6 +1,6 @@
 /**
  * Source contract: unattached locally-originated Link packets fail closed
- * (ratspeak/rsReticulum#22 / 921eac4). mesh-client no longer overlays
+ * (ratspeak/rsReticulum#22 / 921eac4). sarmesh no longer overlays
  * pathless-Link RF exclusion.
  */
 import { existsSync, readFileSync } from 'node:fs';

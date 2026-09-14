@@ -456,7 +456,7 @@ impl LiveBridge {
             }
             // Rate-limited warn so developer bundles can prove sidecar receipt without spam.
             rate_limited_inbound_lxmf_warn(&sender_hex, message_hash);
-            // Contacts are manual-only in mesh-client; do not upsert on inbound LXMF.
+            // Contacts are manual-only in sarmesh; do not upsert on inbound LXMF.
             emit_lxmf_event(&event_tx_cb, payload);
         });
 

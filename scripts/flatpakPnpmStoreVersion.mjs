@@ -40,14 +40,14 @@ export const FLATPAK_NODE_GENERATOR_LOCAL_VENV_DIR = '.cache/flatpak-node-venv';
  * zips are not vendored. GitHub `github.com/…/raw/…` 404s; Flatpak uses
  * PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 (Electron E2E).
  */
-export const PLAYWRIGHT_SPECIAL_SKIP_MARKER = 'mesh-client-skip-playwright-browsers';
+export const PLAYWRIGHT_SPECIAL_SKIP_MARKER = 'sarmesh-skip-playwright-browsers';
 
 /** Exact upstream dispatch in special.py (ac5a296a). */
 export const PLAYWRIGHT_SPECIAL_SOURCE_CALL = `        elif package.name == 'playwright':
             await self._handle_playwright(package)`;
 
 export const PLAYWRIGHT_SPECIAL_SOURCE_SKIP = `        elif package.name == 'playwright':
-            # mesh-client-skip-playwright-browsers: GitHub github.com/.../raw/... 404s;
+            # sarmesh-skip-playwright-browsers: GitHub github.com/.../raw/... 404s;
             # Flatpak uses PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 (Electron E2E).
             pass`;
 
@@ -55,7 +55,7 @@ export const PLAYWRIGHT_SPECIAL_SOURCE_SKIP = `        elif package.name == 'pla
  * Marker written into the pinned generator's electron.py so Electron >= 44 does
  * not request linux-armv7l zips (Electron 43 was the last armv7l release).
  */
-export const ELECTRON_ARMV7L_SKIP_MARKER = 'mesh-client-skip-electron-armv7l-44';
+export const ELECTRON_ARMV7L_SKIP_MARKER = 'sarmesh-skip-electron-armv7l-44';
 
 /** Exact upstream ia32 skip block in electron.py (ac5a296a) — insert armv7l skip after. */
 export const ELECTRON_IA32_SKIP_BLOCK = `            # Electron v19+ drop linux-ia32 support.
@@ -72,7 +72,7 @@ export const ELECTRON_ARMV7L_SKIP_BLOCK = `            # Electron v19+ drop linu
             ):
                 continue
 
-            # mesh-client-skip-electron-armv7l-44: Electron v44+ drop linux-armv7l
+            # sarmesh-skip-electron-armv7l-44: Electron v44+ drop linux-armv7l
             # (Electron 43 was the last armv7l release). Flatpak ships x64+arm64 only.
             if (
                 SemVer.parse(self.version) >= SemVer.parse('44.0.0')

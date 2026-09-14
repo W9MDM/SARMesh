@@ -28,7 +28,7 @@ export function getCheckNowFromMenu(): (() => void) | null {
   return checkFromMenu;
 }
 
-const REPO = 'Colorado-Mesh/mesh-client';
+const REPO = 'W9MDM/SARMesh';
 const RELEASES_URL = `https://github.com/${REPO}/releases`;
 
 type SendFn = (channel: string, payload?: unknown) => void;
@@ -38,7 +38,7 @@ function releaseUrlForVersion(version: string): string {
 }
 
 async function fetchGithubReleases(): Promise<GithubReleaseRow[]> {
-  return fetchAllGithubReleases(REPO, `mesh-client/${app.getVersion()}`);
+  return fetchAllGithubReleases(REPO, `sarmesh/${app.getVersion()}`);
 }
 
 async function openAppReleasePage(send: SendFn): Promise<void> {

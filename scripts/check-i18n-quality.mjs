@@ -573,11 +573,11 @@ export const DEBUG_SNAPSHOT_MIXED_EN_SNAPSHOT_RES = {
 /** German debugSnapshotFailed must match Debug-Snapshot term used elsewhere. */
 export const DE_DEBUG_SNAPSHOT_FAILED_WRONG_TERM_RE = /Fehlerbehebungs/i;
 
-/** MyMemory often inserts spaces in the Mesh-Client product name. */
-export const MESH_CLIENT_SPACED_RE = /Mesh\s+-\s+Client/;
+/** MyMemory often inserts spaces in the SARMesh product name. */
+export const SARMESH_SPACED_RE = /Mesh\s+-\s+Client/;
 
-/** Lowercase mesh-client product name with CAT spaces around the hyphen. */
-export const MESH_CLIENT_LOWERCASE_SPACED_RE = /mesh\s+-\s+client/i;
+/** Lowercase sarmesh product name with CAT spaces around the hyphen. */
+export const SARMESH_LOWERCASE_SPACED_RE = /mesh\s+-\s+client/i;
 
 /** Reticulum connection panel strings added with Phase B sidecar scaffold. */
 export const RETICULUM_CONNECTION_PANEL_LEAF_KEYS = new Set([
@@ -1105,8 +1105,8 @@ export function reticulumConnectionPanelLiteralIssues(enVal, val) {
       issues.push('reticulum:sidecar:build command must not insert spaces around colons');
     }
   }
-  if (enVal.includes('mesh-client') && MESH_CLIENT_LOWERCASE_SPACED_RE.test(val)) {
-    issues.push('use "mesh-client" without spaces around the hyphen (not "mesh - client")');
+  if (enVal.includes('sarmesh') && SARMESH_LOWERCASE_SPACED_RE.test(val)) {
+    issues.push('use "sarmesh" without spaces around the hyphen (not "mesh - client")');
   }
   if (/\bRust\b/.test(enVal) && !/\bRust\b/.test(val)) {
     issues.push('keep programming language name "Rust" untranslated');
@@ -1261,7 +1261,7 @@ function checkReticulumConnectionPanelIssues(ctx) {
     }
   }
   if (flatKey.startsWith('reticulumVoice.') && locale !== 'en') {
-    for (const token of ['LXST', 'Sideband', 'rsLXST', 'mesh-client', 'Ratspeak']) {
+    for (const token of ['LXST', 'Sideband', 'rsLXST', 'sarmesh', 'Ratspeak']) {
       if (enVal.includes(token) && !val.includes(token)) {
         issues.push(`reticulumVoice key must preserve wire/product token "${token}"`);
         break;
@@ -2309,7 +2309,7 @@ export const PROTECTED_BRANDS = [
   'Nomad Network',
   'Nomad',
   'Micron',
-  'mesh-client',
+  'sarmesh',
   'Giphy',
   'GitHub',
   'RNode',
@@ -2334,7 +2334,7 @@ const BRAND_WORD_RES = new Map([
   ['Nomad Network', /Nomad Network/g],
   ['Nomad', /\bNomad\b/g],
   ['Micron', /\bMicron\b/g],
-  ['mesh-client', /mesh-client/gi],
+  ['sarmesh', /sarmesh/gi],
   ['Giphy', /\bGiphy\b/g],
   ['GitHub', /\bGitHub\b/g],
   ['RNode', /\bRNode\b/g],
@@ -3116,7 +3116,7 @@ function checkFlasherIssues(ctx) {
     if (!/\bBLE\b/.test(val)) {
       issues.push('longSessionRestartNudge must preserve protocol token "BLE"');
     }
-    issues.push(...protectedBrandIssues(enVal, val, ['mesh-client']));
+    issues.push(...protectedBrandIssues(enVal, val, ['sarmesh']));
   }
 
   if (locale !== 'en' && flatKey === 'longSession.body' && /\bBLE\b/.test(enVal)) {
@@ -3126,7 +3126,7 @@ function checkFlasherIssues(ctx) {
     if (/\bNoble\b/.test(enVal) && !/\bNoble\b/.test(val)) {
       issues.push('longSession.body must preserve protocol token "Noble"');
     }
-    issues.push(...protectedBrandIssues(enVal, val, ['mesh-client']));
+    issues.push(...protectedBrandIssues(enVal, val, ['sarmesh']));
   }
 
   return issues;
@@ -3582,12 +3582,12 @@ function checkAppPanelReduceMotionAndBrandIssues(ctx) {
     issues.push('reduceMotion uses 运动 (exercise) — use 动态效果 or 动画 for UI motion');
   }
 
-  if (enVal.includes('Mesh-Client') && MESH_CLIENT_SPACED_RE.test(val)) {
-    issues.push('use "Mesh-Client" without spaces around the hyphen (not "Mesh - Client")');
+  if (enVal.includes('SARMesh') && SARMESH_SPACED_RE.test(val)) {
+    issues.push('use "SARMesh" without spaces around the hyphen (not "Mesh - Client")');
   }
 
-  if (enVal.includes('mesh-client') && MESH_CLIENT_LOWERCASE_SPACED_RE.test(val)) {
-    issues.push('use "mesh-client" without spaces around the hyphen (not "mesh - client")');
+  if (enVal.includes('sarmesh') && SARMESH_LOWERCASE_SPACED_RE.test(val)) {
+    issues.push('use "sarmesh" without spaces around the hyphen (not "mesh - client")');
   }
   return issues;
 }

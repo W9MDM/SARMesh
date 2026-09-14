@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsReticulum BLE RNode pairing-transition reconnect debounce.
+# Apply sarmesh rsReticulum BLE RNode pairing-transition reconnect debounce.
 # Mid-SMP disconnects ("BLE pairing in progress") used a 1s reconnect that
 # re-fired the OS passkey dialog while the user was typing; wait 30s instead.
 set -euo pipefail

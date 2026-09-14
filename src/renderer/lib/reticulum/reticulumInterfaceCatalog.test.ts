@@ -29,8 +29,8 @@ const UPSTREAM_FACTORY_TYPES = [
   'BackboneInterface',
 ];
 
-/** mesh-client spawns this itself from live.rs; upstream has no config type name. */
-const MESH_CLIENT_SPAWNED_TYPES = ['BlePeerInterface'];
+/** sarmesh spawns this itself from live.rs; upstream has no config type name. */
+const SARMESH_SPAWNED_TYPES = ['BlePeerInterface'];
 
 describe('reticulumInterfaceCatalog', () => {
   it('exposes every configured type', () => {
@@ -46,8 +46,7 @@ describe('reticulumInterfaceCatalog', () => {
       expect(entry).not.toBeNull();
       const configType = entry?.configType ?? '';
       expect(
-        UPSTREAM_FACTORY_TYPES.includes(configType) ||
-          MESH_CLIENT_SPAWNED_TYPES.includes(configType),
+        UPSTREAM_FACTORY_TYPES.includes(configType) || SARMESH_SPAWNED_TYPES.includes(configType),
       ).toBe(true);
     }
   });

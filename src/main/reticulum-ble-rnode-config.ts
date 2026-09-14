@@ -45,7 +45,7 @@ function contentHasEnabledBleRnode(content: string): boolean {
   return flush();
 }
 
-/** True when mesh-client Reticulum config has an enabled BLE RNode interface block. */
+/** True when sarmesh Reticulum config has an enabled BLE RNode interface block. */
 export function reticulumConfigDirHasEnabledBleRnode(configDir: string): boolean {
   const configPath = path.join(configDir, 'config');
   try {

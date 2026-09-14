@@ -239,8 +239,8 @@ describe('meshcoreStoreDedup', () => {
     const optimistic = {
       sender_id: authorId,
       sender_name: 'NV0N 01',
-      payload: 'Testing from the mesh-client',
-      meshcoreDedupeKey: 'Testing from the mesh-client',
+      payload: 'Testing from the sarmesh',
+      meshcoreDedupeKey: 'Testing from the sarmesh',
       channel: MESHCORE_ROOM_MESSAGE_CHANNEL,
       timestamp: clientTsMs,
       status: 'sending' as const,
@@ -250,7 +250,7 @@ describe('meshcoreStoreDedup', () => {
     upsertMeshcoreMessageWithDedup(ID, optimistic);
 
     const echo = buildMeshcoreRoomIncomingMessage({
-      rawText: 'Testing from the mesh-client',
+      rawText: 'Testing from the sarmesh',
       roomServerId: roomId,
       authorId,
       authorName: 'NV0N 01',
@@ -266,7 +266,7 @@ describe('meshcoreStoreDedup', () => {
     expect(result.inserted).toBe(false);
     expect(result.message.timestamp).toBe(firmwareTsMs);
     expect(result.message.status).toBe('acked');
-    expect(result.message.payload).toBe('Testing from the mesh-client');
+    expect(result.message.payload).toBe('Testing from the sarmesh');
     expect(Object.values(useMessageStore.getState().messages[ID] ?? {})).toHaveLength(1);
   });
 

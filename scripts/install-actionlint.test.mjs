@@ -43,7 +43,7 @@ describe('install-actionlint', () => {
   it('builds githubApiHeaders with Bearer token when GITHUB_TOKEN is set', () => {
     const headers = githubApiHeaders({ GITHUB_TOKEN: ' ghp_test ' });
     expect(headers.Authorization).toBe('Bearer ghp_test');
-    expect(headers['User-Agent']).toBe('mesh-client');
+    expect(headers['User-Agent']).toBe('sarmesh');
   });
 
   it('omits Authorization when no token is present', () => {

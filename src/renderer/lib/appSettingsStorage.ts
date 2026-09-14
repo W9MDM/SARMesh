@@ -66,7 +66,7 @@ export function getStoreForwardHistoryProfile(): StoreForwardHistoryProfile {
   return DEFAULT_APP_SETTINGS_SHARED.storeForwardHistoryProfile;
 }
 
-/** Whether mesh-client may look up host GPS and send the user's location on any protocol. */
+/** Whether sarmesh may look up host GPS and send the user's location on any protocol. */
 export function isShareMyLocationEnabled(): boolean {
   const parsed = parseStoredJson<{ shareMyLocation?: boolean }>(
     getAppSettingsRaw(),

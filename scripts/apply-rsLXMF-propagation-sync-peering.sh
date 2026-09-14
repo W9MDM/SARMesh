@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsLXMF PropagationSyncTask peering/identity overlay for rns-stack builds.
+# Apply sarmesh rsLXMF PropagationSyncTask peering/identity overlay for rns-stack builds.
 # On current rsLXMF main, LinkIdentify lives as set_identity()/send_identify() (API rewrite);
 # the historical set_local_identity overlay is only needed on older checkouts.
 set -euo pipefail

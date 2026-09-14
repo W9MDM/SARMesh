@@ -1,5 +1,5 @@
 /**
- * Declarative SQLite schema sync + idempotent structural upgrades for mesh-client.
+ * Declarative SQLite schema sync + idempotent structural upgrades for sarmesh.
  * Replaces the historical linear user_version migration ladder (#388).
  *
  * Failure point: any ALTER/CREATE/DATA step can throw; caller transaction rolls back.

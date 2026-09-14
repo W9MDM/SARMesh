@@ -80,7 +80,7 @@ vi.mock('react-i18next', () => ({
         return `Too long — MeshCore sends one packet per message (max ${opts?.limit} characters)`;
       }
       if (key === 'chatPanel.composeLimit.meshcoreSingleNotice.body') {
-        return `MeshCore sends each message as a single radio packet (up to ${opts?.limit} characters). Longer messages are dropped in parts, so mesh-client doesn't split them.`;
+        return `MeshCore sends each message as a single radio packet (up to ${opts?.limit} characters). Longer messages are dropped in parts, so sarmesh doesn't split them.`;
       }
       if (key === 'chatPanel.composeLimit.sendParts') {
         return `Send ${opts?.count} parts`;

@@ -219,7 +219,7 @@ describe('MicronPageEditor', () => {
       return el;
     }
 
-    // The class is what supplies `white-space: pre` and MeshClientNomadMono, which is
+    // The class is what supplies `white-space: pre` and SARMeshNomadMono, which is
     // what makes box-drawing art render the same as in the browser.
     it('renders the preview through the shared nomad-micron-page container', async () => {
       const { container } = render(

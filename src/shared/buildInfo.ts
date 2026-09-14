@@ -1,14 +1,14 @@
 /**
  * Compile-time CI build stamp for packaged binaries.
  *
- * Set at main-process esbuild time via define `__MESH_CLIENT_BUILD_INFO__`
- * from env `MESH_CLIENT_BUILD_INFO` (see scripts/esbuild-main-build.mjs and
+ * Set at main-process esbuild time via define `__SARMESH_BUILD_INFO__`
+ * from env `SARMESH_BUILD_INFO` (see scripts/esbuild-main-build.mjs and
  * scripts/ci-write-build-info-env.mjs). Empty / unset → local unmarked build.
  */
 
 export type BuildChannel = 'test' | 'release' | 'local';
 
-export interface MeshClientBuildInfo {
+export interface SARMeshBuildInfo {
   buildChannel: BuildChannel;
   workflow?: string;
   runNumber?: number;
@@ -19,13 +19,13 @@ export interface MeshClientBuildInfo {
 }
 
 /** Injected by esbuild; absent in unit tests / unmarked local builds. */
-declare const __MESH_CLIENT_BUILD_INFO__: string | undefined;
+declare const __SARMESH_BUILD_INFO__: string | undefined;
 
 const BUILD_CHANNELS = new Set<BuildChannel>(['test', 'release', 'local']);
 
 function readCompileTimeRaw(): string {
   // typeof on an undeclared binding is safe in JS (returns 'undefined').
-  return typeof __MESH_CLIENT_BUILD_INFO__ === 'string' ? __MESH_CLIENT_BUILD_INFO__ : '';
+  return typeof __SARMESH_BUILD_INFO__ === 'string' ? __SARMESH_BUILD_INFO__ : '';
 }
 
 function normalizeChannel(raw: unknown): BuildChannel {
@@ -52,10 +52,10 @@ function optionalRunNumber(raw: unknown): number | undefined {
 }
 
 /**
- * Parse a MESH_CLIENT_BUILD_INFO JSON string into a normalized build stamp.
+ * Parse a SARMESH_BUILD_INFO JSON string into a normalized build stamp.
  * Never throws — invalid JSON or unknown channel falls back to `local`.
  */
-export function parseBuildInfo(raw: string): MeshClientBuildInfo {
+export function parseBuildInfo(raw: string): SARMeshBuildInfo {
   const trimmed = raw.trim();
   if (!trimmed) {
     return { buildChannel: 'local' };
@@ -67,7 +67,7 @@ export function parseBuildInfo(raw: string): MeshClientBuildInfo {
     }
     const obj = parsed as Record<string, unknown>;
     const buildChannel = normalizeChannel(obj.channel ?? obj.buildChannel);
-    const info: MeshClientBuildInfo = { buildChannel };
+    const info: SARMeshBuildInfo = { buildChannel };
     const workflow = optionalNonEmptyString(obj.workflow);
     if (workflow) info.workflow = workflow;
     const runNumber = optionalRunNumber(obj.runNumber);
@@ -88,7 +88,7 @@ export function parseBuildInfo(raw: string): MeshClientBuildInfo {
 }
 
 /** Build stamp baked into the main-process bundle (or `local` when unmarked). */
-export function getBuildInfo(): MeshClientBuildInfo {
+export function getBuildInfo(): SARMeshBuildInfo {
   return parseBuildInfo(readCompileTimeRaw());
 }
 
@@ -96,7 +96,7 @@ export function getBuildInfo(): MeshClientBuildInfo {
  * Compact fragment for {@link formatRuntimeLogTag} / startup logs.
  * Full `runUrl` stays in support-bundle manifest JSON for triage.
  */
-export function formatBuildInfoLogFragment(info: MeshClientBuildInfo = getBuildInfo()): string {
+export function formatBuildInfoLogFragment(info: SARMeshBuildInfo = getBuildInfo()): string {
   const parts: string[] = [`buildChannel=${info.buildChannel}`];
   if (info.tag) parts.push(`tag=${info.tag}`);
   if (info.runNumber !== undefined) parts.push(`run=${info.runNumber}`);
@@ -109,7 +109,7 @@ export function formatBuildInfoLogFragment(info: MeshClientBuildInfo = getBuildI
  * Fields to merge into support-bundle `manifest.json`.
  * Always includes `buildChannel`; adds `buildInfo` when CI look-up fields exist.
  */
-export function buildInfoForManifest(info: MeshClientBuildInfo = getBuildInfo()): {
+export function buildInfoForManifest(info: SARMeshBuildInfo = getBuildInfo()): {
   buildChannel: BuildChannel;
   buildInfo?: Record<string, string | number>;
 } {

@@ -1,4 +1,4 @@
-# Mesh-Client
+# SARMesh
 
 > Cross-platform **Electron** desktop client for **Meshtastic**, **MeshCore**, and **Reticulum (LXMF)** on **macOS**, **Linux**, and **Windows** — **BLE**, **USB serial**, **Wi-Fi/TCP**, **MQTT**, local **SQLite** history, **routing diagnostics**, **16-language UI**, plus a Ratspeak-compatible Reticulum sidecar (**Games**, **encrypted paper**, **LXST voice**, Nomad, RRC, Remote).
 
@@ -13,21 +13,21 @@
 
 **For everyone, everywhere.** We welcome community participation and collaboration in the development of this project!
 
-Releases and build artifacts are published on [GitHub](https://github.com/Colorado-Mesh/mesh-client); source is also manually mirrored to [gitworkshop](https://gitworkshop.dev/npub1wwaq5gyk7yljly3cwl3wleuk79nz63ukpp2a6lq5x4q9s9r4nrgqjk3dlv/relay.ngit.dev/mesh-client).
+Releases and build artifacts are published on [GitHub](https://github.com/Colorado-Mesh/mesh-client); source is also manually mirrored to [gitworkshop](https://gitworkshop.dev/npub1wwaq5gyk7yljly3cwl3wleuk79nz63ukpp2a6lq5x4q9s9r4nrgqjk3dlv/relay.ngit.dev/sarmesh).
 
 ---
 
 ## Why
 
-### Mesh-Client: The Universal Desktop Suite for Mesh Networks
+### SARMesh: The Universal Desktop Suite for Mesh Networks
 
 Reliable Desktop Power. Local Persistence. Total Insight.
 
-While official mobile apps cover the basics, desktop power users often face a fragmented ecosystem: limited desktop options for MeshCore and Reticulum (LXMF), inconsistent support across operating systems, and persistent sync issues on macOS. Mesh-Client fills those gaps with a high-performance desktop experience that unifies **Meshtastic**, **MeshCore**, and **Reticulum** in one app.
+While official mobile apps cover the basics, desktop power users often face a fragmented ecosystem: limited desktop options for MeshCore and Reticulum (LXMF), inconsistent support across operating systems, and persistent sync issues on macOS. SARMesh fills those gaps with a high-performance desktop experience that unifies **Meshtastic**, **MeshCore**, and **Reticulum** in one app.
 
-With a dedicated local SQLite database, Mesh-Client keeps message history and mesh logs durable across restarts and sync failures. It provides one reliable hub for Meshtastic, MeshCore, and Reticulum (via an AGPL Rust sidecar), delivering a unified workflow regardless of protocol or hardware.
+With a dedicated local SQLite database, SARMesh keeps message history and mesh logs durable across restarts and sync failures. It provides one reliable hub for Meshtastic, MeshCore, and Reticulum (via an AGPL Rust sidecar), delivering a unified workflow regardless of protocol or hardware.
 
-**Why Mesh-Client?**
+**Why SARMesh?**
 
 - **True message persistence:** Local SQLite storage for reliable long-term history, without lost chats or broken logs.
 - **Universal protocol support:** One consistent interface for Meshtastic, MeshCore, and Reticulum (amber protocol pill; LXMF DMs, RRC hub chat, Nomad, Remote, Games, and LXST voice via sidecar).
@@ -35,9 +35,9 @@ With a dedicated local SQLite database, Mesh-Client keeps message history and me
 - **Desktop-first workflow:** MQTT integration (Meshtastic/MeshCore); for Reticulum, LXMF DMs / encrypted paper / propagation, RRC, LRGP Games, LXST voice, and rnsh/rncp Remote — aimed at Ratspeak-compatible peers.
 - **Cross-platform stability:** A feature-rich experience across macOS, Linux, and Windows.
 
-From real-time diagnostics to permanent message archives, Mesh-Client delivers the desktop visibility serious mesh users require.
+From real-time diagnostics to permanent message archives, SARMesh delivers the desktop visibility serious mesh users require.
 
-**Protocol scope:** Mesh-Client focuses on **RF mesh** networking—LoRa and related radio meshes. Additional protocols are in scope when they support that kind of RF mesh path. Internet-only messaging stacks are out of scope. Amateur-radio (ham) protocols are welcome when they meet the same RF-mesh bar; Mesh-Client is for everyone, everywhere, and is not gated or targeted specifically at people with a ham radio license. Protocols that already ship may still use internet transports _alongside_ RF.
+**Protocol scope:** SARMesh focuses on **RF mesh** networking—LoRa and related radio meshes. Additional protocols are in scope when they support that kind of RF mesh path. Internet-only messaging stacks are out of scope. Amateur-radio (ham) protocols are welcome when they meet the same RF-mesh bar; SARMesh is for everyone, everywhere, and is not gated or targeted specifically at people with a ham radio license. Protocols that already ship may still use internet transports _alongside_ RF.
 
 **Known Bugs:**
 
@@ -83,7 +83,7 @@ From real-time diagnostics to permanent message archives, Mesh-Client delivers t
 
 ## Key Features
 
-Mesh-Client supports **three mesh stacks** in one desktop app. Use the header **protocol switcher** (Meshtastic green, MeshCore cyan, Reticulum amber) to focus a tab; the other sessions stay connected in the background.
+SARMesh supports **three mesh stacks** in one desktop app. Use the header **protocol switcher** (Meshtastic green, MeshCore cyan, Reticulum amber) to focus a tab; the other sessions stay connected in the background.
 
 | Protocol   | Transport focus                                    | Deep-dive doc                                                                                                      |
 | ---------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -312,7 +312,7 @@ Reticulum is the third protocol tab (**amber** pill). The stack runs in an **AGP
 
 **Ratspeak-compatible stack.** Primary interop target is [Ratspeak](https://github.com/ratspeak/Ratspeak) peers on [rsReticulum](https://github.com/ratspeak/rsReticulum) / [rsLXMF](https://github.com/ratspeak/rsLXMF), with sibling crates for the same surfaces Ratspeak ships:
 
-| Surface                      | Sibling / library                                   | mesh-client UI                  |
+| Surface                      | Sibling / library                                   | sarmesh UI                      |
 | ---------------------------- | --------------------------------------------------- | ------------------------------- |
 | LXMF DMs, paper, propagation | rsLXMF                                              | Chat, Network                   |
 | Nomad pages                  | [rsNomad](https://github.com/Colorado-Mesh/rsNomad) | Nomad Network                   |
@@ -381,11 +381,11 @@ Architecture and API: [docs/reticulum.md](docs/reticulum.md). Games wire parity:
 
 ## Limitations
 
-- **MQTT → RF (Meshtastic)**: Downlink uses the firmware **MQTT module** (`proxy_to_client_enabled` on BLE/USB) and per-channel **downlink enabled** on the Radio tab — not legacy app `sendText` relay. mesh-client bridges `MqttClientProxyMessage` between broker and radio when proxy is active.
+- **MQTT → RF (Meshtastic)**: Downlink uses the firmware **MQTT module** (`proxy_to_client_enabled` on BLE/USB) and per-channel **downlink enabled** on the Radio tab — not legacy app `sendText` relay. sarmesh bridges `MqttClientProxyMessage` between broker and radio when proxy is active.
 - **MQTT → RF (MeshCore JSON)**: Not supported; MeshCore MQTT is chat ingest only.
 - **Meshtastic - PKC remote admin**: Configure-node-over-MQTT is not supported; a connected local RF radio is required to reach remote nodes (firmware 2.5+).
 - **MeshCore - MQTT (JSON v1)**: The Connection tab can connect to an MQTT broker in MeshCore mode using a small JSON chat envelope (see [docs/meshcore-meshtastic-parity.md](docs/meshcore-meshtastic-parity.md)). This is separate from Meshtastic's protobuf MQTT pipeline.
-- **Breaking change — MeshCore single-packet messages (no multi-part / multi-split)**: mesh-client **no longer** auto-splits outbound MeshCore chat, DM, or room messages into numbered `[i/N]` packets. Each send is one radio packet (max ~130-160 characters depending on context and sender name); longer text is **blocked** with an explanatory notice in the composer. On a busy mesh, repeaters routinely drop some split parts, so recipients previously got silently incomplete messages. **Migration:** shorten long messages, or send them as a few separate shorter messages. A non-blocking advisory also appears if you send faster than the mesh can relay (~5s). Call this out in release notes. Upstream: [meshcore-dev/MeshCore#1502](https://github.com/meshcore-dev/MeshCore/issues/1502), [#2820](https://github.com/meshcore-dev/MeshCore/issues/2820), [#3053](https://github.com/meshcore-dev/MeshCore/issues/3053). Inbound multi-part from other clients is still merged for display. Meshtastic multi-split (up to 9 parts) is unchanged.
+- **Breaking change — MeshCore single-packet messages (no multi-part / multi-split)**: sarmesh **no longer** auto-splits outbound MeshCore chat, DM, or room messages into numbered `[i/N]` packets. Each send is one radio packet (max ~130-160 characters depending on context and sender name); longer text is **blocked** with an explanatory notice in the composer. On a busy mesh, repeaters routinely drop some split parts, so recipients previously got silently incomplete messages. **Migration:** shorten long messages, or send them as a few separate shorter messages. A non-blocking advisory also appears if you send faster than the mesh can relay (~5s). Call this out in release notes. Upstream: [meshcore-dev/MeshCore#1502](https://github.com/meshcore-dev/MeshCore/issues/1502), [#2820](https://github.com/meshcore-dev/MeshCore/issues/2820), [#3053](https://github.com/meshcore-dev/MeshCore/issues/3053). Inbound multi-part from other clients is still merged for display. Meshtastic multi-split (up to 9 parts) is unchanged.
 - **MeshCore - partial routing diagnostics**: MeshCore supports `route_flapping` / `path_instability` (PathUpdated events) and `weak_link` (when `hasPerHopSnr` and a trace is completed). Distance-based `hop_goblin` / close-in `bad_route` are Meshtastic-only (`hasDistanceBasedHopAnomalies`). Full hop-anomaly detection and Meshtastic-style LocalStats RF findings require Meshtastic packets; MeshCore provides its own RF findings (Elevated Noise Floor, Excessive Flooding) from Repeater Status packet stats. **Foreign LoRa** tables render on the Meshtastic tab only (MeshCore may record overhear internally).
 - **MeshCore - channel editing**: Can add/edit/delete channels (name + PSK) via the Radio tab, but does not expose Meshtastic-style full protobuf config. Radio parameters (frequency, bandwidth, spreading factor, coding rate, TX power) can be set via the Radio tab.
 - **MeshCore - remote telemetry availability**: `getTelemetry` requires the remote node to have environment sensors. A timeout is returned if the node has no sensor data.
@@ -397,7 +397,7 @@ Architecture and API: [docs/reticulum.md](docs/reticulum.md). Games wire parity:
 - **Reticulum — no LoRa companion parity**: Reticulum does not use Meshtastic/MeshCore `ConnectionDriver`, MQTT hybrid, channel pills, Rooms BBS, or Hop Goblins diagnostics. The **Chat** tab is **DM-only**; hub room chat lives on the **RRC** tab. Interface add/edit/delete updates config on disk — **restart the stack** after changes under `rns-stack`.
 - **Reticulum — sidecar license**: The spawned `mesh-client-reticulum` binary is **AGPL-3.0-or-later** (separate process from the GPL-3.0-or-later Electron shell). See [docs/reticulum.md](docs/reticulum.md) and [docs/credits.md](docs/credits.md#bundled-binaries). Flatpak AppStream `metadata_license` remains MIT (metadata file only); `project_license` is GPL-3.0-or-later.
 - **Graph / Topology visible-node cap**: Meshtastic and MeshCore **Graph** and Reticulum **Topology** render at most **400** nodes after hop filters (force-layout budget). Numeric **Max hops** is applied even when Show distant is off. Unknown hops are omitted unless Max hops is **All hops** and Show distant is on (they are not 1-hop neighbors). The nearby hop ceiling (Mesh hops > 1, Reticulum hops > 2) applies only when Max hops is **All hops**. Reticulum Topology can also filter **RF only** (RNode / KISS / BLE; hides TCP/I2P/Auto). Reticulum path-table ingest is a separate layer (renderer feed **800**, sidecar **2,000**).
-- **Noble BLE long sessions (macOS observed; Windows precautionary):** The Noble BLE driver can hard-crash the app (`EXC_BREAKPOINT` / native abort) if a LoRa BLE session stays up for ~**5+ days** without a full app restart. This is **confirmed on macOS**; Windows is nudged as a precaution because the same failure class there is **unconfirmed**. The crash is outside JavaScript control (not catchable with `try/catch`); the mechanism is **suspected** to be a native teardown race and is tracked upstream as [stoprocent/noble#140](https://github.com/stoprocent/noble/issues/140). mesh-client **prompts on day 4 while Noble BLE is connected** (in-app banner + OS notification / Dock badge / taskbar flash + Restart). Prefer Serial/TCP for always-on desks. Linux uses Web Bluetooth (a different stack; this prompt is not shown).
+- **Noble BLE long sessions (macOS observed; Windows precautionary):** The Noble BLE driver can hard-crash the app (`EXC_BREAKPOINT` / native abort) if a LoRa BLE session stays up for ~**5+ days** without a full app restart. This is **confirmed on macOS**; Windows is nudged as a precaution because the same failure class there is **unconfirmed**. The crash is outside JavaScript control (not catchable with `try/catch`); the mechanism is **suspected** to be a native teardown race and is tracked upstream as [stoprocent/noble#140](https://github.com/stoprocent/noble/issues/140). sarmesh **prompts on day 4 while Noble BLE is connected** (in-app banner + OS notification / Dock badge / taskbar flash + Restart). Prefer Serial/TCP for always-on desks. Linux uses Web Bluetooth (a different stack; this prompt is not shown).
 - **Reticulum — propagation required for offline peers**: LXMF send fails with `no_propagation_node` when the destination is not in the path table and no cascade candidates exist (enabled remotes or local-prop). Local inbox Completes (`stored_locally`) ≠ peer delivery at a remote PN. When a path exists, Direct is tried first; on Direct fail the sidecar cascades preferred remote → other enabled remotes (hop-sorted) → local-prop last.
 
 ---
@@ -414,40 +414,40 @@ Architecture and API: [docs/reticulum.md](docs/reticulum.md). Games wire parity:
 
 **Pre-built binaries** for **macOS**, **Linux**, and **Windows** are available in the [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) area. Download the installer or archive for your platform; no Node.js or build tools required.
 
-- **Windows (Intel/AMD x64):** `Mesh-client-Setup-{version}.exe`
-- **Windows 11 on ARM (Snapdragon, etc.):** `Mesh-client-Setup-{version}-arm64.exe` — do not use the x64 installer on native ARM hardware.
+- **Windows (Intel/AMD x64):** `SARMesh-Setup-{version}.exe`
+- **Windows 11 on ARM (Snapdragon, etc.):** `SARMesh-Setup-{version}-arm64.exe` — do not use the x64 installer on native ARM hardware.
 
-**Flatpak** bundles (`org.coloradomesh.MeshClient-x86_64.flatpak` and `org.coloradomesh.MeshClient-aarch64.flatpak`) are published on each version tag for Flatpak-enabled Linux:
+**Flatpak** bundles (`io.github.w9mdm.SARMesh-x86_64.flatpak` and `io.github.w9mdm.SARMesh-aarch64.flatpak`) are published on each version tag for Flatpak-enabled Linux:
 
 ```bash
-flatpak install --user ./org.coloradomesh.MeshClient-x86_64.flatpak # or -aarch64
-flatpak run org.coloradomesh.MeshClient
+flatpak install --user ./io.github.w9mdm.SARMesh-x86_64.flatpak # or -aarch64
+flatpak run io.github.w9mdm.SARMesh
 ```
 
 VMware guests and other GPU edge cases: [Flatpak troubleshooting](docs/troubleshooting.md#flatpak-vmwgfx-driver-missing-vmware-on-macos).
 
-**Arch Linux (AUR, third-party):** community package [`mesh-client`](https://aur.archlinux.org/packages/mesh-client) (maintainer `victorix`) — **not** maintained by Colorado Mesh. Prefer [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) AppImage / `.deb` / `.rpm` / Flatpak for official builds. Report packaging issues on the AUR package page; report app bugs on GitHub.
+**Arch Linux (AUR, third-party):** community package [`sarmesh`](https://aur.archlinux.org/packages/sarmesh) (maintainer `victorix`) — **not** maintained by Colorado Mesh. Prefer [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) AppImage / `.deb` / `.rpm` / Flatpak for official builds. Report packaging issues on the AUR package page; report app bugs on GitHub.
 
 ```bash
-yay -S mesh-client # or: paru -S mesh-client
+yay -S sarmesh # or: paru -S sarmesh
 ```
 
 **macOS (release download):**
 
 - Requires **macOS 13 Ventura** or later.
-- **Apple Silicon (M1/M2/M3/…):** download the **arm64 `.dmg`**, open it, and drag **Mesh-client** to **Applications**.
-- **Intel Mac:** download the **x64 `.dmg`** (file name includes `x64`, or has no `arm64` suffix), open it, and drag **Mesh-client** to **Applications**.
+- **Apple Silicon (M1/M2/M3/…):** download the **arm64 `.dmg`**, open it, and drag **SARMesh** to **Applications**.
+- **Intel Mac:** download the **x64 `.dmg`** (file name includes `x64`, or has no `arm64` suffix), open it, and drag **SARMesh** to **Applications**.
 - If you use the **`.zip`** instead: extract with **[Keka](https://www.keka.io/en/)** or `ditto -xk` — **do not use 7-Zip** (or Finder Archive Utility). Those tools flatten macOS framework symlinks and can cause a launch crash: `Library not loaded: Squirrel.framework`.
 - **Official [GitHub Releases](https://github.com/Colorado-Mesh/mesh-client/releases) (v5.22.0+):** macOS builds are **Developer ID signed and notarized**. Drag to **Applications** and open normally — you should **not** need `xattr` or Right-click → Open.
-- **Unsigned local or fork builds** (`pnpm run dist:mac` without signing secrets, CI artifacts from forks): Gatekeeper may show **"Mesh-client" is damaged and can't be opened** (or **File is damaged and cannot be opened**), especially on **Apple silicon**. That is quarantine on unsigned downloads, not a corrupt file.
+- **Unsigned local or fork builds** (`pnpm run dist:mac` without signing secrets, CI artifacts from forks): Gatekeeper may show **"SARMesh" is damaged and can't be opened** (or **File is damaged and cannot be opened**), especially on **Apple silicon**. That is quarantine on unsigned downloads, not a corrupt file.
 
 If the app is blocked:
 
-1. Open **System Settings → Privacy & Security** and scroll to the bottom. If you see "Mesh-client was blocked from use", click **Allow** to run the app.
-2. For **unsigned** builds only — if you don't see the Mesh-client entry in Privacy & Security, or the app still won't open after clicking Allow — remove the quarantine attribute:
+1. Open **System Settings → Privacy & Security** and scroll to the bottom. If you see "SARMesh was blocked from use", click **Allow** to run the app.
+2. For **unsigned** builds only — if you don't see the SARMesh entry in Privacy & Security, or the app still won't open after clicking Allow — remove the quarantine attribute:
 
 ```bash
-xattr -r -d com.apple.quarantine /Applications/Mesh-client.app
+xattr -r -d com.apple.quarantine /Applications/SARMesh.app
 ```
 
 After running `xattr`, check Privacy & Security again (scroll to the bottom); the entry should now appear with an **Allow** button.
@@ -464,7 +464,7 @@ See [Troubleshooting; macOS: File is damaged…](docs/troubleshooting.md#macos-f
 
 ```bash
 git clone https://github.com/Colorado-Mesh/mesh-client
-cd mesh-client
+cd sarmesh
 pnpm install
 pnpm run dev
 ```
@@ -485,7 +485,7 @@ All three protocols can run at the same time. Use the **Meshtastic / MeshCore / 
 
 1. Power on your Meshtastic device
 2. Put it in Bluetooth pairing mode (if connecting via BLE)
-3. Open Mesh-Client and go to the **Connection** tab, ensure **Meshtastic** is selected
+3. Open SARMesh and go to the **Connection** tab, ensure **Meshtastic** is selected
 4. Select your connection type (Bluetooth / USB Serial / WiFi/HTTP / WiFi/TCP (fast) / MQTT)
 5. Click **Connect** and select your device from the picker
 6. Wait for status to show **Configured**; you're connected
@@ -510,7 +510,7 @@ Dev builds need the sidecar binary once: `pnpm run reticulum:sidecar:build`. Pac
 
 ### Auto-Reconnect
 
-After a successful connection, Mesh-Client remembers your last device per protocol. On next launch:
+After a successful connection, SARMesh remembers your last device per protocol. On next launch:
 
 - **Serial**: auto-connects silently in the background (Meshtastic and MeshCore)
 - **Bluetooth (macOS/Windows)**: auto-scans on launch and reconnects when the last device is discovered (no user gesture required)
@@ -523,7 +523,7 @@ When both Meshtastic and MeshCore have different saved BLE peripherals, dual-rad
 
 ### MQTT
 
-Enter your broker URL, topic, and optional credentials in the MQTT section of the Connection tab. When connected, the section collapses to a compact info card showing the server, client ID, and topic. You can send messages via MQTT without a radio when using **Meshtastic**, or **MeshCore** with brokers other than the public **LetsMesh** presets (Ripple / Custom still use the JSON v1 chat envelope for MQTT-only sends). **LetsMesh** public MQTT targets the **Analyzer** packet-logger model: optional RX summaries to `{topicPrefix}/meshcore/packets` when your radio is connected ([docs/letsmesh-mqtt-auth.md](docs/letsmesh-mqtt-auth.md)); MQTT-only channel chat to LetsMesh without a radio is not supported. **Meshtastic** uses the protobuf MQTT stack; **MeshCore** broker details are in [docs/meshcore-meshtastic-parity.md](docs/meshcore-meshtastic-parity.md). In **MeshCore** mode, the **LetsMesh** / **MeshMapper** / **Colorado Mesh** / **Waev** / **Meshat.se** / **MeshCore.CA** / **EastMesh** / **Ripple Networks** presets fill those fields for the corresponding public networks. The device-signing presets (everything except Ripple / Custom) use the same contract as [meshcore-mqtt-broker](https://github.com/michaelhart/meshcore-mqtt-broker) with JWT `aud` matching the **broker hostname** you connect to (e.g. `mqtt-us-v1.letsmesh.net`, `mqtt.waev.app`, `mqtt1.meshcore.ca`); mesh-client generates tokens from your imported MeshCore identity (`public_key` + `private_key` in config JSON). **Custom** settings also use device signing when the configured server matches a known device-signing broker hostname (e.g. `mqtt.waev.app`); Custom is only non-device-signing for unmatched hosts. Use **Custom** and paste credentials manually if your operator issued different rules.
+Enter your broker URL, topic, and optional credentials in the MQTT section of the Connection tab. When connected, the section collapses to a compact info card showing the server, client ID, and topic. You can send messages via MQTT without a radio when using **Meshtastic**, or **MeshCore** with brokers other than the public **LetsMesh** presets (Ripple / Custom still use the JSON v1 chat envelope for MQTT-only sends). **LetsMesh** public MQTT targets the **Analyzer** packet-logger model: optional RX summaries to `{topicPrefix}/meshcore/packets` when your radio is connected ([docs/letsmesh-mqtt-auth.md](docs/letsmesh-mqtt-auth.md)); MQTT-only channel chat to LetsMesh without a radio is not supported. **Meshtastic** uses the protobuf MQTT stack; **MeshCore** broker details are in [docs/meshcore-meshtastic-parity.md](docs/meshcore-meshtastic-parity.md). In **MeshCore** mode, the **LetsMesh** / **MeshMapper** / **Colorado Mesh** / **Waev** / **Meshat.se** / **MeshCore.CA** / **EastMesh** / **Ripple Networks** presets fill those fields for the corresponding public networks. The device-signing presets (everything except Ripple / Custom) use the same contract as [meshcore-mqtt-broker](https://github.com/michaelhart/meshcore-mqtt-broker) with JWT `aud` matching the **broker hostname** you connect to (e.g. `mqtt-us-v1.letsmesh.net`, `mqtt.waev.app`, `mqtt1.meshcore.ca`); sarmesh generates tokens from your imported MeshCore identity (`public_key` + `private_key` in config JSON). **Custom** settings also use device signing when the configured server matches a known device-signing broker hostname (e.g. `mqtt.waev.app`); Custom is only non-device-signing for unmatched hosts. Use **Custom** and paste credentials manually if your operator issued different rules.
 
 ---
 
@@ -595,7 +595,7 @@ For coding conventions and PR workflow, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Community
 
-Join the `#mesh-client` channel on Discord for help, feedback, and development discussion: https://discord.com/invite/McChKR5NpS
+Join the `#sarmesh` channel on Discord for help, feedback, and development discussion: https://discord.com/invite/McChKR5NpS
 
 ---
 

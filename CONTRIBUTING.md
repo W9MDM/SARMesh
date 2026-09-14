@@ -1,4 +1,4 @@
-# Contributing to Mesh Client
+# Contributing to SARMesh
 
 Thank you for your interest in contributing.
 
@@ -30,7 +30,7 @@ See [Test harness setup and local quality checks](docs/development-environment.m
 
 ## Protocol scope
 
-Mesh-Client focuses on **RF mesh** networking (LoRa and related radio meshes). Additional protocols are in scope when they support that kind of RF mesh path. Internet-only messaging is out of scope. Ham protocols are welcome under the same RF-mesh criteria; Mesh-Client is for everyone, everywhere, and is not gated or targeted specifically at people with a ham radio license. Protocols that already ship may still use internet transports _alongside_ RF. Product framing: [README — Why](README.md#why).
+SARMesh focuses on **RF mesh** networking (LoRa and related radio meshes). Additional protocols are in scope when they support that kind of RF mesh path. Internet-only messaging is out of scope. Ham protocols are welcome under the same RF-mesh criteria; SARMesh is for everyone, everywhere, and is not gated or targeted specifically at people with a ham radio license. Protocols that already ship may still use internet transports _alongside_ RF. Product framing: [README — Why](README.md#why).
 
 ## PR process
 

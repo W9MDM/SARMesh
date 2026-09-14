@@ -97,7 +97,7 @@ export function disableDecommissionedReticulumHubsInConfigContent(content: strin
   return { next: out.join('\n'), disabledNames };
 }
 
-/** Patch mesh-client reticulum config on disk before sidecar start. */
+/** Patch sarmesh reticulum config on disk before sidecar start. */
 export function disableDecommissionedReticulumHubsInConfigDir(configDir: string): string[] {
   const configPath = path.join(configDir, 'config');
   try {

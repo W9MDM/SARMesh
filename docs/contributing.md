@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve Mesh-Client.
+Thanks for helping improve SARMesh.
 
 This page provides a docs-native contribution overview. The complete
 contributor guide lives in the repository at

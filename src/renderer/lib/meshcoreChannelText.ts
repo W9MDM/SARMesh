@@ -17,7 +17,7 @@ export interface MeshcoreNormalizedText {
   payload: string;
   /** Name inside `@[...]` when that prefix was present on the payload (after `Sender: `). */
   bracketTargetName?: string;
-  /** mesh-client wire extension: explicit parent key after `#` inside brackets (`@[Name#123456]`). */
+  /** sarmesh wire extension: explicit parent key after `#` inside brackets (`@[Name#123456]`). */
   wireReplyKey?: number;
   /** True when payload began with `@[…]` even if the name inside brackets was empty (`@[]`). */
   hadBracketReplyPrefix?: boolean;
@@ -25,7 +25,7 @@ export interface MeshcoreNormalizedText {
 
 /** Leading reply/tapback marker; name inside brackets may be empty on the wire (`@[] body`). */
 const BRACKET_PREFIX = /^@\[([^\]]*)\]\s*(.*)$/su;
-/** Optional mesh-client parent key suffix inside brackets: `@[Display Name#1780235760]`. */
+/** Optional sarmesh parent key suffix inside brackets: `@[Display Name#1780235760]`. */
 /** Inbound keys may be firmware seconds or ms-scale; outbound text replies are keyless. */
 const BRACKET_REPLY_KEY_SUFFIX = /#(\d{10,})$/;
 const UNSAFE_WIRE_NAME = /\]|#\d{10,}$/u;
@@ -36,7 +36,7 @@ export function sanitizeMeshcoreWireName(name: string): string {
   return UNSAFE_WIRE_NAME.test(normalized) ? '' : normalized;
 }
 
-/** Build `@[Name#replyKey]` prefix (keyed wire; used by some inbound clients, not mesh-client outbound). */
+/** Build `@[Name#replyKey]` prefix (keyed wire; used by some inbound clients, not sarmesh outbound). */
 export function formatMeshcoreWireReplyPrefix(displayName: string, replyKey: number): string {
   const clean = sanitizeMeshcoreWireName(displayName);
   const name = clean.length > 0 ? clean : 'Unknown';

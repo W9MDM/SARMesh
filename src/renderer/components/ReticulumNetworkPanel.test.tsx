@@ -48,7 +48,7 @@ vi.mock('../stores/reticulumPeerStore', () => ({
 }));
 
 import { useBlockStore } from '@/renderer/stores/blockStore';
-import { buildLxmaContactUri } from '@/shared/meshClientDeepLink';
+import { buildLxmaContactUri } from '@/shared/sarMeshDeepLink';
 
 import { ReticulumNetworkPanel } from './ReticulumNetworkPanel';
 import { ToastProvider } from './Toast';

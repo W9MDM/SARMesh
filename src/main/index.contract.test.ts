@@ -537,7 +537,7 @@ describe('Native Electron call guards (source contract)', () => {
   });
 
   it('guards fatal startup error dialog fallback', () => {
-    expect(INDEX_SOURCE).toContain("showFatalStartupError('Mesh-Client — Startup Error', message)");
+    expect(INDEX_SOURCE).toContain("showFatalStartupError('SARMesh — Startup Error', message)");
     expect(INDEX_SOURCE).toContain('isDatabaseSchemaTooNewError(error)');
     expect(INDEX_SOURCE).toContain('formatDatabaseSchemaTooNewMessage');
     expect(INDEX_SOURCE).not.toMatch(/showMessageBox\([^)]*mainWindow[^)]*Startup Error/s);
@@ -554,7 +554,7 @@ describe('Native Electron call guards (source contract)', () => {
   });
 
   it('shows import blocked dialog when merge source schema is too new', () => {
-    expect(INDEX_SOURCE).toContain("'Mesh-Client — Import Blocked'");
+    expect(INDEX_SOURCE).toContain("'SARMesh — Import Blocked'");
     expect(INDEX_SOURCE).toMatch(
       /db:import[\s\S]*?isDatabaseSchemaTooNewError\(err\)[\s\S]*?formatDatabaseSchemaTooNewMessage/,
     );

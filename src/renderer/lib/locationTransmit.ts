@@ -10,7 +10,7 @@ export interface CanTransmitLocationOpts {
   meshtasticRole?: number | null;
 }
 
-/** Whether mesh-client may send or publish the user's location for the active protocol. */
+/** Whether sarmesh may send or publish the user's location for the active protocol. */
 export function canTransmitLocation(opts: CanTransmitLocationOpts): boolean {
   if (!isShareMyLocationEnabled()) return false;
   if (opts.protocol === 'meshtastic' && opts.meshtasticRole === MESHTASTIC_ROLE_CLIENT_MUTE) {

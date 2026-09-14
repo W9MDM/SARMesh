@@ -4,15 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { ConfirmModal } from '@/renderer/components/ConfirmModal';
 import { useToast } from '@/renderer/components/Toast';
 import { errLikeToLogString } from '@/renderer/lib/errLikeToLogString';
+import { handleReticulumQrIngest } from '@/renderer/lib/reticulum/handleReticulumQrIngest';
+import { showReticulumQrIngestToast } from '@/renderer/lib/reticulum/showReticulumQrIngestToast';
 import {
   applyLxmaContactImport,
   applyLxmContactImport,
   applyMeshcoreChannelAdd,
   applyMeshcoreContactAdd,
-} from '@/renderer/lib/meshClientDeepLinkApply';
-import { handleReticulumQrIngest } from '@/renderer/lib/reticulum/handleReticulumQrIngest';
-import { showReticulumQrIngestToast } from '@/renderer/lib/reticulum/showReticulumQrIngestToast';
-import { classifyMeshClientDeepLink } from '@/shared/meshClientDeepLink';
+} from '@/renderer/lib/sarMeshDeepLinkApply';
+import { classifySARMeshDeepLink } from '@/shared/sarMeshDeepLink';
 
 type PendingImport =
   | { kind: 'lxmContact'; destinationHash: string; name: string | null }
@@ -34,7 +34,7 @@ type PendingImport =
  * Mount once from App: listen for lxm:// / lxma:// / meshcore:// / OS deep links and route actions.
  * External imports require explicit confirmation.
  */
-export function MeshClientDeepLinkHost(): ReactElement | null {
+export function SARMeshDeepLinkHost(): ReactElement | null {
   const { t } = useTranslation();
   const { addToast } = useToast();
   const [pending, setPending] = useState<PendingImport | null>(null);
@@ -45,13 +45,13 @@ export function MeshClientDeepLinkHost(): ReactElement | null {
     if (!api?.onOpenUrl) return undefined;
 
     const unsub = api.onOpenUrl((url) => {
-      const parsed = classifyMeshClientDeepLink(url);
+      const parsed = classifySARMeshDeepLink(url);
       if (parsed.kind === 'lxmPaperMessage') {
         void (async () => {
           const outcome = await handleReticulumQrIngest(parsed.uri);
           showReticulumQrIngestToast(outcome, { t, addToast });
         })().catch((err: unknown) => {
-          console.error('[MeshClientDeepLinkHost] paper ingest failed: ' + errLikeToLogString(err));
+          console.error('[SARMeshDeepLinkHost] paper ingest failed: ' + errLikeToLogString(err));
           addToast(t('qrIngest.unknownLink'), 'error');
         });
         return;
@@ -164,7 +164,7 @@ export function MeshClientDeepLinkHost(): ReactElement | null {
               return true;
             } catch (err) {
               console.error(
-                '[MeshClientDeepLinkHost] meshcore contact save failed: ' + errLikeToLogString(err),
+                '[SARMeshDeepLinkHost] meshcore contact save failed: ' + errLikeToLogString(err),
               );
               return false;
             }

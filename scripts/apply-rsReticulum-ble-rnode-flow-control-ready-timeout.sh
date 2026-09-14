@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsReticulum BLE RNode flow-control READY timeout overlay.
+# Apply sarmesh rsReticulum BLE RNode flow-control READY timeout overlay.
 # When flow_control is on, wait briefly for CMD_READY then release the one-packet
 # permit so BLE NUS links that never deliver READY cannot freeze the host TX queue.
 set -euo pipefail

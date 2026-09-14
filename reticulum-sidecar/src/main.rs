@@ -1,4 +1,4 @@
-//! Headless Reticulum sidecar for mesh-client.
+//! Headless Reticulum sidecar for sarmesh.
 //!
 //! IPC contract aligns with Ratspeak `ratspeak-tauri` commands (see docs/reticulum-sidecar-ipc.md).
 
@@ -137,14 +137,14 @@ async fn main() -> ExitCode {
     }
 
     if !is_loopback_host(&cli.host)
-        && std::env::var("MESH_CLIENT_RETICULUM_BIND_ALL")
+        && std::env::var("SARMESH_RETICULUM_BIND_ALL")
             .ok()
             .as_deref()
             != Some("1")
     {
         error!(
             host = %cli.host,
-            "refusing to bind to non-loopback host without MESH_CLIENT_RETICULUM_BIND_ALL=1"
+            "refusing to bind to non-loopback host without SARMESH_RETICULUM_BIND_ALL=1"
         );
         return ExitCode::from(1);
     }

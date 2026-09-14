@@ -12,7 +12,7 @@
   "app": {
     "loadingPanel": "Loading panel",
     "loadingDialog": "Loading dialog",
-    "loadingApp": "Loading Mesh Client",
+    "loadingApp": "Loading SARMesh",
     "meshtasticQueueTooltip": "Transmit queue: packets waiting to be sent. Green = low, amber = filling up, red = congested.",
     "meshcoreQueueTooltip": "Because MeshCore sends messages rapidly, and we poll every 30 seconds, this should always be 0. If not 0, there is congestion or program error.",
     "reticulumQueueTooltip": "Host TX queue for local RNode \"{{name}}\": packets waiting for the radio (worst fill when multiple RNodes). Green under 25%, amber under 60%, red at 60% or more.",
@@ -39,7 +39,7 @@
     "nodeLabel": "Node: {{name}}",
     "footerSlogan": "For everyone, everywhere. Join us:",
     "footerStats": "{{nodeCount}} {{nodeLabel}} | {{messageCount}} messages",
-    "title": "Mesh Client",
+    "title": "SARMesh",
     "brandName": "Colorado Mesh",
     "meshTubeSignOff": "Turn off Colorado Mesh sign",
     "meshTubeSignOn": "Turn on Colorado Mesh sign",
@@ -64,7 +64,7 @@
     "exportFailed": "Export failed: {{message}}",
     "dbMerged": "Merged: {{nodesAdded}} new nodes, {{messagesAdded}} new messages.",
     "importFailed": "Import failed: {{message}}",
-    "importSchemaTooNew": "This database file requires a newer Mesh-Client (schema {{dbVersion}}). This build supports schema {{appVersion}} or older. Install the latest release and try again.",
+    "importSchemaTooNew": "This database file requires a newer SARMesh (schema {{dbVersion}}). This build supports schema {{appVersion}} or older. Install the latest release and try again.",
     "colorsReset": "Colors reset to app defaults.",
     "themeSaved": "Current colors saved.",
     "themeRestored": "Saved colors restored.",
@@ -265,7 +265,7 @@
     "reticulumDestinationsUnit_other": "destinations",
     "meshcoreOpenWireExperimentalTitle": "MeshCore Open wire (experimental)",
     "meshcoreOpenWireCompatLabel": "Enable MeshCore Open compatibility",
-    "meshcoreOpenWireCompatHint": "When enabled, mesh-client sends keyed text replies (@[Name#key]), compact r: reactions, and g: Giphy GIFs. This may not match the official companion wire format; receivers need MeshCore Open-aware clients.",
+    "meshcoreOpenWireCompatHint": "When enabled, sarmesh sends keyed text replies (@[Name#key]), compact r: reactions, and g: Giphy GIFs. This may not match the official companion wire format; receivers need MeshCore Open-aware clients.",
     "meshcorePathHashExperimentalTitle": "MeshCore path hash size (experimental)",
     "meshcorePathHashModeLabel": "Default path hash size",
     "meshcorePathHashMode1Byte": "1-byte (legacy, up to 64 hops)",
@@ -755,7 +755,7 @@
       "seekAria": "Seek voice memo playback position",
       "containerAria": "Voice memo",
       "sendAria": "Send voice memo",
-      "recordTooltip": "LXMF voice memo — records a short Opus clip for this direct message. Supported by mesh-client, Ratspeak, and Sideband (FIELD_AUDIO). Not the same as LXST Call.",
+      "recordTooltip": "LXMF voice memo — records a short Opus clip for this direct message. Supported by sarmesh, Ratspeak, and Sideband (FIELD_AUDIO). Not the same as LXST Call.",
       "sendTooltip": "Send the recorded LXMF voice memo",
       "callBusy": "Hang up the voice call before recording a memo.",
       "micDenied": "Microphone access is required to record a voice memo.",
@@ -981,9 +981,9 @@
       "refreshPorts": "Refresh ports",
       "availablePorts": "Available: {{ports}}",
       "tcpUnreachable": "{{name}}: TCP hub unreachable ({{host}}:{{port}})",
-      "tcpUnreachableHint": "The remote Reticulum instance may be offline or blocking connections. Disable this interface or verify the host and port. Frequent mesh-client or stack restarts can cause Reticulum 1.4.0+ hubs to block your IP for 12 hours — wait rather than restarting again.",
+      "tcpUnreachableHint": "The remote Reticulum instance may be offline or blocking connections. Disable this interface or verify the host and port. Frequent sarmesh or stack restarts can cause Reticulum 1.4.0+ hubs to block your IP for 12 hours — wait rather than restarting again.",
       "tcpFastFlap": "{{name}}: hub likely blocked your IP after frequent stack restarts ({{host}}:{{port}})",
-      "tcpFastFlapHint": "Reticulum 1.4.0+ public hubs block an IP after five short TCP sessions within 12 hours. Quick mesh-client or stack restarts count. Disable this hub and wait up to 12 hours — restarting again extends the block."
+      "tcpFastFlapHint": "Reticulum 1.4.0+ public hubs block an IP after five short TCP sessions within 12 hours. Quick sarmesh or stack restarts count. Disable this hub and wait up to 12 hours — restarting again extends the block."
     },
     "reticulumSharedInstance": {
       "title": "Using another app’s shared instance",
@@ -1019,10 +1019,10 @@
       "suppressed": "{{count}} similar sidecar log lines suppressed recently."
     },
     "reticulumNetworkEmpty": "No interfaces reported yet.",
-    "reticulumSidecarMissing": "Reticulum sidecar not built. From the mesh-client repo run `pnpm run reticulum:sidecar:build` (requires Rust).",
+    "reticulumSidecarMissing": "Reticulum sidecar not built. From the sarmesh repo run `pnpm run reticulum:sidecar:build` (requires Rust).",
     "reticulumSidecarBundledMissing": "This install is missing the bundled Reticulum sidecar. Upgrade to a newer release or report the issue — building from source is not available in packaged installs.",
     "reticulumSidecarCargoMissing": "Rust toolchain (cargo) not found. Install from https://rustup.rs then run `pnpm run reticulum:sidecar:build`.",
-    "reticulumSidecarPatchMissing": "Reticulum sidecar build needs the rsReticulum packet-tap overlay. From the mesh-client repo root run `pnpm run reticulum:sidecar:build` (applies patches automatically).",
+    "reticulumSidecarPatchMissing": "Reticulum sidecar build needs the rsReticulum packet-tap overlay. From the sarmesh repo root run `pnpm run reticulum:sidecar:build` (applies patches automatically).",
     "reticulumSidecarStartFailed": "Could not start Reticulum stack: {{message}}",
     "reticulumStats": {
       "interfaces": "{{count}} interfaces",
@@ -1244,7 +1244,7 @@
       "addFailed": "Failed to add interface.",
       "invalidHost": "Enter a valid hostname or IP address (use [brackets] for IPv6).",
       "toggleFailed": "Failed to change interface state.",
-      "decommissionedHubEnableBlocked": "This hub is decommissioned and cannot stay enabled — mesh-client turns it off on every stack start. Use Add default backbones or the backbone directory for live endpoints.",
+      "decommissionedHubEnableBlocked": "This hub is decommissioned and cannot stay enabled — sarmesh turns it off on every stack start. Use Add default backbones or the backbone directory for live endpoints.",
       "decommissionedBadge": "decommissioned",
       "edit": "Edit",
       "editTitle": "Edit interface",
@@ -1260,7 +1260,7 @@
       "showPassphrase": "Show passphrase",
       "hidePassphrase": "Hide passphrase",
       "flowControl": "Flow control (TX ready-gate)",
-      "flowControlBleHint": "On Bluetooth, the radio often never sends CMD_READY. Mesh-Client still paces TX (waits briefly for READY, then continues) so flow control reduces overload without freezing the queue.",
+      "flowControlBleHint": "On Bluetooth, the radio often never sends CMD_READY. SARMesh still paces TX (waits briefly for READY, then continues) so flow control reduces overload without freezing the queue.",
       "advanced": "Advanced",
       "advancedHint": "Additional key=value pairs for this interface, one per line. Known fields (host, mode, network name, …) stay in the form above.",
       "advancedAria": "Advanced interface key-value options",
@@ -1301,7 +1301,7 @@
       "rmapFullModeHint": "Full mode with RMAP publish keeps Full via ignore_config_warnings. LXMF delivery announces will egress this radio on the stack announce interval (default 1 hour).",
       "effectiveModeBadge": "Effective: {{mode}}",
       "effectiveModeAria": "Effective runtime mode {{mode}}. Configured mode differs from what Reticulum is running.",
-      "effectiveModeTooltip": "Reticulum rewrote this discoverable interface to Access Point (or another allowed mode) because discoverable requires Gateway, Internal, or Access Point unless ignore_config_warnings is set. Restart the stack after mesh-client stamps that opt-out so Full (or your configured mode) takes effect.",
+      "effectiveModeTooltip": "Reticulum rewrote this discoverable interface to Access Point (or another allowed mode) because discoverable requires Gateway, Internal, or Access Point unless ignore_config_warnings is set. Restart the stack after sarmesh stamps that opt-out so Full (or your configured mode) takes effect.",
       "rmapEnableSuccess": "RMAP discovery enabled on {{name}}.",
       "rmapDisableSuccess": "RMAP discovery disabled on {{name}}.",
       "rmapToggleFailed": "RMAP change failed for {{name}}: {{error}}",
@@ -1490,7 +1490,7 @@
         "accessDeniedLinuxHint": "On Linux, add your user to the dialout group: sudo usermod -aG dialout $USER (then log out and back in)",
         "disconnectedHint": "Ensure the USB cable is connected and the device is powered on.",
         "timeoutHint": "If the port appeared briefly, try reconnecting the USB cable.",
-        "portStillOpenHint": "The USB serial port did not release cleanly. Quit mesh-client completely and reopen it, or unplug and replug the USB cable, then connect again."
+        "portStillOpenHint": "The USB serial port did not release cleanly. Quit sarmesh completely and reopen it, or unplug and replug the USB cable, then connect again."
       },
       "http": {
         "timeoutMdnsWindows": "On Windows, meshtastic.local requires Bonjour (installed with iTunes). Use the device's IP address instead.",
@@ -1518,7 +1518,7 @@
         "connectionAttemptFailedLinuxHint": " On Linux, you can manage pairings via the system Bluetooth settings or 'bluetoothctl' tool.",
         "meshcoreHandshakeHint": "Ensure your MeshCore device is in Bluetooth Companion mode and paired with your computer using a PIN. Remove any existing pairing and re-pair if connection issues persist.",
         "meshcoreHandshakeWindowsExtra": " On Windows, toggle Bluetooth off/on and update the adapter driver in Device Manager if disconnects persist.",
-        "macWakeRecoveryHint": "After sleep, quit mesh-client (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
+        "macWakeRecoveryHint": "After sleep, quit sarmesh (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
         "dualProtocolContentionHint": "The other protocol may still be connecting over Bluetooth. Wait a few seconds and try again, or switch to the other protocol tab to check its connection status.",
         "scanBusy": "Another Bluetooth scan is in progress. Try again in a moment.",
         "sameDeviceConflict": "This Bluetooth device is already connected to {{owner}}.",
@@ -1873,7 +1873,7 @@
         "announceBusPressureTipAnnounceInterval": "Network announce interval only controls this node’s outbound announces — it does not stop inbound path-response floods.",
         "announceBusPressureTipWait": "Catch-up is already active; this warning clears after about 5 minutes without lag, storm, or overflow.",
         "tooManyDefaultBackbones": "You have {{count}} default backbones enabled. Consider disabling extras and keeping about 2 for redundancy.",
-        "decommissionedHubEnabled": "Decommissioned hub \"{{name}}\" is still enabled — mesh-client turns it off on every stack start. Use Add default backbones or the backbone directory for live endpoints."
+        "decommissionedHubEnabled": "Decommissioned hub \"{{name}}\" is still enabled — sarmesh turns it off on every stack start. Use Add default backbones or the backbone directory for live endpoints."
       },
       "audit": {
         "tcp_enable_key": "TCP interface \"{{name}}\" uses the wrong enable key — RNS will not load it.",
@@ -1895,7 +1895,7 @@
         "rmap_no_tcp_hub": "Discoverable local RNode has no enabled TCP client hub for internet reachability.",
         "rmap_transport_disabled": "Discoverable interfaces are configured but transport mode is off.",
         "rmap_i2p_not_connectable": "I2P interface \"{{name}}\" is discoverable but connectable is not yes.",
-        "rmap_mode_autocorrect": "Interface \"{{name}}\" is discoverable with a non-AP/Gateway mode — Reticulum will run it as Access Point unless ignore_config_warnings is set. Edit the interface or restart the stack so mesh-client can stamp the opt-out."
+        "rmap_mode_autocorrect": "Interface \"{{name}}\" is discoverable with a non-AP/Gateway mode — Reticulum will run it as Access Point unless ignore_config_warnings is set. Edit the interface or restart the stack so sarmesh can stamp the opt-out."
       }
     }
   },
@@ -2277,11 +2277,11 @@
       },
       "database-chmod": {
         "label": "Database chmod (non-fatal)",
-        "recommendation": "Database file permission tweak failed (often benign on Windows). If you see real DB errors elsewhere, check antivirus and folder permissions for the mesh-client userData directory."
+        "recommendation": "Database file permission tweak failed (often benign on Windows). If you see real DB errors elsewhere, check antivirus and folder permissions for the sarmesh userData directory."
       },
       "database-writable": {
         "label": "Database Not Writable",
-        "recommendation": "The app cannot write its database folder. Fix permissions on the mesh-client userData directory (see troubleshooting: Database directory is not writable)."
+        "recommendation": "The app cannot write its database folder. Fix permissions on the sarmesh userData directory (see troubleshooting: Database directory is not writable)."
       },
       "tak-server": {
         "label": "TAK Server Issues",
@@ -2390,7 +2390,7 @@
   },
   "longSession": {
     "title": "Restart recommended",
-    "body": "mesh-client has been running for four days with Bluetooth radio connected. Restart the app to reduce the risk of crashes on long Noble BLE sessions.",
+    "body": "sarmesh has been running for four days with Bluetooth radio connected. Restart the app to reduce the risk of crashes on long Noble BLE sessions.",
     "restart": "Restart",
     "dismiss": "Dismiss"
   },
@@ -2697,7 +2697,7 @@
       "mqttRelayEnabledDesc": "Enable the device to relay packets to/from an MQTT broker.",
       "mqttProxyToClientEnabled": "Proxy to client",
       "mqttProxyToClientEnabledDesc": "Route MQTT through the connected app instead of the radio’s own network stack. Required on devices without Wi-Fi/Ethernet when MQTT relay is enabled.",
-      "mqttProxyGatewayHint": "With proxy enabled, mesh-client bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
+      "mqttProxyGatewayHint": "With proxy enabled, sarmesh bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
       "mapReportPublishInterval": "Map report interval (seconds)",
       "mapReportPublishIntervalDesc": "0 uses firmware default. How often the device publishes map reports when map reporting is enabled.",
       "mapReportPositionPrecision": "Map report position precision",
@@ -3514,7 +3514,7 @@
       "missingIdentity": "This node has no remembered identity yet. Wait for a Nomad announce, then try again.",
       "transportUnavailable": "Reticulum transport is unavailable. Restart the stack and try again.",
       "sidecarNotRunning": "Reticulum sidecar is not running. Start the stack from Connection, then try again.",
-      "responseTooLarge": "The node returned more data than mesh-client will accept for this request.",
+      "responseTooLarge": "The node returned more data than sarmesh will accept for this request.",
       "nomadBusy": "Another Nomad page request is still in progress. Try again in a moment.",
       "nomadNotServing": "This is your Nomad node, but My Pages hosting is not running. Open My Pages, choose a folder, and start serving to preview locally.",
       "networkNotReady": "Waiting for a hub or radio interface to come online. Try again once Connection shows an interface up."
@@ -4915,7 +4915,7 @@
     "enableLocalHostConfirm": "Enable hosting",
     "addProbing": "Checking /offer support…",
     "syncPeerCostExceedsMax": "This propagation node’s peering cost is above your max peering cost — raise the max in Network → Advanced PN hosting, or pick another node.",
-    "offerUnsupported": "This destination does not support LXMF /offer sync — mesh-client cannot use it as a propagation node.",
+    "offerUnsupported": "This destination does not support LXMF /offer sync — sarmesh cannot use it as a propagation node.",
     "offerProbeTimeout": "Timed out while checking /offer support — the node may be unreachable. Try again when a path is available.",
     "offerProbeFailed": "Could not verify /offer support for this propagation node — try again in a moment.",
     "refreshing": "Refreshing…",
@@ -5139,7 +5139,7 @@
     "enableRequest": {
       "title": "Enable file receiving?",
       "body": "{{peer}} asked you to turn on rncp file receiving so they can send you a file.",
-      "shareDestWarning": "If you enable, mesh-client will send your rncp receive destination to this peer so they can autofill file send.",
+      "shareDestWarning": "If you enable, sarmesh will send your rncp receive destination to this peer so they can autofill file send.",
       "enableAsk": "Enable (Ask each time)",
       "enableAskAria": "Enable inbound file offers and ask before accepting",
       "enableAllow": "Enable and allow this identity",
@@ -5300,7 +5300,7 @@
     "capabilityHeardShort": "LXST",
     "capabilityUnknownShort": "?",
     "help": {
-      "interop": "LXST voice needs a peer running LXST telephony (Sideband, Ratspeak, or mesh-client). Not a voice-note clip. Python LXST is the reference; rsLXST is experimental."
+      "interop": "LXST voice needs a peer running LXST telephony (Sideband, Ratspeak, or sarmesh). Not a voice-note clip. Python LXST is the reference; rsLXST is experimental."
     },
     "toast": {
       "busy": "Line busy.",
@@ -5407,7 +5407,7 @@
     "rememberPassword": "Remember password",
     "autoSync": "Auto-sync",
     "autoSyncTooltip": "Periodically re-login to fetch new posts when the radio is connected",
-    "historyLocalHint": "On login, mesh-client requests recent posts still in the room server ring buffer (when this device has no local watermark yet). Enable Auto-sync to stay subscribed while connected.",
+    "historyLocalHint": "On login, sarmesh requests recent posts still in the room server ring buffer (when this device has no local watermark yet). Enable Auto-sync to stay subscribed while connected.",
     "syncIntervalLabel": "Sync interval",
     "syncInterval60": "Every 60 minutes",
     "syncInterval120": "Every 2 hours",
@@ -5862,7 +5862,7 @@
     "restartTitle": "Restart and install",
     "retryCheck": "Retry update check",
     "updateError": "Update error",
-    "menuToastUpToDateTitle": "Mesh-Client",
+    "menuToastUpToDateTitle": "SARMesh",
     "menuToastUpToDateBody": "You're on the latest version.",
     "menuToastAvailableTitle": "Update available",
     "menuToastAvailableBody": "Version {{version}} is available.",

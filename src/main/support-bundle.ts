@@ -13,11 +13,11 @@ import { sanitizeLogMessage } from './sanitize-log-message';
 export type { SupportBundleMode };
 
 const MAX_DEBUG_SNAPSHOT_JSON_BYTES = 5 * 1024 * 1024;
-/** Tail-cap for preserved/rotated `mesh-client.log.1` in support zips (full file can be ~100 MB). */
+/** Tail-cap for preserved/rotated `sarmesh.log.1` in support zips (full file can be ~100 MB). */
 const MAX_SUPPORT_BUNDLE_LOG_BACKUP_BYTES = 10 * 1024 * 1024;
-const LOG_BACKUP_FILENAME = 'mesh-client.log.1';
+const LOG_BACKUP_FILENAME = 'sarmesh.log.1';
 const RETICULUM_CONFIG_REL = path.join('config', 'config');
-const RETICULUM_STACK_REL = path.join('storage', 'mesh_client_stack.json');
+const RETICULUM_STACK_REL = path.join('storage', 'sarmesh_stack.json');
 
 export interface ReticulumDeveloperArtifacts {
   config?: Buffer;
@@ -94,7 +94,7 @@ export function validateDebugSnapshotJson(debugSnapshotJson: string): Record<str
 }
 
 function buildManifest(mode: SupportBundleMode): Record<string, unknown> {
-  const kind = mode === 'github' ? 'mesh-client-github-report' : 'mesh-client-developer-bundle';
+  const kind = mode === 'github' ? 'sarmesh-github-report' : 'sarmesh-developer-bundle';
   const stamped = buildInfoForManifest(getBuildInfo());
   const manifest: Record<string, unknown> = {
     kind,
@@ -134,7 +134,7 @@ function buildChannelReadmeLine(): string {
 
 function buildReadme(mode: SupportBundleMode): string {
   if (mode === 'github') {
-    return `mesh-client support bundle (GitHub report)
+    return `sarmesh support bundle (GitHub report)
 
 This zip is safe to attach to public GitHub issues.
 
@@ -142,8 +142,8 @@ ${buildChannelReadmeLine()}
 
 Contents:
   debug-snapshot.json  — UI/session state for triage (Meshtastic, MeshCore, Reticulum sidecar)
-  mesh-client.log      — Application log (current session)
-  mesh-client.log.1    — Prior session log (preserved on restart) or size-rotated backup
+  sarmesh.log      — Application log (current session)
+  sarmesh.log.1    — Prior session log (preserved on restart) or size-rotated backup
   manifest.json        — App version, buildChannel, and platform metadata
   README.txt           — This file
 
@@ -155,9 +155,9 @@ export "Export for Developer" separately and share it via a private channel only
 `;
   }
 
-  return `mesh-client support bundle (Developer)
+  return `sarmesh support bundle (Developer)
 
-PRIVATE USE ONLY — do not attach this zip or mesh-client.db to public GitHub issues.
+PRIVATE USE ONLY — do not attach this zip or sarmesh.db to public GitHub issues.
 
 The database may contain saved passwords (MeshCore room/repeater credentials, MQTT
 settings, and similar secrets). Share this bundle only with maintainers via a
@@ -167,12 +167,12 @@ ${buildChannelReadmeLine()}
 
 Contents:
   debug-snapshot.json           — UI/session state for triage (includes Reticulum sidecar snapshot)
-  mesh-client.db                — SQLite database backup (contains secrets)
+  sarmesh.db                — SQLite database backup (contains secrets)
   reticulum/config              — rnsd interface config (if present)
-  reticulum/mesh_client_stack.json — Sidecar stack state, mnemonic redacted (if present)
+  reticulum/sarmesh_stack.json — Sidecar stack state, mnemonic redacted (if present)
   reticulum/lxmf-outbound.log   — Filtered LXMF outbound / PN cascade lines from app logs
-  mesh-client.log               — Application log (current session)
-  mesh-client.log.1             — Prior session log (preserved on restart) or size-rotated backup
+  sarmesh.log               — Application log (current session)
+  sarmesh.log.1             — Prior session log (preserved on restart) or size-rotated backup
   manifest.json                 — App version, buildChannel, and platform metadata
   README.txt                    — This file
 `;
@@ -274,8 +274,8 @@ async function atomicWriteFile(destPath: string, data: Buffer): Promise<void> {
 export function defaultSupportBundleFilename(mode: SupportBundleMode): string {
   const date = new Date().toISOString().slice(0, 10);
   return mode === 'github'
-    ? `mesh-client-github-report-${date}.zip`
-    : `mesh-client-developer-bundle-${date}.zip`;
+    ? `sarmesh-github-report-${date}.zip`
+    : `sarmesh-developer-bundle-${date}.zip`;
 }
 
 export function isSupportBundleMode(value: unknown): value is SupportBundleMode {
@@ -297,7 +297,7 @@ export async function buildSupportBundleZip(
   const logPath = getLogPath();
   const logDir = path.dirname(logPath);
   const currentLog = await readFileOrEmpty(logPath);
-  zip.file('mesh-client.log', currentLog);
+  zip.file('sarmesh.log', currentLog);
 
   const backupPath = path.join(logDir, LOG_BACKUP_FILENAME);
   let backupLog: Buffer = Buffer.alloc(0);
@@ -313,10 +313,10 @@ export async function buildSupportBundleZip(
     const tempRoot = app.getPath('temp');
     await fs.promises.mkdir(tempRoot, { recursive: true });
     const tempDbDir = await fs.promises.mkdtemp(path.join(tempRoot, 'mesh-support-db-'));
-    const tempDbPath = path.join(tempDbDir, 'mesh-client.db');
+    const tempDbPath = path.join(tempDbDir, 'sarmesh.db');
     try {
       exportDatabase(tempDbPath);
-      zip.file('mesh-client.db', await fs.promises.readFile(tempDbPath));
+      zip.file('sarmesh.db', await fs.promises.readFile(tempDbPath));
     } finally {
       await fs.promises.rm(tempDbDir, { recursive: true, force: true });
     }
@@ -328,11 +328,11 @@ export async function buildSupportBundleZip(
     // Always include stack state so a missing PN preferred/config is unambiguous
     // (present-but-placeholder vs silently omitted, as in the w0rmt dump).
     zip.file(
-      'reticulum/mesh_client_stack.json',
+      'reticulum/sarmesh_stack.json',
       reticulumArtifacts.stackJson ??
         Buffer.from(
           JSON.stringify(
-            { note: 'mesh_client_stack.json not found or unreadable at export time' },
+            { note: 'sarmesh_stack.json not found or unreadable at export time' },
             null,
             2,
           ) + '\n',

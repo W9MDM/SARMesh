@@ -9,7 +9,7 @@ export type SendRncpRequestEnableResult =
 
 /**
  * Sends an ordinary LXMF DM asking the peer to enable rncp receive.
- * Body includes human-readable instructions + mesh-client sentinel.
+ * Body includes human-readable instructions + sarmesh sentinel.
  */
 export async function sendRncpRequestEnable(
   peerLxmfHash: string,

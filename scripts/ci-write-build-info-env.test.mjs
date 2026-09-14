@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
-  buildMeshClientBuildInfoPayload,
+  buildSARMeshBuildInfoPayload,
   formatGithubEnvAssignment,
   readReleaseTagFromPackageJson,
   shortSha,
@@ -17,10 +17,10 @@ describe('shortSha', () => {
   });
 });
 
-describe('buildMeshClientBuildInfoPayload', () => {
+describe('buildSARMeshBuildInfoPayload', () => {
   it('builds test payload with runUrl', () => {
     expect(
-      buildMeshClientBuildInfoPayload({
+      buildSARMeshBuildInfoPayload({
         channel: 'test',
         workflow: 'Build Binaries (no release)',
         runId: '123',
@@ -41,7 +41,7 @@ describe('buildMeshClientBuildInfoPayload', () => {
 
   it('includes tag for release', () => {
     expect(
-      buildMeshClientBuildInfoPayload({
+      buildSARMeshBuildInfoPayload({
         channel: 'release',
         tag: 'v5.26.0',
         runId: '9',
@@ -57,16 +57,16 @@ describe('buildMeshClientBuildInfoPayload', () => {
   });
 
   it('rejects invalid channel', () => {
-    expect(() =>
-      buildMeshClientBuildInfoPayload({ channel: /** @type {any} */ ('nightly') }),
-    ).toThrow(/test\|release/);
+    expect(() => buildSARMeshBuildInfoPayload({ channel: /** @type {any} */ ('nightly') })).toThrow(
+      /test\|release/,
+    );
   });
 });
 
 describe('formatGithubEnvAssignment', () => {
   it('uses heredoc delimiters', () => {
     const text = formatGithubEnvAssignment({ channel: 'test', runId: '1' });
-    expect(text).toContain('MESH_CLIENT_BUILD_INFO<<MESH_BUILD_INFO_EOF\n');
+    expect(text).toContain('SARMESH_BUILD_INFO<<MESH_BUILD_INFO_EOF\n');
     expect(text).toContain('{"channel":"test","runId":"1"}');
     expect(text.endsWith('MESH_BUILD_INFO_EOF\n')).toBe(true);
   });
@@ -89,8 +89,8 @@ describe('writeBuildInfoEnv', () => {
     fs.writeFileSync(envFile, '', 'utf8');
 
     const { payload } = writeBuildInfoEnv({
-      MESH_CLIENT_BUILD_CHANNEL: 'test',
-      MESH_CLIENT_BUILD_WORKFLOW: 'Build Binaries (no release)',
+      SARMESH_BUILD_CHANNEL: 'test',
+      SARMESH_BUILD_WORKFLOW: 'Build Binaries (no release)',
       GITHUB_ENV: envFile,
       GITHUB_RUN_ID: '42',
       GITHUB_RUN_NUMBER: '7',
@@ -101,7 +101,7 @@ describe('writeBuildInfoEnv', () => {
 
     expect(payload.channel).toBe('test');
     const written = fs.readFileSync(envFile, 'utf8');
-    expect(written).toContain('MESH_CLIENT_BUILD_INFO<<MESH_BUILD_INFO_EOF');
+    expect(written).toContain('SARMESH_BUILD_INFO<<MESH_BUILD_INFO_EOF');
     expect(written).toContain('"runId":"42"');
   });
 
@@ -115,7 +115,7 @@ describe('writeBuildInfoEnv', () => {
 
     const { payload } = writeBuildInfoEnv(
       {
-        MESH_CLIENT_BUILD_CHANNEL: 'release',
+        SARMESH_BUILD_CHANNEL: 'release',
         GITHUB_ENV: envFile,
         GITHUB_RUN_ID: '1',
         GITHUB_RUN_NUMBER: '1',

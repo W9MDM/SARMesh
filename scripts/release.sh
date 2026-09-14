@@ -60,7 +60,7 @@ PY
   return 0
 }
 
-METAINFO_FILE="flatpak/org.coloradomesh.MeshClient.metainfo.xml"
+METAINFO_FILE="flatpak/io.github.w9mdm.SARMesh.metainfo.xml"
 
 read_package_version() {
   node -p "require('./package.json').version"
@@ -86,7 +86,7 @@ sync_metainfo_release() {
   node scripts/prepend-metainfo-release.mjs "$version" "$today"
 }
 
-# Non-interactive confirmations: --yes / -y or MESH_CLIENT_RELEASE_YES=1|true.
+# Non-interactive confirmations: --yes / -y or SARMESH_RELEASE_YES=1|true.
 confirm_or_yes() {
   local prompt="$1"
   if [ "${RELEASE_YES}" = true ]; then
@@ -112,7 +112,7 @@ print_release_usage() {
   echo "       pnpm run release --finish       # Complete mid-release (no re-bump)"
   echo "       pnpm run release --yes          # Skip confirmation prompts"
   echo "       pnpm run release --skip-dep-update  # Skip pnpm update/dedupe"
-  echo "       MESH_CLIENT_RELEASE_YES=1 pnpm run release   # Same as --yes"
+  echo "       SARMESH_RELEASE_YES=1 pnpm run release   # Same as --yes"
   echo "       (Bare -- from \`pnpm run release -- …\` is ignored; pnpm 11 forwards it.)"
 }
 
@@ -161,7 +161,7 @@ push_release_main_with_rebase() {
 
 commit_tag_and_push_release() {
   local new_version="$1"
-  git add package.json pnpm-lock.yaml org.coloradomesh.MeshClient.yml
+  git add package.json pnpm-lock.yaml io.github.w9mdm.SARMesh.yml
   [ -f "$METAINFO_FILE" ] && git add "$METAINFO_FILE"
   git commit -m "chore: release $new_version"
 
@@ -211,7 +211,7 @@ finish_pending_release() {
   if ! pnpm run check:flatpak; then
     print_error "MetaInfo does not match package.json."
     print_error "Do NOT re-run \`pnpm run release\` (that would bump again)."
-    print_error "Fix flatpak/org.coloradomesh.MeshClient.metainfo.xml top <release version=\"$clean_version\">, then: pnpm run release --finish"
+    print_error "Fix flatpak/io.github.w9mdm.SARMesh.metainfo.xml top <release version=\"$clean_version\">, then: pnpm run release --finish"
     exit 1
   fi
 
@@ -274,7 +274,7 @@ EOF
 
   echo ""
   echo "### macOS install"
-  echo "- **Recommended:** open the **\`.dmg\`** and drag **Mesh-client** to **Applications**."
+  echo "- **Recommended:** open the **\`.dmg\`** and drag **SARMesh** to **Applications**."
   echo "- If you use the **\`.zip\`**: extract with **[Keka](https://www.keka.io/en/)** or \`ditto -xk\` — **do not use 7-Zip** (or Finder Archive Utility); they break framework symlinks and can crash at launch with \`Library not loaded: Squirrel.framework\`."
   echo "- See docs/troubleshooting.md (macOS Squirrel.framework) if the app will not open after a ZIP extract."
 
@@ -332,7 +332,7 @@ AUTO_DETECT=false
 FINISH_ONLY=false
 SKIP_DEP_UPDATE=false
 RELEASE_YES=false
-if [ "${MESH_CLIENT_RELEASE_YES:-}" = "1" ] || [ "${MESH_CLIENT_RELEASE_YES:-}" = "true" ]; then
+if [ "${SARMESH_RELEASE_YES:-}" = "1" ] || [ "${SARMESH_RELEASE_YES:-}" = "true" ]; then
   RELEASE_YES=true
 fi
 
@@ -394,12 +394,12 @@ if [ "$FINISH_ONLY" = false ] && [ -z "$VERSION_TYPE" ] && [ "$AUTO_DETECT" = fa
 fi
 
 # Test hook: dump parsed flags and exit before git/network side effects.
-# Block under GitHub Actions unless MESH_CLIENT_ALLOW_PARSE_ONLY_IN_CI=1 (unit tests).
+# Block under GitHub Actions unless SARMESH_ALLOW_PARSE_ONLY_IN_CI=1 (unit tests).
 # A repo/org Actions variable left at PARSE_ONLY=1 would otherwise green-succeed Cut release.
-if [ "${MESH_CLIENT_RELEASE_PARSE_ONLY:-}" = "1" ]; then
-  if [ "${GITHUB_ACTIONS:-}" = "true" ] && [ "${MESH_CLIENT_ALLOW_PARSE_ONLY_IN_CI:-}" != "1" ]; then
-    print_error "MESH_CLIENT_RELEASE_PARSE_ONLY is a local/test hook and cannot run under GitHub Actions."
-    print_error "Unset the variable (Cut release clears it) or set MESH_CLIENT_ALLOW_PARSE_ONLY_IN_CI=1 for tests."
+if [ "${SARMESH_RELEASE_PARSE_ONLY:-}" = "1" ]; then
+  if [ "${GITHUB_ACTIONS:-}" = "true" ] && [ "${SARMESH_ALLOW_PARSE_ONLY_IN_CI:-}" != "1" ]; then
+    print_error "SARMESH_RELEASE_PARSE_ONLY is a local/test hook and cannot run under GitHub Actions."
+    print_error "Unset the variable (Cut release clears it) or set SARMESH_ALLOW_PARSE_ONLY_IN_CI=1 for tests."
     exit 1
   fi
   printf 'RELEASE_YES=%s\n' "$RELEASE_YES"

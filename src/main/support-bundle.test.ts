@@ -58,7 +58,7 @@ function mockDefaultAppPaths(): void {
 }
 
 beforeAll(() => {
-  defaultPathsRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-client-support-default-'));
+  defaultPathsRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'sarmesh-support-default-'));
   fs.mkdirSync(path.join(defaultPathsRoot, 'temp'), { recursive: true });
   fs.mkdirSync(path.join(defaultPathsRoot, 'userdata'), { recursive: true });
   mockDefaultAppPaths();
@@ -94,8 +94,8 @@ describe('isSupportBundleMode', () => {
 
 describe('defaultSupportBundleFilename', () => {
   it('uses mode-specific prefixes', () => {
-    expect(defaultSupportBundleFilename('github')).toMatch(/^mesh-client-github-report-/);
-    expect(defaultSupportBundleFilename('developer')).toMatch(/^mesh-client-developer-bundle-/);
+    expect(defaultSupportBundleFilename('github')).toMatch(/^sarmesh-github-report-/);
+    expect(defaultSupportBundleFilename('developer')).toMatch(/^sarmesh-developer-bundle-/);
   });
 });
 
@@ -218,7 +218,7 @@ describe('readReticulumDeveloperArtifacts', () => {
 
   it('reads config and redacted stack state when present', async () => {
     const configPath = path.join(userDataDir, 'reticulum', 'config', 'config');
-    const stackPath = path.join(userDataDir, 'reticulum', 'storage', 'mesh_client_stack.json');
+    const stackPath = path.join(userDataDir, 'reticulum', 'storage', 'sarmesh_stack.json');
     await fs.promises.mkdir(path.dirname(configPath), { recursive: true });
     await fs.promises.mkdir(path.dirname(stackPath), { recursive: true });
     await fs.promises.writeFile(configPath, '[interfaces]\n[[TCPClientInterface]]\n', 'utf8');
@@ -241,7 +241,7 @@ describe('readReticulumDeveloperArtifacts', () => {
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
     try {
       const configPath = path.join(userDataDir, 'reticulum', 'config', 'config');
-      const stackPath = path.join(userDataDir, 'reticulum', 'storage', 'mesh_client_stack.json');
+      const stackPath = path.join(userDataDir, 'reticulum', 'storage', 'sarmesh_stack.json');
       await fs.promises.mkdir(path.dirname(configPath), { recursive: true });
       await fs.promises.mkdir(path.dirname(stackPath), { recursive: true });
       // Directory where a file is expected → EISDIR / read failure
@@ -268,7 +268,7 @@ describe('buildSupportBundleZip', () => {
 
   beforeEach(async () => {
     workDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'mesh-support-bundle-'));
-    logPath = path.join(workDir, 'mesh-client.log');
+    logPath = path.join(workDir, 'sarmesh.log');
     getLogPath.mockReturnValue(logPath);
     flushLogBeforeQuit.mockClear();
     exportDatabase.mockReset();
@@ -295,10 +295,10 @@ describe('buildSupportBundleZip', () => {
 
     const names = await zipEntryNames(dest);
     expect(names).toContain('debug-snapshot.json');
-    expect(names).toContain('mesh-client.log');
+    expect(names).toContain('sarmesh.log');
     expect(names).toContain('manifest.json');
     expect(names).toContain('README.txt');
-    expect(names).not.toContain('mesh-client.db');
+    expect(names).not.toContain('sarmesh.db');
     expect(exportDatabase).not.toHaveBeenCalled();
   });
 
@@ -313,12 +313,12 @@ describe('buildSupportBundleZip', () => {
     await buildSupportBundleZip(dest, 'developer', snapshot);
 
     const names = await zipEntryNames(dest);
-    expect(names).toContain('mesh-client.db');
+    expect(names).toContain('sarmesh.db');
     expect(exportDatabase).toHaveBeenCalledOnce();
 
     const buf = await fs.promises.readFile(dest);
     const zip = await JSZip.loadAsync(buf);
-    const dbBytes = await zip.file('mesh-client.db')!.async('nodebuffer');
+    const dbBytes = await zip.file('sarmesh.db')!.async('nodebuffer');
     expect(dbBytes.toString('utf8')).toBe('sqlite-bytes');
   });
 
@@ -361,28 +361,28 @@ describe('buildSupportBundleZip', () => {
     await buildSupportBundleZip(dest, 'developer', '{"ok":true}');
 
     const names = await zipEntryNames(dest);
-    expect(names).toContain('reticulum/mesh_client_stack.json');
+    expect(names).toContain('reticulum/sarmesh_stack.json');
     expect(names).toContain('reticulum/lxmf-outbound.log');
 
     const buf = await fs.promises.readFile(dest);
     const zip = await JSZip.loadAsync(buf);
-    const stack = JSON.parse(
-      await zip.file('reticulum/mesh_client_stack.json')!.async('string'),
-    ) as { note?: string };
+    const stack = JSON.parse(await zip.file('reticulum/sarmesh_stack.json')!.async('string')) as {
+      note?: string;
+    };
     expect(stack.note).toMatch(/not found or unreadable/);
     const slice = await zip.file('reticulum/lxmf-outbound.log')!.async('string');
     expect(slice).toMatch(/No LXMF outbound \/ PN cascade lines matched/);
   });
 
   it('includes rotated log backup when present', async () => {
-    await fs.promises.writeFile(path.join(workDir, 'mesh-client.log.1'), 'rotated\n', 'utf8');
+    await fs.promises.writeFile(path.join(workDir, 'sarmesh.log.1'), 'rotated\n', 'utf8');
     const dest = path.join(workDir, 'github-with-backup.zip');
     await buildSupportBundleZip(dest, 'github', '{"ok":true}');
     const names = await zipEntryNames(dest);
-    expect(names).toContain('mesh-client.log.1');
+    expect(names).toContain('sarmesh.log.1');
     const buf = await fs.promises.readFile(dest);
     const zip = await JSZip.loadAsync(buf);
-    const backup = await zip.file('mesh-client.log.1')!.async('string');
+    const backup = await zip.file('sarmesh.log.1')!.async('string');
     expect(backup).toBe('rotated\n');
   });
 
@@ -391,12 +391,12 @@ describe('buildSupportBundleZip', () => {
     const oversized = Buffer.alloc(tenMiB + 4096, 0x61);
     // Distinct trailing marker so we can prove the zip holds the end of the file.
     oversized.write('TAIL-MARKER-END', tenMiB + 4096 - 15);
-    await fs.promises.writeFile(path.join(workDir, 'mesh-client.log.1'), oversized);
+    await fs.promises.writeFile(path.join(workDir, 'sarmesh.log.1'), oversized);
     const dest = path.join(workDir, 'github-backup-tail.zip');
     await buildSupportBundleZip(dest, 'github', '{"ok":true}');
     const buf = await fs.promises.readFile(dest);
     const zip = await JSZip.loadAsync(buf);
-    const entry = await zip.file('mesh-client.log.1')!.async('nodebuffer');
+    const entry = await zip.file('sarmesh.log.1')!.async('nodebuffer');
     expect(entry.byteLength).toBe(tenMiB);
     expect(entry.subarray(entry.byteLength - 15).toString('utf8')).toBe('TAIL-MARKER-END');
   });
@@ -412,7 +412,7 @@ describe('buildSupportBundleZip', () => {
       appVersion: string;
       buildChannel: string;
     };
-    expect(manifest.kind).toBe('mesh-client-github-report');
+    expect(manifest.kind).toBe('sarmesh-github-report');
     expect(manifest.appVersion).toBe('9.9.9-test');
     expect(manifest.buildChannel).toBe('local');
 

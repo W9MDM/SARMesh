@@ -653,9 +653,9 @@ export default function ConnectionPanel({
       }, LETS_MESH_USERNAME_SYNC_DEBOUNCE_MS);
     };
     syncLetsMeshUsername();
-    window.addEventListener('meshclient:meshcoreIdentityUpdated', scheduleSync);
+    window.addEventListener('sarmesh:meshcoreIdentityUpdated', scheduleSync);
     return () => {
-      window.removeEventListener('meshclient:meshcoreIdentityUpdated', scheduleSync);
+      window.removeEventListener('sarmesh:meshcoreIdentityUpdated', scheduleSync);
       if (letsMeshUsernameSyncTimerRef.current) {
         clearTimeout(letsMeshUsernameSyncTimerRef.current);
         letsMeshUsernameSyncTimerRef.current = null;
@@ -668,9 +668,9 @@ export default function ConnectionPanel({
     const sync = () => {
       setHasPrivateKey(meshcoreIdentityHasPrivateKey());
     };
-    window.addEventListener('meshclient:meshcoreIdentityUpdated', sync);
+    window.addEventListener('sarmesh:meshcoreIdentityUpdated', sync);
     return () => {
-      window.removeEventListener('meshclient:meshcoreIdentityUpdated', sync);
+      window.removeEventListener('sarmesh:meshcoreIdentityUpdated', sync);
     };
   }, []);
 

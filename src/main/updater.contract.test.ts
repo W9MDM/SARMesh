@@ -89,7 +89,7 @@ const win = {
 } as unknown as BrowserWindow;
 
 const trustedEvent = {
-  senderFrame: { url: 'file:///Applications/Mesh-client.app/Contents/Resources/app.asar/x.html' },
+  senderFrame: { url: 'file:///Applications/SARMesh.app/Contents/Resources/app.asar/x.html' },
 } as unknown as IpcMainInvokeEvent;
 
 const untrustedEvent = {
@@ -100,7 +100,7 @@ const NEWER_RELEASE_ROW = {
   tag_name: 'v9.9.9',
   draft: false,
   prerelease: false,
-  html_url: 'https://github.com/Colorado-Mesh/mesh-client/releases/tag/v9.9.9',
+  html_url: 'https://github.com/W9MDM/SARMesh/releases/tag/v9.9.9',
 };
 
 function setPlatform(platform: 'darwin' | 'win32' | 'linux'): void {
@@ -204,7 +204,7 @@ describe('updater behavior (electron-updater path)', () => {
     await flushMicrotasks();
     expect(harness.send).toHaveBeenCalledWith('update:available', {
       version: '9.9.9',
-      releaseUrl: 'https://github.com/Colorado-Mesh/mesh-client/releases/tag/v9.9.9',
+      releaseUrl: 'https://github.com/W9MDM/SARMesh/releases/tag/v9.9.9',
       isPackaged: true,
       isMac,
     });
@@ -262,13 +262,13 @@ describe('updater behavior (electron-updater path)', () => {
         harness.autoUpdater.checkForUpdates.mockResolvedValueOnce({
           // Reject after a tick so doCheck() can attach its catch first.
           downloadPromise: Promise.resolve().then(() => {
-            throw new Error('Cannot download Mesh-client-Setup-5.36.0.exe status:404\ninjected');
+            throw new Error('Cannot download SARMesh-Setup-5.36.0.exe status:404\ninjected');
           }),
         });
         await handler('update:check')(trustedEvent);
         await flushMicrotasks();
         expect(harness.send).toHaveBeenCalledWith('update:error', {
-          message: 'Cannot download Mesh-client-Setup-5.36.0.exe status:404 injected',
+          message: 'Cannot download SARMesh-Setup-5.36.0.exe status:404 injected',
         });
         expect(unhandled).toEqual([]);
       } finally {
@@ -282,7 +282,7 @@ describe('updater behavior (electron-updater path)', () => {
     async (platform) => {
       setup(platform);
       harness.autoUpdater.checkForUpdates.mockResolvedValueOnce({
-        downloadPromise: Promise.resolve(['Mesh-client-Setup-9.9.9.exe']),
+        downloadPromise: Promise.resolve(['SARMesh-Setup-9.9.9.exe']),
       });
       await handler('update:check')(trustedEvent);
       emitUpdaterEvent('update-downloaded');
@@ -310,17 +310,15 @@ describe('updater behavior (electron-updater path)', () => {
     setup('darwin');
     await handler('update:open-releases')(
       trustedEvent,
-      'https://github.com/Colorado-Mesh/mesh-client/releases/tag/v9.9.9',
+      'https://github.com/W9MDM/SARMesh/releases/tag/v9.9.9',
     );
     expect(harness.openExternal).toHaveBeenCalledWith(
-      'https://github.com/Colorado-Mesh/mesh-client/releases/tag/v9.9.9',
+      'https://github.com/W9MDM/SARMesh/releases/tag/v9.9.9',
     );
 
     harness.openExternal.mockClear();
     await handler('update:open-releases')(trustedEvent, 'https://evil.example/clone');
-    expect(harness.openExternal).toHaveBeenCalledWith(
-      'https://github.com/Colorado-Mesh/mesh-client/releases',
-    );
+    expect(harness.openExternal).toHaveBeenCalledWith('https://github.com/W9MDM/SARMesh/releases');
   });
 
   it.each(['update:check', 'update:download', 'update:install', 'update:open-releases'] as const)(
@@ -349,14 +347,14 @@ describe('updater behavior (GitHub Releases API fallback)', () => {
     await handler('update:check')(trustedEvent);
     expect(harness.send).toHaveBeenCalledWith('update:available', {
       version: '9.9.9',
-      releaseUrl: 'https://github.com/Colorado-Mesh/mesh-client/releases/tag/v9.9.9',
+      releaseUrl: 'https://github.com/W9MDM/SARMesh/releases/tag/v9.9.9',
       isPackaged: true,
       isMac: false,
     });
 
     await handler('update:download')(trustedEvent);
     expect(harness.openExternal).toHaveBeenCalledWith(
-      'https://github.com/Colorado-Mesh/mesh-client/releases/tag/v9.9.9',
+      'https://github.com/W9MDM/SARMesh/releases/tag/v9.9.9',
     );
     expect(harness.autoUpdater.downloadUpdate).not.toHaveBeenCalled();
   });

@@ -66,11 +66,11 @@ export function shouldForwardReticulumSidecarStdout(text: string): boolean {
 }
 
 /**
- * Resolve RUST_LOG for sidecar spawn. Honors MESH_CLIENT_RUST_LOG, then RUST_LOG,
- * else defaults to warn so INFO packet spam does not fill mesh-client.log.
+ * Resolve RUST_LOG for sidecar spawn. Honors SARMESH_RUST_LOG, then RUST_LOG,
+ * else defaults to warn so INFO packet spam does not fill sarmesh.log.
  */
 export function resolveSidecarRustLog(env: NodeJS.ProcessEnv = process.env): string {
-  const fromMesh = env.MESH_CLIENT_RUST_LOG?.trim();
+  const fromMesh = env.SARMESH_RUST_LOG?.trim();
   if (fromMesh) return fromMesh;
   const fromRust = env.RUST_LOG?.trim();
   if (fromRust) return fromRust;

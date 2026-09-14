@@ -89,7 +89,7 @@ export async function loadOrGenerateCerts(serverName: string): Promise<CertBundl
 
   // Generate CA
   const caKeyPair = await generateKeyPairAsync();
-  const caSubject: forge.pki.CertificateField[] = [{ name: 'commonName', value: 'mesh-client-ca' }];
+  const caSubject: forge.pki.CertificateField[] = [{ name: 'commonName', value: 'sarmesh-ca' }];
   const caCert = buildCert(
     caSubject,
     caSubject,

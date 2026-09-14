@@ -4,7 +4,7 @@ const applyLxmPaperIngest = vi.fn();
 const applyLxmContactImport = vi.fn();
 const applyLxmaContactImport = vi.fn();
 
-vi.mock('@/renderer/lib/meshClientDeepLinkApply', () => ({
+vi.mock('@/renderer/lib/sarMeshDeepLinkApply', () => ({
   applyLxmPaperIngest: (...args: unknown[]) => applyLxmPaperIngest(...args),
   applyLxmContactImport: (...args: unknown[]) => applyLxmContactImport(...args),
   applyLxmaContactImport: (...args: unknown[]) => applyLxmaContactImport(...args),

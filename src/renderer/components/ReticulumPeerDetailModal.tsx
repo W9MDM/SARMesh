@@ -42,9 +42,9 @@ import {
   resolveReticulumPeerLabel,
   useReticulumPeerStore,
 } from '@/renderer/stores/reticulumPeerStore';
-import { buildLxmaContactUri, buildLxmContactUri } from '@/shared/meshClientDeepLink';
 import { canonicalizeReticulumDestinationHash } from '@/shared/reticulumDestinationHash';
 import { formatReticulumIdentityFingerprint } from '@/shared/reticulumIdentityFingerprint';
+import { buildLxmaContactUri, buildLxmContactUri } from '@/shared/sarMeshDeepLink';
 
 import { ConfirmModal } from './ConfirmModal';
 import QrCodeImage from './QrCodeImage';

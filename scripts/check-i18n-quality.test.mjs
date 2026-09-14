@@ -1338,7 +1338,7 @@ describe('roomsPanel saved passwords per-key quality', () => {
   const enMeshcoreDistanceFilterHint =
     'You have {{count}} contacts with GPS on the map. Enable the distance filter in App → Appearance to focus on nearby nodes.';
   const enImportSchemaTooNew =
-    'This database file requires a newer Mesh-Client (schema {{dbVersion}}). This build supports schema {{appVersion}} or older. Install the latest release and try again.';
+    'This database file requires a newer SARMesh (schema {{dbVersion}}). This build supports schema {{appVersion}} or older. Install the latest release and try again.';
 
   it('flags untranslated App → Appearance in meshcoreDistanceFilterHint', () => {
     const issues = localeStringQualityIssues({
@@ -1370,14 +1370,14 @@ describe('roomsPanel saved passwords per-key quality', () => {
     expectIssue(issues, 'orphan "→" navigation');
   });
 
-  it('flags spaced Mesh-Client in importSchemaTooNew', () => {
+  it('flags spaced SARMesh in importSchemaTooNew', () => {
     const issues = localeStringQualityIssues({
       locale: 'id',
       flatKey: 'appPanel.importSchemaTooNew',
       val: 'File ini memerlukan Mesh - Client yang lebih baru (skema {{dbVersion}}).',
       enVal: enImportSchemaTooNew,
     });
-    expectIssue(issues, 'Mesh-Client');
+    expectIssue(issues, 'SARMesh');
   });
 
   const enDebugSnapshotCopied = 'Debug snapshot copied to clipboard';
@@ -1680,7 +1680,7 @@ describe('roomsPanel saved passwords per-key quality', () => {
   });
 
   const enLongSessionRestartNudge =
-    'Mesh-client has been running for four days. Restart the app to reduce the risk of crashes on long MeshCore BLE sessions.';
+    'SARMesh has been running for four days. Restart the app to reduce the risk of crashes on long MeshCore BLE sessions.';
 
   it('flags lowercase ble in longSessionRestartNudge', () => {
     const issues = localeStringQualityIssues({
@@ -1692,25 +1692,25 @@ describe('roomsPanel saved passwords per-key quality', () => {
     expectIssue(issues, 'protocol token "BLE"');
   });
 
-  it('accepts Mesh-Client casing for mesh-client brand in longSessionRestartNudge', () => {
+  it('accepts SARMesh casing for sarmesh brand in longSessionRestartNudge', () => {
     expect(
       localeStringQualityIssues({
         locale: 'de',
         flatKey: 'toasts.longSessionRestartNudge',
-        val: 'Mesh-Client läuft seit vier Tagen. MeshCore BLE-Sitzungen.',
+        val: 'SARMesh läuft seit vier Tagen. MeshCore BLE-Sitzungen.',
         enVal: enLongSessionRestartNudge,
       }),
     ).toEqual([]);
   });
 
   const enLongSessionBody =
-    'mesh-client has been running for four days with Bluetooth radio connected. Restart the app to reduce the risk of crashes on long Noble BLE sessions.';
+    'sarmesh has been running for four days with Bluetooth radio connected. Restart the app to reduce the risk of crashes on long Noble BLE sessions.';
 
   it('flags missing BLE in longSession.body', () => {
     const issues = localeStringQualityIssues({
       locale: 'de',
       flatKey: 'longSession.body',
-      val: 'mesh-client läuft seit vier Tagen. Noble Sitzungen.',
+      val: 'sarmesh läuft seit vier Tagen. Noble Sitzungen.',
       enVal: enLongSessionBody,
     });
     expectIssue(issues, 'protocol token "BLE"');
@@ -1720,25 +1720,25 @@ describe('roomsPanel saved passwords per-key quality', () => {
     const issues = localeStringQualityIssues({
       locale: 'ja',
       flatKey: 'longSession.body',
-      val: 'mesh-clientは4日間稼働。BLEセッション。',
+      val: 'sarmeshは4日間稼働。BLEセッション。',
       enVal: enLongSessionBody,
     });
     expectIssue(issues, 'protocol token "Noble"');
   });
 
-  it('accepts mesh-client and Noble BLE in longSession.body', () => {
+  it('accepts sarmesh and Noble BLE in longSession.body', () => {
     expect(
       localeStringQualityIssues({
         locale: 'zh',
         flatKey: 'longSession.body',
-        val: 'mesh-client 已经运行了四天。降低长时间 Noble BLE 会话中崩溃的风险。',
+        val: 'sarmesh 已经运行了四天。降低长时间 Noble BLE 会话中崩溃的风险。',
         enVal: enLongSessionBody,
       }),
     ).toEqual([]);
   });
 
   const enMeshcoreOpenWireCompatHint =
-    'When enabled, mesh-client sends keyed text replies (@[Name#key]), compact r: reactions, and g: Giphy GIFs. This may not match the official companion wire format; receivers need MeshCore Open-aware clients.';
+    'When enabled, sarmesh sends keyed text replies (@[Name#key]), compact r: reactions, and g: Giphy GIFs. This may not match the official companion wire format; receivers need MeshCore Open-aware clients.';
 
   it('flags spaced @[Name#key] token in meshcoreOpenWireCompatHint', () => {
     const issues = localeStringQualityIssues({
@@ -1780,14 +1780,14 @@ describe('roomsPanel saved passwords per-key quality', () => {
     expectIssue(issues, 'open wire title false friend');
   });
 
-  it('flags mesh - client spacing in unrelated keys when English uses mesh-client', () => {
+  it('flags mesh - client spacing in unrelated keys when English uses sarmesh', () => {
     const issues = localeStringQualityIssues({
       locale: 'id',
       flatKey: 'modulePanel.fields.mqttProxyGatewayHint',
       val: 'mesh - client menjembatani',
-      enVal: 'With proxy enabled, mesh-client bridges broker traffic via MqttClientProxyMessage.',
+      enVal: 'With proxy enabled, sarmesh bridges broker traffic via MqttClientProxyMessage.',
     });
-    expectIssue(issues, 'use "mesh-client" without spaces');
+    expectIssue(issues, 'use "sarmesh" without spaces');
   });
 
   it('passes fixed meshcoreOpenWireCompatHint in German', () => {
@@ -1795,7 +1795,7 @@ describe('roomsPanel saved passwords per-key quality', () => {
       localeStringQualityIssues({
         locale: 'de',
         flatKey: 'appPanel.meshcoreOpenWireCompatHint',
-        val: 'Wenn aktiviert, sendet mesh-client Schlüssel-Textantworten (@[Name#key]), kompakte r:-Reaktionen und g:-Giphy-GIFs. Das entspricht möglicherweise nicht dem offiziellen Companion-Wire-Format; Empfänger benötigen MeshCore-Open-kompatible Clients.',
+        val: 'Wenn aktiviert, sendet sarmesh Schlüssel-Textantworten (@[Name#key]), kompakte r:-Reaktionen und g:-Giphy-GIFs. Das entspricht möglicherweise nicht dem offiziellen Companion-Wire-Format; Empfänger benötigen MeshCore-Open-kompatible Clients.',
         enVal: enMeshcoreOpenWireCompatHint,
       }),
     ).toEqual([]);
@@ -1873,7 +1873,7 @@ describe('roomsPanel saved passwords per-key quality', () => {
 
   it('flags spaced reticulum sidecar build command', () => {
     const enVal =
-      'Reticulum sidecar not built. From the mesh-client repo run `pnpm run reticulum:sidecar:build` (requires Rust).';
+      'Reticulum sidecar not built. From the sarmesh repo run `pnpm run reticulum:sidecar:build` (requires Rust).';
     const issues = localeStringQualityIssues({
       locale: 'ko',
       flatKey: 'connectionPanel.reticulumSidecarMissing',
@@ -1885,7 +1885,7 @@ describe('roomsPanel saved passwords per-key quality', () => {
 
   it('flags Rust translated as corrosion in reticulumSidecarMissing', () => {
     const enVal =
-      'Reticulum sidecar not built. From the mesh-client repo run `pnpm run reticulum:sidecar:build` (requires Rust).';
+      'Reticulum sidecar not built. From the sarmesh repo run `pnpm run reticulum:sidecar:build` (requires Rust).';
     const issues = localeStringQualityIssues({
       locale: 'es',
       flatKey: 'connectionPanel.reticulumSidecarMissing',
@@ -2112,12 +2112,12 @@ describe('protectedBrandIssues', () => {
     expectIssue(issues, 'Brand "Colorado Mesh" missing');
   });
 
-  it('flags missing mesh-client hyphenated product name', () => {
+  it('flags missing sarmesh hyphenated product name', () => {
     const issues = protectedBrandIssues(
-      'Quit mesh-client completely and reopen it.',
+      'Quit sarmesh completely and reopen it.',
       'Cierre la aplicación por completo y vuelva a abrirla.',
     );
-    expectIssue(issues, 'Brand "mesh-client" missing');
+    expectIssue(issues, 'Brand "sarmesh" missing');
   });
 });
 

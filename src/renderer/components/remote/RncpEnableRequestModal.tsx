@@ -62,7 +62,7 @@ export async function resolveIdentityHashForLxmfPeer(peerDestHash: string): Prom
 
 /**
  * After enabling inbound rncp, share our rncp.receive hash with the requester
- * so their Chat DM / Transfer field can autofill (mesh-client peers only).
+ * so their Chat DM / Transfer field can autofill (sarmesh peers only).
  */
 async function shareRncpReceiveDestWithPeer(
   peerLxmfHash: string,

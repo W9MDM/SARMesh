@@ -97,7 +97,7 @@ export function setDeepLocaleValue(obj, dotKey, value) {
 
 // Multi-word brands / protocol phrases stripped before the single-token list.
 const SKIP_AUDIT_PHRASE_RE =
-  /\b(Colorado Mesh|Nomad Network|Ripple Networks|mesh-client|Mesh-Client|Liam's|CalTopo|LetsMesh|MeshMapper|Flood Advert|Reticulum)\b/gi;
+  /\b(Colorado Mesh|Nomad Network|Ripple Networks|sarmesh|SARMesh|Liam's|CalTopo|LetsMesh|MeshMapper|Flood Advert|Reticulum)\b/gi;
 
 // Tokens that are legitimately identical across languages and should not be
 // treated as "untranslated" when a locale value matches English verbatim.

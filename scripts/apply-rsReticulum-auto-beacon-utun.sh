@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply mesh-client rsReticulum AutoInterface beacon overlay for rns-stack local builds.
+# Apply sarmesh rsReticulum AutoInterface beacon overlay for rns-stack local builds.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

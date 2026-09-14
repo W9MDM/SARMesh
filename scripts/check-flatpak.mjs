@@ -15,16 +15,16 @@ import { FLATPAK_BUILD_INFO_EXPORT_SNIPPET } from './write-flatpak-ci-build-info
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
-const METAINFO = path.join(ROOT, 'flatpak', 'org.coloradomesh.MeshClient.metainfo.xml');
-const DESKTOP = path.join(ROOT, 'flatpak', 'org.coloradomesh.MeshClient.desktop');
-const MANIFEST = path.join(ROOT, 'org.coloradomesh.MeshClient.yml');
+const METAINFO = path.join(ROOT, 'flatpak', 'io.github.w9mdm.SARMesh.metainfo.xml');
+const DESKTOP = path.join(ROOT, 'flatpak', 'io.github.w9mdm.SARMesh.desktop');
+const MANIFEST = path.join(ROOT, 'io.github.w9mdm.SARMesh.yml');
 const FLATPAK_WORKFLOW = path.join(ROOT, '.github/workflows/flatpak.yaml');
 const CI_WORKFLOW = path.join(ROOT, '.github/workflows/ci.yaml');
-const WRAPPER = path.join(ROOT, 'flatpak', 'mesh-client-wrapper.sh');
+const WRAPPER = path.join(ROOT, 'flatpak', 'sarmesh-wrapper.sh');
 const PKG = path.join(ROOT, 'package.json');
-const EXPECTED_APP_ID = 'org.coloradomesh.MeshClient';
+const EXPECTED_APP_ID = 'io.github.w9mdm.SARMesh';
 const EXPECTED_MAIN = 'dist-electron/main/index.js';
-const EXPECTED_ELECTRON = '/app/lib/mesh-client/electron/electron';
+const EXPECTED_ELECTRON = '/app/lib/sarmesh/electron/electron';
 const SEMVER_PATTERN = /(\d+\.\d+\.\d+)/;
 
 /** Corepack `pnpm@VERSION[+sha512…]` — pre-release suffixes allowed; + integrity hash stripped. */
@@ -108,19 +108,19 @@ function checkMetainfoAppId() {
 function checkManifestAppId() {
   const violations = [];
   if (!fs.existsSync(MANIFEST)) {
-    violations.push({ file: 'org.coloradomesh.MeshClient.yml', message: 'manifest file missing' });
+    violations.push({ file: 'io.github.w9mdm.SARMesh.yml', message: 'manifest file missing' });
     return violations;
   }
 
   const yaml = fs.readFileSync(MANIFEST, 'utf8');
   const m = yaml.match(/^app-id:\s*(.+)$/m);
   if (!m) {
-    violations.push({ file: 'org.coloradomesh.MeshClient.yml', message: 'missing app-id field' });
+    violations.push({ file: 'io.github.w9mdm.SARMesh.yml', message: 'missing app-id field' });
     return violations;
   }
   if (m[1].trim() !== EXPECTED_APP_ID) {
     violations.push({
-      file: 'org.coloradomesh.MeshClient.yml',
+      file: 'io.github.w9mdm.SARMesh.yml',
       message: `app-id is "${m[1].trim()}", expected "${EXPECTED_APP_ID}"`,
     });
   }
@@ -175,7 +175,7 @@ function checkManifestPnpmVersion(pkg) {
   }
 
   // The standalone wrapper requires dist/pnpm.mjs beside .pnpm-bin/pnpm.
-  if (!/cp\s+-a\s+pnpm-vendor\/dist\s+\/run\/build\/mesh-client\/\.pnpm-bin\/dist\b/.test(yaml)) {
+  if (!/cp\s+-a\s+pnpm-vendor\/dist\s+\/run\/build\/sarmesh\/\.pnpm-bin\/dist\b/.test(yaml)) {
     violations.push({
       file: rel,
       message:
@@ -249,7 +249,7 @@ function checkManifestBranchAndElectronPayload(pkg) {
     });
   }
 
-  if (!yaml.includes('electron-prebuilt /app/lib/mesh-client/electron')) {
+  if (!yaml.includes('electron-prebuilt /app/lib/sarmesh/electron')) {
     violations.push({
       file: rel,
       message: 'manifest must install electron-prebuilt into the app (zypak needs Chromium)',
@@ -292,7 +292,7 @@ function checkManifestBranchAndElectronPayload(pkg) {
     }
   }
 
-  if (!yaml.includes('resources /app/lib/mesh-client/')) {
+  if (!yaml.includes('resources /app/lib/sarmesh/')) {
     violations.push({
       file: rel,
       message: 'manifest must install resources/ for runtime icon paths',
@@ -324,11 +324,11 @@ function checkManifestReticulumSidecarPayload() {
   const yaml = fs.readFileSync(MANIFEST, 'utf8');
   const rel = path.relative(ROOT, MANIFEST);
 
-  if (!yaml.includes('cp -a dist dist-electron node_modules resources /app/lib/mesh-client/')) {
+  if (!yaml.includes('cp -a dist dist-electron node_modules resources /app/lib/sarmesh/')) {
     violations.push({
       file: rel,
       message:
-        'manifest must copy resources/ into /app/lib/mesh-client/ (Reticulum sidecar under resources/reticulum-sidecar/)',
+        'manifest must copy resources/ into /app/lib/sarmesh/ (Reticulum sidecar under resources/reticulum-sidecar/)',
     });
   }
 
@@ -359,10 +359,10 @@ function checkWrapperLaunchPaths() {
     });
   }
 
-  if (!sh.includes('CHROME_WRAPPER=/app/bin/mesh-client')) {
+  if (!sh.includes('CHROME_WRAPPER=/app/bin/sarmesh')) {
     violations.push({
       file: rel,
-      message: 'wrapper must set CHROME_WRAPPER=/app/bin/mesh-client for zypak re-exec',
+      message: 'wrapper must set CHROME_WRAPPER=/app/bin/sarmesh for zypak re-exec',
     });
   }
 
@@ -428,16 +428,15 @@ function checkWrapperLaunchPaths() {
   if (sh.includes('/app/electron/electron')) {
     violations.push({
       file: rel,
-      message:
-        'wrapper must not reference /app/electron/electron (Electron is under lib/mesh-client)',
+      message: 'wrapper must not reference /app/electron/electron (Electron is under lib/sarmesh)',
     });
   }
 
-  if (!sh.includes('MESH_CLIENT_DISABLE_GPU')) {
+  if (!sh.includes('SARMESH_DISABLE_GPU')) {
     violations.push({
       file: rel,
       message:
-        'wrapper must set MESH_CLIENT_DISABLE_GPU for vmwgfx (virtualized) stacks where Mesa DRI is missing',
+        'wrapper must set SARMESH_DISABLE_GPU for vmwgfx (virtualized) stacks where Mesa DRI is missing',
     });
   }
 
@@ -452,21 +451,21 @@ function checkWrapperLaunchPaths() {
     violations.push({
       file: rel,
       message:
-        'wrapper must pass --disable-gpu to Electron when MESH_CLIENT_DISABLE_GPU=1 (Chromium startup flags)',
+        'wrapper must pass --disable-gpu to Electron when SARMESH_DISABLE_GPU=1 (Chromium startup flags)',
     });
   }
 
-  if (!sh.includes('MESH_CLIENT_ENABLE_GPU')) {
+  if (!sh.includes('SARMESH_ENABLE_GPU')) {
     violations.push({
       file: rel,
-      message: 'wrapper must allow MESH_CLIENT_ENABLE_GPU=1 to opt out of vmwgfx GPU disable',
+      message: 'wrapper must allow SARMESH_ENABLE_GPU=1 to opt out of vmwgfx GPU disable',
     });
   }
 
-  if (!sh.includes('MESH_CLIENT_DISABLE_GPU:-}" != "0"')) {
+  if (!sh.includes('SARMESH_DISABLE_GPU:-}" != "0"')) {
     violations.push({
       file: rel,
-      message: 'wrapper must allow MESH_CLIENT_DISABLE_GPU=0 to opt out of vmwgfx auto-detection',
+      message: 'wrapper must allow SARMESH_DISABLE_GPU=0 to opt out of vmwgfx auto-detection',
     });
   }
 
@@ -526,12 +525,12 @@ export function manifestCiBuildInfoExportViolations(doc, fileLabel) {
     return violations;
   }
   const meshModule = modules.find(
-    (m) => m && typeof m === 'object' && !Array.isArray(m) && m.name === 'mesh-client',
+    (m) => m && typeof m === 'object' && !Array.isArray(m) && m.name === 'sarmesh',
   );
   if (!meshModule) {
     violations.push({
       file: fileLabel,
-      message: 'manifest must include a mesh-client module',
+      message: 'manifest must include a sarmesh module',
     });
     return violations;
   }
@@ -539,7 +538,7 @@ export function manifestCiBuildInfoExportViolations(doc, fileLabel) {
   if (!Array.isArray(commands) || !commands.every((c) => typeof c === 'string')) {
     violations.push({
       file: fileLabel,
-      message: 'mesh-client module must define build-commands as a string array',
+      message: 'sarmesh module must define build-commands as a string array',
     });
     return violations;
   }
@@ -548,7 +547,7 @@ export function manifestCiBuildInfoExportViolations(doc, fileLabel) {
     if (!joined.includes(line)) {
       violations.push({
         file: fileLabel,
-        message: `manifest build must export MESH_CLIENT_BUILD_INFO from flatpak/ci-build-info.json (missing: ${line})`,
+        message: `manifest build must export SARMESH_BUILD_INFO from flatpak/ci-build-info.json (missing: ${line})`,
       });
       break;
     }

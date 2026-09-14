@@ -195,12 +195,12 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
-      - name: Run release (MESH_CLIENT_RELEASE_YES)
+      - name: Run release (SARMESH_RELEASE_YES)
         if: ${{ inputs.dry_run != true && inputs.dry_run != 'true' }}
         env:
-          MESH_CLIENT_RELEASE_YES: '1'
+          SARMESH_RELEASE_YES: '1'
           # Never inherit a repo/org PARSE_ONLY var — that would green-exit with no tag.
-          MESH_CLIENT_RELEASE_PARSE_ONLY: ''
+          SARMESH_RELEASE_PARSE_ONLY: ''
           RELEASE_BUMP: ${{ steps.preview.outputs.bump }}
           SKIP_DEP_UPDATE: ${{ inputs.skip_dep_update }}
         run: |

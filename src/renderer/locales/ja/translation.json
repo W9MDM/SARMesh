@@ -34,7 +34,7 @@
     },
     "nodeLabel": "ノード: {{name}}",
     "takClientLost": "TAKクライアントを失いました",
-    "title": "メッシュクライアント",
+    "title": "SARMesh",
     "brandName": "Colorado Mesh",
     "meshTubeSignOff": "Turn off Colorado Mesh sign",
     "meshTubeSignOn": "Turn on Colorado Mesh sign",
@@ -44,7 +44,7 @@
     "footerDiscordTitle": "Colorado Mesh Discord",
     "footerGithubTitle": "Colorado Mesh on GitHub",
     "footerWebsiteTitle": "Colorado Mesh website",
-    "loadingApp": "メッシュクライアントを読み込んでいます",
+    "loadingApp": "SARMesh を読み込んでいます",
     "reticulumQueueTooltip": "ローカルRNode \"{{name}}\"のホストTXキュー：無線を待っているパケット（複数のRNodeの場合は最悪の満杯）。緑25 ％未満、琥珀60 ％未満、赤60 ％以上。",
     "reticulumQueueTooltipGeneric": "最もビジーなローカルRNodeのホストTXキュー：無線を待っているパケット。緑25 ％未満、琥珀60 ％未満、赤60 ％以上。",
     "reticulumTxBuffering": "ローカルRNodeへのアウトバウンドパケットのバッファリング（ホストTXキュー排出）。",
@@ -194,7 +194,7 @@
     "reduceMotion": "動きを減らす",
     "reduceMotionDesc": "アニメーションアイコンと装飾効果を無効にします。読み込みスピナーと接続状態インジケーターは引き続きアニメーションします。",
     "roomMessages": "ルームのメッセージ",
-    "importSchemaTooNew": "このデータベースファイルには新しい Mesh-Client（スキーマ {{dbVersion}}）が必要です。このビルドはスキーマ {{appVersion}} 以前のみ対応しています。最新版をインストールして再試行してください。",
+    "importSchemaTooNew": "このデータベースファイルには新しい SARMesh（スキーマ {{dbVersion}}）が必要です。このビルドはスキーマ {{appVersion}} 以前のみ対応しています。最新版をインストールして再試行してください。",
     "floodAdvertTypeLabel": "Advertタイプ",
     "floodAdvertTypeFlood": "フラッド（マルチホップ）",
     "floodAdvertTypeZeroHop": "ゼロホップ（近隣住民のみ）",
@@ -204,7 +204,7 @@
     "debugSnapshotFailed": "デバッグスナップショットをコピーできませんでした",
     "meshcoreOpenWireExperimentalTitle": "MeshCoreオープンワイヤー（実験用）",
     "meshcoreOpenWireCompatLabel": "MeshCore Openの互換性を有効にする",
-    "meshcoreOpenWireCompatHint": "有効にすると、mesh-clientはキー付きテキスト返信（@[Name#key]）、コンパクトなr:リアクション、g: Giphy GIFを送信します。公式のcompanion wire形式と一致しない場合があります。受信側はMeshCore Open対応クライアントが必要です。",
+    "meshcoreOpenWireCompatHint": "有効にすると、sarmeshはキー付きテキスト返信（@[Name#key]）、コンパクトなr:リアクション、g: Giphy GIFを送信します。公式のcompanion wire形式と一致しない場合があります。受信側はMeshCore Open対応クライアントが必要です。",
     "meshcorePathHashExperimentalTitle": "MeshCoreパスハッシュサイズ（試験的）",
     "meshcorePathHashModeLabel": "デフォルトパスハッシュサイズ",
     "meshcorePathHashMode1Byte": "1バイト（レガシー、最大64ホップ）",
@@ -731,7 +731,7 @@
       "tooLargeForWire": "ボイスメモが大きすぎて送信できません。短いクリップを録画します。",
       "tooLargeForPropagation": "ボイスメッセージが伝播ノードの制限を超えています。受取人がオンラインの場合にのみ配達されます。オフライン配送用に保存するには短くしてください。",
       "directOnlyBadge": "ダイレクトのみ—オフラインストレージには大きすぎます",
-      "recordTooltip": "LXMFボイスメモ—このダイレクトメッセージの短いOpusクリップを記録します。mesh-client、Ratspeak、Sideband (FIELD_AUDIO) でサポートされています。LXST Callとは異なります。",
+      "recordTooltip": "LXMFボイスメモ—このダイレクトメッセージの短いOpusクリップを記録します。sarmesh、Ratspeak、Sideband (FIELD_AUDIO) でサポートされています。LXST Callとは異なります。",
       "sendTooltip": "録音したLXMFボイスメモを送信する",
       "startFailed": "ボイスメモの録音を開始できませんでした。もう一度やり直してください。",
       "sendAriaWithElapsed": "ボイスメモを送信（ {{seconds}}秒録音）",
@@ -956,7 +956,7 @@
         "accessDeniedLinuxHint": "Linux では、ユーザーをダイヤルアウト グループに追加します: sudo usermod -aG digialout $USER (その後、ログアウトして再度ログインします)",
         "disconnectedHint": "USB ケーブルが接続されており、デバイスの電源が入っていることを確認します。",
         "timeoutHint": "ポートが一時的に表示された場合は、USB ケーブルを再接続してみてください。",
-        "portStillOpenHint": "The USB serial port did not release cleanly. Quit mesh-client completely and reopen it, or unplug and replug the USB cable, then connect again."
+        "portStillOpenHint": "The USB serial port did not release cleanly. Quit sarmesh completely and reopen it, or unplug and replug the USB cable, then connect again."
       },
       "http": {
         "timeoutMdnsWindows": "Windows では、meshtastic.local には Bonjour (iTunes とともにインストールされる) が必要です。代わりにデバイスの IP アドレスを使用してください。",
@@ -984,7 +984,7 @@
         "connectionAttemptFailedLinuxHint": "Linux では、システムの Bluetooth 設定または「bluetoothctl」ツールを介してペアリングを管理できます。",
         "meshcoreHandshakeHint": "MeshCore デバイスが Bluetooth コンパニオン モードになっていて、PIN を使用してコンピュータとペアリングされていることを確認します。接続の問題が解決しない場合は、既存のペアリングを削除し、再度ペアリングします。",
         "meshcoreHandshakeWindowsExtra": "Windows では、切断が続く場合は、Bluetooth のオフ/オンを切り替え、デバイス マネージャーでアダプター ドライバーを更新します。",
-        "macWakeRecoveryHint": "After sleep, quit mesh-client (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
+        "macWakeRecoveryHint": "After sleep, quit sarmesh (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
         "dualProtocolContentionHint": "他のプロトコルはまだBluetooth経由で接続している可能性があります。数秒待ってからもう一度お試しいただくか、他のプロトコルタブに切り替えて接続ステータスを確認してください。",
         "scanBusy": "別の Bluetooth スキャンが進行中です。しばらくしてからもう一度試してください。",
         "sameDeviceConflict": "この Bluetooth デバイスはすでに {{owner}} に接続されています。",
@@ -1014,9 +1014,9 @@
     "reticulumStackHint": "ローカルのReticulum/LXMFサイドカー（TCPおよびAutoインターフェース）を起動します。",
     "reticulumStartStack": "スタックを開始",
     "reticulumNetworkEmpty": "まだインターフェースが報告されていません。",
-    "reticulumSidecarMissing": "Reticulumサイドカーがビルドされていません。mesh-clientリポジトリで `pnpm run reticulum:sidecar:build` を実行してください（Rustが必要です）。",
+    "reticulumSidecarMissing": "Reticulumサイドカーがビルドされていません。sarmeshリポジトリで `pnpm run reticulum:sidecar:build` を実行してください（Rustが必要です）。",
     "reticulumSidecarCargoMissing": "Rustツールチェーン（cargo）が見つかりません。https://rustup.rs からインストールし、`pnpm run reticulum:sidecar:build` を実行してください。",
-    "reticulumSidecarPatchMissing": "ReticulumサイドカーのビルドにはrsReticulum packet-tapオーバーレイが必要です。mesh-clientリポジトリで `pnpm run reticulum:sidecar:build` を実行してください（パッチは自動適用されます）。",
+    "reticulumSidecarPatchMissing": "ReticulumサイドカーのビルドにはrsReticulum packet-tapオーバーレイが必要です。sarmeshリポジトリで `pnpm run reticulum:sidecar:build` を実行してください（パッチは自動適用されます）。",
     "reticulumSidecarStartFailed": "Reticulumスタックを開始できませんでした: {{message}}",
     "reticulumStopStack": "スタックを停止",
     "reticulumAutostart": "接続を開いたときにスタックを自動的に開始する",
@@ -1254,7 +1254,7 @@
       "advancedAria": "高度なインターフェースキーバリューオプション",
       "advancedKeyReserved": "キー「{{key}}」は既知のフィールドであり、無視されました。上記のフォームを使用してください。",
       "pickerDeviceAriaWithRssi": "{{name}} {{address}}、{{rssi}} dBm",
-      "decommissionedHubEnableBlocked": "このハブは廃止されており、有効のままにできません — mesh-client はスタック起動のたびにオフにします。稼働中のエンドポイントには「デフォルトのバックボーンを追加」またはバックボーン一覧を使ってください。",
+      "decommissionedHubEnableBlocked": "このハブは廃止されており、有効のままにできません — sarmesh はスタック起動のたびにオフにします。稼働中のエンドポイントには「デフォルトのバックボーンを追加」またはバックボーン一覧を使ってください。",
       "decommissionedBadge": "廃止済み",
       "defaultHubsPickerTitle": "デフォルトのバックボーンを追加",
       "defaultHubsPickerConfirm": "{{count}}ハブを追加",
@@ -1299,8 +1299,8 @@
       "rmapFullModeHint": "RMAP発行のフルモードは、IGNORE_CONFIG_WARNINGSを介してフルを維持します。LXMF配信アナウンスは、スタックアナウンス間隔（デフォルトは1時間）でこの無線を出力します。",
       "effectiveModeBadge": "有効期限： {{mode}}",
       "effectiveModeAria": "有効なランタイムモード{{mode}}。設定モードは、Reticulumが実行しているモードとは異なります。",
-      "effectiveModeTooltip": "Reticulumは、ignore_config_warningsが設定されていない限り、DISCOVERABLEにはゲートウェイ、内部、またはアクセスポイントが必要なため、この検出可能なインターフェイスをアクセスポイント（または別の許可されたモード）に書き換えました。フル（または設定モード）が有効になるようにオプトアウトするmesh-clientスタンプの後、スタックを再起動します。",
-      "flowControlBleHint": "Bluetoothでは、ラジオはCMD_READYを送信しないことがよくあります。Mesh-Clientは依然としてTXをペーシングします（READYを短時間待ってから続行します）。そのため、フロー制御はキューをフリーズさせることなく過負荷を軽減します。",
+      "effectiveModeTooltip": "Reticulumは、ignore_config_warningsが設定されていない限り、DISCOVERABLEにはゲートウェイ、内部、またはアクセスポイントが必要なため、この検出可能なインターフェイスをアクセスポイント（または別の許可されたモード）に書き換えました。フル（または設定モード）が有効になるようにオプトアウトするsarmeshスタンプの後、スタックを再起動します。",
+      "flowControlBleHint": "Bluetoothでは、ラジオはCMD_READYを送信しないことがよくあります。SARMeshは依然としてTXをペーシングします（READYを短時間待ってから続行します）。そのため、フロー制御はキューをフリーズさせることなく過負荷を軽減します。",
       "advancedFields": "詳細設定",
       "field": {
         "port": "ポート",
@@ -1366,12 +1366,12 @@
       "connectingRow": "{{name}}: Bluetooth 経由で接続しています",
       "offlineHintWifi": "RNodeがLAN上にあり、電源が入っており、設定されたIP （ 4242ではなくデフォルトのTCPポート7633 ）で到達可能であることを確認します。DHCPが新しいアドレスを割り当てた場合は、以下のホストを更新するか、Reticulum → AdminでWi-Fiを再プロビジョニングします。",
       "tcpUnreachable": "{{name}} ： TCPハブに到達できません（ {{host}} ： {{port}} ）",
-      "tcpUnreachableHint": "リモートReticulumインスタンスはオフラインか、接続をブロックしている可能性があります。このインターフェイスを無効にするか、ホストとポートを確認してください。mesh-client やスタックの頻繁な再起動は、Reticulum 1.4.0+ ハブが IP を 12 時間ブロックする原因になります。再起動せずに待ってください。",
+      "tcpUnreachableHint": "リモートReticulumインスタンスはオフラインか、接続をブロックしている可能性があります。このインターフェイスを無効にするか、ホストとポートを確認してください。sarmesh やスタックの頻繁な再起動は、Reticulum 1.4.0+ ハブが IP を 12 時間ブロックする原因になります。再起動せずに待ってください。",
       "connectingHintBle": "BLE RNode リンクは、スタックの開始後 (OS パスキー ウィンドウ) に最大 60 秒かかる場合があります。プロンプトが表示されたら、現在の RNode PIN を入力します。決して 123456 を入力しないでください。これは正常であり、エラーではありません。接続が成功するまで、デバイスはシステム設定に表示されない場合があります。",
       "offlineHintBle": "このエラーを解消するには、このインターフェースを削除して再度追加（デバイスを選択）し、保存済みの Bluetooth ID を更新してからスタックを再起動する必要がある場合があります。OS から 6 桁の Bluetooth PIN の入力を求められることがあります（macOS、Windows、または Linux）。RNode はペアリングのたびに新しいコードを生成します。123456 は使用しないでください（Meshtastic のデフォルトであり、RNode ではありません）。このアプリが接続する前に、RNode がシステム設定 → Bluetooth に表示されている必要はありません。スタックがペアリングすると OS のダイアログが表示されます。ディスプレイのない無線機：USB を接続 → Reticulum Admin → Bluetooth → ペアリング開始 → 管理パネルに表示された PIN（無線機の画面ではありません）を OS ダイアログに入力します。ディスプレイ付き無線機：Heltec デバイスでボタンを約 7 秒押し続け（タイミングは機種により異なります。多くのボードでは約 10 秒で Wi‑Fi AP が有効になります）、画面の PIN を読み取り、OS ダイアログに入力します。再試行する前に、OS の Bluetooth 設定で失敗したボンディングをクリアしてください。",
       "offlineHintBleBondStale": "macOSは引き続きこのRNodeをペアリング済みとして表示しますが、Bluetoothキーは一致しなくなりました（ピアが削除されたペアリング情報）。システム設定→Bluetoothでデバイスを忘れ、RNodeをペアリングモードにします（管理→Bluetooth→開始ペアリング、またはボタンを7秒間押したままにします）。次に、このインターフェース（デバイスを選択）を削除して再追加し、スタックを再起動し、プロンプトが表示されたら新しい6桁のPINを入力します。",
       "tcpFastFlap": "{{name}} ：頻繁にスタックを再起動した後、ハブがIPをブロックした可能性があります（ {{host}} ： {{port}} ）",
-      "tcpFastFlapHint": "Reticulum 1.4.0+ のパブリックハブは、12時間以内に5回の短いTCPセッションの後にIPをブロックします。mesh-client やスタックの素早い再起動もカウントされます。このハブを無効にして最大12時間待ってください。再起動するとブロックが延びます。"
+      "tcpFastFlapHint": "Reticulum 1.4.0+ のパブリックハブは、12時間以内に5回の短いTCPセッションの後にIPをブロックします。sarmesh やスタックの素早い再起動もカウントされます。このハブを無効にして最大12時間待ってください。再起動するとブロックが延びます。"
     },
     "autoConnectingTo": "{{deviceName}} に自動接続中…",
     "autoReconnectInProgress": "自動再接続中です…",
@@ -1835,7 +1835,7 @@
         "rmap_transport_disabled": "検出可能なインターフェイスが設定されていますが、トランスポートモードはオフです。",
         "rmap_i2p_not_connectable": "I2Pインターフェース「{{name}}」は検出可能ですが、接続可能ではありません。",
         "shared_instance_client": "Share instance attached as a client of another app — local TCP hubs in this config are not started.",
-        "rmap_mode_autocorrect": "インターフェース「{{name}}」は、非AP/ゲートウェイモードで検出可能です。Reticulumは、ignore_config_warningsが設定されていない限り、アクセスポイントとして実行します。mesh-clientがオプトアウトをスタンプできるように、インターフェースを編集するか、スタックを再起動します。"
+        "rmap_mode_autocorrect": "インターフェース「{{name}}」は、非AP/ゲートウェイモードで検出可能です。Reticulumは、ignore_config_warningsが設定されていない限り、アクセスポイントとして実行します。sarmeshがオプトアウトをスタンプできるように、インターフェースを編集するか、スタックを再起動します。"
       },
       "runtime": {
         "rnsNotReady": "RNS スタックの準備ができていません",
@@ -1868,7 +1868,7 @@
         "announceBusPressureTipBoundaryHubs": "境界/バックボーンハブを有効にしました： {{hubs}}。",
         "announceBusPressureTipTxSaturated": "TXキューは次の日付にドロップします： {{names}} —そのインターフェイスが飽和している可能性があります。",
         "tooManyDefaultBackbones": "{{count}}デフォルトのバックボーンが有効になっています。余分なものを無効にし、冗長性を保つために約2つを保管することを検討してください。",
-        "decommissionedHubEnabled": "廃止されたハブ「{{name}}」がまだ有効です — mesh-client はスタック起動のたびにオフにします。稼働中のエンドポイントには「デフォルトのバックボーンを追加」またはバックボーン一覧を使ってください。",
+        "decommissionedHubEnabled": "廃止されたハブ「{{name}}」がまだ有効です — sarmesh はスタック起動のたびにオフにします。稼働中のエンドポイントには「デフォルトのバックボーンを追加」またはバックボーン一覧を使ってください。",
         "txQueueDropsBle": "インターフェース「{{name}}」が{{count}}送信パケットをドロップしました（ TXキューがいっぱいです） — BLE RNodeリンクが固着しています。USBを使用するか、再ペアリングしてください",
         "txQueueDropsBleBondStale": "インターフェース「{{name}}」が{{count}}個のアウトバウンドパケットをドロップしました（ TXキューがいっぱいです） — BLEボンドが古くなっています。OS Bluetoothで忘れてから再ペアリングしてください",
         "txQueueDropsNeutral": "インターフェース「{{name}}」が{{count}}送信パケットをドロップしました（ TXキューがいっぱいです） —そのインターフェースのリンクを確認してください",
@@ -2135,11 +2135,11 @@
       },
       "database-chmod": {
         "label": "データベース chmod (致命的ではない)",
-        "recommendation": "Database file permission tweak failed (often benign on Windows). If you see real DB errors elsewhere, check antivirus and folder permissions for the mesh-client userData directory."
+        "recommendation": "Database file permission tweak failed (often benign on Windows). If you see real DB errors elsewhere, check antivirus and folder permissions for the sarmesh userData directory."
       },
       "database-writable": {
         "label": "データベースは書き込み不可です",
-        "recommendation": "The app cannot write its database folder. Fix permissions on the mesh-client userData directory (see troubleshooting: Database directory is not writable)."
+        "recommendation": "The app cannot write its database folder. Fix permissions on the sarmesh userData directory (see troubleshooting: Database directory is not writable)."
       },
       "tak-server": {
         "label": "TAK サーバーの問題",
@@ -2642,7 +2642,7 @@
       "remoteHardwareEnabledDesc": "リモートノードがこのデバイスのGPIOピンを読み書きできるようにします。",
       "remoteHardwareAllowUndefinedPins": "未定義ピンへのアクセスを許可",
       "remoteHardwareAllowUndefinedPinsDesc": "利用可能なピン設定に記載されていないピンの読み書きを許可します。",
-      "mqttProxyGatewayHint": "With proxy enabled, mesh-client bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
+      "mqttProxyGatewayHint": "With proxy enabled, sarmesh bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
       "mapReportPublishInterval": "マップレポート間隔（秒）",
       "mapReportPublishIntervalDesc": "0はファームウェアのデフォルトを使用します。マップレポートが有効になっているときに、デバイスがマップレポートを発行する頻度。",
       "mapReportPositionPrecision": "マップレポートの位置精度",
@@ -3326,7 +3326,7 @@
       "missingIdentity": "このノードにはまだ記憶されている身元がありません。Nomad アナウンスを待ってから、もう一度お試しください。",
       "transportUnavailable": "Reticulum トランスポートは利用できません。スタックを再起動してもう一度お試しください。",
       "sidecarNotRunning": "Reticulum サイドカーが実行されていません。接続からスタックを開始してから、もう一度お試しください。",
-      "responseTooLarge": "ノードが返すデータ量が、この要求で mesh-client が受け入れる上限を超えました。",
+      "responseTooLarge": "ノードが返すデータ量が、この要求で sarmesh が受け入れる上限を超えました。",
       "nomadBusy": "別の Nomad ページまたはファイル要求が処理中です。しばらくしてから再試行してください。",
       "nomadNotServing": "これは Nomad ノードですが、My Pages ホスティングは実行されていません。 [マイ ページ] を開いてフォルダーを選択し、ローカルでプレビューするための配信を開始します。",
       "networkNotReady": "ハブまたは無線インターフェイスがオンラインになるのを待っています。接続にインターフェイスが表示されたら、もう一度試してください。",
@@ -4702,7 +4702,7 @@
     "localHostStats": "{{count}} キューに登録 · {{bytes}} バイト",
     "localHostName": "ホスト伝播ノード",
     "syncPeerCostExceedsMax": "この伝播ノードのピアリング コストが最大ピアリング コストを超えています。[ネットワーク] → [高度な PN ホスティング] で最大値を上げるか、別のノードを選択してください。",
-    "offerUnsupported": "この宛先は LXMF /offer 同期をサポートしていません。mesh-client はそれを伝播ノードとして使用できません。",
+    "offerUnsupported": "この宛先は LXMF /offer 同期をサポートしていません。sarmesh はそれを伝播ノードとして使用できません。",
     "offerProbeTimeout": "/offer サポートのチェック中にタイムアウトしました — ノードに到達できない可能性があります。パスが使用可能なときに再試行してください。",
     "offerProbeFailed": "この伝播ノードの /offer サポートを確認できませんでした。しばらくしてからもう一度お試しください。",
     "enableLocalHostConfirmTitle": "ローカル伝播ノードのホスティングを有効にしますか?",
@@ -4949,7 +4949,7 @@
     "legendNotSavedTooltip": "空の円—このルームにはパスワードが保存されていません",
     "legendSavedTooltip": "空色の半円 — パスワード保存済み。ログインしてセッションを開く",
     "legendLoggedInTooltip": "緑の点 — アクティブなクライアントセッション（サーバーがオフラインの場合はルームを退出）",
-    "historyLocalHint": "ログイン時、mesh-client はこのデバイスにまだローカルのウォーターマークがない場合、ルームサーバーのリングバッファに残っている最近の投稿を要求します。接続中に購読を維持するには自動同期を有効にしてください。",
+    "historyLocalHint": "ログイン時、sarmesh はこのデバイスにまだローカルのウォーターマークがない場合、ルームサーバーのリングバッファに残っている最近の投稿を要求します。接続中に購読を維持するには自動同期を有効にしてください。",
     "loginAllSavedDisabledNoSavedPasswords": "すべてログインするには、まずルームパスワードを保存してください",
     "membersHeadingWithCount": "メンバー（ {{count}} ）",
     "collapseRoomList": "ルームリストを折りたたむ",
@@ -5203,7 +5203,7 @@
     "restartTitle": "再起動してインストールする",
     "retryCheck": "更新チェックを再試行します",
     "updateError": "アップデートエラー",
-    "menuToastUpToDateTitle": "mesh-client",
+    "menuToastUpToDateTitle": "sarmesh",
     "menuToastUpToDateBody": "最新バージョンを使用しています。",
     "menuToastAvailableTitle": "利用可能なアップデート",
     "menuToastAvailableBody": "バージョン{{version}}が利用できます。",
@@ -5611,7 +5611,7 @@
       "enabled": "ファイル受信が有効になっています。",
       "enableFailed": "ファイル受信を有効にできませんでした： {{error}}",
       "saveDirRequired": "受信を有効にする保存フォルダを選択します。",
-      "shareDestWarning": "有効にすると、mesh-client は rncp 受信宛先をこのピアに送信し、ファイル送信を自動入力できるようになります。",
+      "shareDestWarning": "有効にすると、sarmesh は rncp 受信宛先をこのピアに送信し、ファイル送信を自動入力できるようになります。",
       "lxmfBody": "rncp ファイル受信を有効にし、rncp 受信宛先ハッシュを返信してください。",
       "lxmfShareBody": "ファイル受信が有効になっています。私のrncp受信宛先ハッシュ:",
       "identityUnknown": "Inbound Ask はオンですが、このピアの ID ハッシュがまだ不明であるため、常に許可には追加されませんでした。各ファイルの前に引き続き質問されます。 try パスまたはアナウンスが到着した後は、常に再度許可します。"
@@ -5715,7 +5715,7 @@
     "capabilityHeardShort": "LXST",
     "capabilityUnknownShort": "?",
     "help": {
-      "interop": "LXST音声には、LXSTテレフォニー（Sideband、Ratspeak、またはmesh-client）を実行するピアが必要です。ボイスノートクリップではありません。Python LXSTがリファレンスです。rsLXSTは実験的です。"
+      "interop": "LXST音声には、LXSTテレフォニー（Sideband、Ratspeak、またはsarmesh）を実行するピアが必要です。ボイスノートクリップではありません。Python LXSTがリファレンスです。rsLXSTは実験的です。"
     },
     "toast": {
       "busy": "回線はビジー状態です。",
@@ -5864,7 +5864,7 @@
   },
   "longSession": {
     "title": "再起動をお勧めします",
-    "body": "mesh-clientは、Bluetooth無線接続で4日間稼働しています。アプリを再起動して、長時間のNoble BLEセッションでクラッシュするリスクを減らしましょう。",
+    "body": "sarmeshは、Bluetooth無線接続で4日間稼働しています。アプリを再起動して、長時間のNoble BLEセッションでクラッシュするリスクを減らしましょう。",
     "restart": "再始動",
     "dismiss": "却下"
   },

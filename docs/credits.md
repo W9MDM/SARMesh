@@ -26,7 +26,7 @@ We were inspired by features from these projects:
 
 - [Meshtastic](https://github.com/meshtastic): Open-source, off-grid mesh communication ecosystem
 - [MeshCore](https://github.com/meshcore-dev): Lightweight hybrid routing mesh protocol for packet radios
-- [Reticulum](https://reticulum.network/): Cryptographic mesh networking stack; mesh-client integrates via rsReticulum/rsLXMF sidecar
+- [Reticulum](https://reticulum.network/): Cryptographic mesh networking stack; sarmesh integrates via rsReticulum/rsLXMF sidecar
 - [meshcore-open](https://github.com/zjs81/meshcore-open): Flutter client for MeshCore devices
 - [meshtastic-cli](https://github.com/statico/meshtastic-cli): Terminal UI for monitoring Meshtastic mesh networks
 - [Mesh Monitor](https://meshmonitor.org/): Web-based mesh network monitoring dashboard
@@ -43,9 +43,9 @@ Application source (Electron main / preload / renderer) is **GPL-3.0-or-later**;
 
 ### Bundled fonts
 
-| Font / file                                                         | License | Role                                                                                                                  |
-| ------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------- |
-| `MeshClientNomadMono.woff2` (JetBrains Mono Nerd Font Mono, subset) | OFL-1.1 | Nomad Micron viewer monospace + Nerd/FA PUA icons ([OFL](../src/renderer/assets/fonts/OFL-JetBrainsMonoNerdFont.txt)) |
+| Font / file                                                      | License | Role                                                                                                                  |
+| ---------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------- |
+| `SARMeshNomadMono.woff2` (JetBrains Mono Nerd Font Mono, subset) | OFL-1.1 | Nomad Micron viewer monospace + Nerd/FA PUA icons ([OFL](../src/renderer/assets/fonts/OFL-JetBrainsMonoNerdFont.txt)) |
 
 ### Vendored
 
