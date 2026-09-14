@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 import type { ElectronAPI, OutboxEntry, OutboxEntryInput } from '@/shared/electron-api.types';
 
 import { DEFAULT_APRS_SETTINGS, IDLE_APRS_STATUS } from '../shared/aprs-types';
+import { DEFAULT_INVENTORY_SETTINGS } from '../shared/inventory-types';
 
 const outboxMockRows: OutboxEntry[] = [];
 let outboxMockIdSeq = 1;
@@ -365,6 +366,49 @@ export function createElectronAPIMock(): ElectronAPI {
       export: vi.fn().mockResolvedValue(null),
       onLine: vi.fn().mockReturnValue(() => {}),
       logDeviceConnection: vi.fn().mockResolvedValue(undefined),
+    },
+    inventory: {
+      list: vi.fn().mockResolvedValue([]),
+      get: vi.fn().mockResolvedValue(undefined),
+      register: vi.fn().mockResolvedValue({
+        nodeId: 0,
+        status: 'needs-config',
+        pendingChanges: [],
+        history: [],
+      }),
+      update: vi.fn().mockResolvedValue({
+        nodeId: 0,
+        status: 'needs-config',
+        pendingChanges: [],
+        history: [],
+      }),
+      remove: vi.fn().mockResolvedValue([]),
+      addNote: vi.fn().mockResolvedValue({
+        nodeId: 0,
+        status: 'needs-config',
+        pendingChanges: [],
+        history: [],
+      }),
+      recordSnapshot: vi.fn().mockResolvedValue({
+        nodeId: 0,
+        status: 'needs-config',
+        pendingChanges: [],
+        history: [],
+      }),
+      queueChange: vi.fn().mockResolvedValue([]),
+      cancelChange: vi.fn().mockResolvedValue([]),
+      pendingFor: vi.fn().mockResolvedValue([]),
+      awaitingConfig: vi.fn().mockResolvedValue([]),
+      markChangeState: vi.fn().mockResolvedValue(undefined),
+      recordReconcile: vi.fn().mockResolvedValue(undefined),
+      listProfiles: vi.fn().mockResolvedValue([]),
+      saveProfile: vi.fn().mockResolvedValue([]),
+      deleteProfile: vi.fn().mockResolvedValue([]),
+      drift: vi.fn().mockResolvedValue([]),
+      getSettings: vi.fn().mockResolvedValue(DEFAULT_INVENTORY_SETTINGS),
+      setSettings: vi.fn().mockResolvedValue(DEFAULT_INVENTORY_SETTINGS),
+      onChanged: vi.fn().mockReturnValue(() => {}),
+      onReconciled: vi.fn().mockReturnValue(() => {}),
     },
     aprs: {
       start: vi.fn().mockResolvedValue(undefined),

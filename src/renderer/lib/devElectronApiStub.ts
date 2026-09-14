@@ -1,6 +1,7 @@
 import type { OutboxEntry, OutboxEntryInput } from '@/shared/electron-api.types';
 
 import { DEFAULT_APRS_SETTINGS, IDLE_APRS_STATUS } from '../../shared/aprs-types';
+import { DEFAULT_INVENTORY_SETTINGS } from '../../shared/inventory-types';
 
 /* eslint-disable @typescript-eslint/require-await -- no-op async IPC stubs for browser dev */
 const noop = (): void => {};
@@ -313,6 +314,49 @@ export function createDevElectronApiStub(): typeof window.electronAPI {
       export: async () => null,
       onLine: noopUnsub,
       logDeviceConnection: noopAsync,
+    },
+    inventory: {
+      list: async () => [],
+      get: async () => undefined,
+      register: async (nodeId: number) => ({
+        nodeId,
+        status: 'needs-config' as const,
+        pendingChanges: [],
+        history: [],
+      }),
+      update: async (nodeId: number) => ({
+        nodeId,
+        status: 'needs-config' as const,
+        pendingChanges: [],
+        history: [],
+      }),
+      remove: async () => [],
+      addNote: async (nodeId: number) => ({
+        nodeId,
+        status: 'needs-config' as const,
+        pendingChanges: [],
+        history: [],
+      }),
+      recordSnapshot: async (nodeId: number) => ({
+        nodeId,
+        status: 'needs-config' as const,
+        pendingChanges: [],
+        history: [],
+      }),
+      queueChange: async () => [],
+      cancelChange: async () => [],
+      pendingFor: async () => [],
+      awaitingConfig: async () => [],
+      markChangeState: noopAsync,
+      recordReconcile: async () => undefined,
+      listProfiles: async () => [],
+      saveProfile: async () => [],
+      deleteProfile: async () => [],
+      drift: async () => [],
+      getSettings: async () => DEFAULT_INVENTORY_SETTINGS,
+      setSettings: async () => DEFAULT_INVENTORY_SETTINGS,
+      onChanged: noopUnsub,
+      onReconciled: noopUnsub,
     },
     aprs: {
       start: noopAsync,

@@ -15,6 +15,17 @@ import type {
   GamesSessionDetailResponse,
   GamesStatusResponse,
 } from './games-types';
+import type {
+  ConfigDrift,
+  InventoryConfig,
+  InventoryNode,
+  InventoryProfile,
+  InventorySettings,
+  NodeConfigSnapshot,
+  PendingChangeState,
+  PendingConfigChange,
+  ReconcileResult,
+} from './inventory-types';
 import type { MeshProtocol } from './meshProtocol';
 import type {
   PathCapability,
@@ -1181,6 +1192,40 @@ export interface ElectronAPI {
       ) => Promise<void>;
       remove: (id: number) => Promise<void>;
     };
+  };
+
+  // ─── Radio inventory ─────────────────────────────────────────────────────────
+  inventory: {
+    list: () => Promise<InventoryNode[]>;
+    get: (nodeId: number) => Promise<InventoryNode | undefined>;
+    register: (nodeId: number, seed?: Partial<InventoryNode>) => Promise<InventoryNode>;
+    update: (nodeId: number, patch: Partial<InventoryNode>) => Promise<InventoryNode>;
+    remove: (nodeId: number) => Promise<InventoryNode[]>;
+    addNote: (nodeId: number, note: string) => Promise<InventoryNode>;
+    recordSnapshot: (nodeId: number, snapshot: NodeConfigSnapshot) => Promise<InventoryNode>;
+    queueChange: (
+      nodeIds: number[],
+      label: string,
+      config: InventoryConfig,
+    ) => Promise<InventoryNode[]>;
+    cancelChange: (nodeId: number, changeId: string) => Promise<InventoryNode[]>;
+    pendingFor: (nodeId: number) => Promise<PendingConfigChange[]>;
+    awaitingConfig: () => Promise<InventoryNode[]>;
+    markChangeState: (
+      nodeId: number,
+      changeId: string,
+      state: PendingChangeState,
+      error?: string,
+    ) => Promise<void>;
+    recordReconcile: (result: ReconcileResult) => Promise<InventoryNode | undefined>;
+    listProfiles: () => Promise<InventoryProfile[]>;
+    saveProfile: (profile: InventoryProfile) => Promise<InventoryProfile[]>;
+    deleteProfile: (id: string) => Promise<InventoryProfile[]>;
+    drift: (nodeId: number, profileId: string) => Promise<ConfigDrift[]>;
+    getSettings: () => Promise<InventorySettings>;
+    setSettings: (settings: InventorySettings) => Promise<InventorySettings>;
+    onChanged: (cb: (nodes: InventoryNode[]) => void) => () => void;
+    onReconciled: (cb: (result: ReconcileResult) => void) => () => void;
   };
 
   // ─── APRS bridge ─────────────────────────────────────────────────────────────

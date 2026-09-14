@@ -115,8 +115,10 @@ import { formatGpxTracks, GPX_EXPORT_MAX_POINTS } from './gpxExportFormat';
 import { isHarmlessSocketOptionError } from './harmlessSocketOptionError';
 import { probeHttpRttMs, probeTcpRttMs } from './host-link-rtt';
 import { isValidHttpHostname } from './httpHostValidation';
+import { InventoryManager } from './inventory-manager';
 import { registerAprsIpcHandlers } from './ipc/aprs-handlers';
 import { registerGpsIpcHandlers } from './ipc/gps-handlers';
+import { registerInventoryIpcHandlers } from './ipc/inventory-handlers';
 import { registerReticulumDbIpcHandlers } from './ipc/reticulum-db-handlers';
 import { registerReticulumIpcHandlers, wireReticulumSidecarBridge } from './ipc/reticulum-handlers';
 import { registerReticulumIdentityIpcHandlers } from './ipc/reticulum-identity-handlers';
@@ -296,6 +298,26 @@ let takServerManager: TakServerManager | null = null;
 let takServerManagerLoadPromise: Promise<TakServerManager> | null = null;
 
 let aprsBridgeManager: AprsBridgeManager | null = null;
+
+let inventoryManager: InventoryManager | null = null;
+
+/** The radio asset register. Loaded from disk on first use. */
+function getInventoryManager(): InventoryManager {
+  if (!inventoryManager) {
+    const manager = new InventoryManager();
+    manager.load();
+    manager.on('changed', (nodes) => {
+      if (mainWindow) mainWindow.webContents.send('inventory:changed', nodes);
+      else console.debug('[main] inventory:changed dropped (mainWindow not ready)');
+    });
+    manager.on('reconciled', (result) => {
+      if (mainWindow) mainWindow.webContents.send('inventory:reconciled', result);
+      else console.debug('[main] inventory:reconciled dropped (mainWindow not ready)');
+    });
+    inventoryManager = manager;
+  }
+  return inventoryManager;
+}
 
 /**
  * The APRS bridge is created eagerly on first use and then fed synchronously
@@ -4197,6 +4219,17 @@ ipcMain.handle('db:saveNode', (event, node) => {
     // Every transport (RF, BLE, serial, MQTT) funnels node positions through
     // db:saveNode, so this is the one place the APRS bridge has to observe.
     offerNodeToAprs(node);
+    // Keep the asset register's "last seen" current without a disk write per
+    // packet; markSeen defers persistence to the next real change.
+    if (inventoryManager) {
+      const seenId = node.node_id;
+      if (Number.isFinite(seenId)) {
+        inventoryManager.markSeen(
+          seenId,
+          typeof node.hw_model === 'string' ? node.hw_model : undefined,
+        );
+      }
+    }
     return result;
   } catch (err) {
     finishDbIpcHandler('db:saveNode', err);
@@ -6584,6 +6617,8 @@ registerTakIpcHandlers({
 });
 
 registerAprsIpcHandlers({ getAprsBridgeManager });
+
+registerInventoryIpcHandlers({ getInventoryManager });
 
 registerReticulumIpcHandlers({
   idleStatus: IDLE_RETICULUM_STATUS,

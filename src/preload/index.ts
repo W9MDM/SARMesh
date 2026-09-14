@@ -33,6 +33,17 @@ import type {
   UpdateCheckingPayload,
 } from '../shared/electron-api.types';
 import type {
+  ConfigDrift,
+  InventoryConfig,
+  InventoryNode,
+  InventoryProfile,
+  InventorySettings,
+  NodeConfigSnapshot,
+  PendingChangeState,
+  PendingConfigChange,
+  ReconcileResult,
+} from '../shared/inventory-types';
+import type {
   ReticulumSidecarEvent,
   ReticulumSidecarStartOptions,
   ReticulumSidecarStatus,
@@ -1083,6 +1094,67 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('meshtastic:tcp-disconnected', handler);
         return () => ipcRenderer.off('meshtastic:tcp-disconnected', handler);
       },
+    },
+  },
+
+  // ─── Radio inventory ─────────────────────────────────────────────
+  inventory: {
+    list: (): Promise<InventoryNode[]> => ipcRenderer.invoke('inventory:list'),
+    get: (nodeId: number): Promise<InventoryNode | undefined> =>
+      ipcRenderer.invoke('inventory:get', nodeId),
+    register: (nodeId: number, seed?: Partial<InventoryNode>): Promise<InventoryNode> =>
+      ipcRenderer.invoke('inventory:register', nodeId, seed),
+    update: (nodeId: number, patch: Partial<InventoryNode>): Promise<InventoryNode> =>
+      ipcRenderer.invoke('inventory:update', nodeId, patch),
+    remove: (nodeId: number): Promise<InventoryNode[]> =>
+      ipcRenderer.invoke('inventory:remove', nodeId),
+    addNote: (nodeId: number, note: string): Promise<InventoryNode> =>
+      ipcRenderer.invoke('inventory:addNote', nodeId, note),
+    recordSnapshot: (nodeId: number, snapshot: NodeConfigSnapshot): Promise<InventoryNode> =>
+      ipcRenderer.invoke('inventory:recordSnapshot', nodeId, snapshot),
+    queueChange: (
+      nodeIds: number[],
+      label: string,
+      config: InventoryConfig,
+    ): Promise<InventoryNode[]> =>
+      ipcRenderer.invoke('inventory:queueChange', nodeIds, label, config),
+    cancelChange: (nodeId: number, changeId: string): Promise<InventoryNode[]> =>
+      ipcRenderer.invoke('inventory:cancelChange', nodeId, changeId),
+    pendingFor: (nodeId: number): Promise<PendingConfigChange[]> =>
+      ipcRenderer.invoke('inventory:pendingFor', nodeId),
+    awaitingConfig: (): Promise<InventoryNode[]> => ipcRenderer.invoke('inventory:awaitingConfig'),
+    markChangeState: (
+      nodeId: number,
+      changeId: string,
+      state: PendingChangeState,
+      error?: string,
+    ): Promise<void> =>
+      ipcRenderer.invoke('inventory:markChangeState', nodeId, changeId, state, error),
+    recordReconcile: (result: ReconcileResult): Promise<InventoryNode | undefined> =>
+      ipcRenderer.invoke('inventory:recordReconcile', result),
+    listProfiles: (): Promise<InventoryProfile[]> => ipcRenderer.invoke('inventory:listProfiles'),
+    saveProfile: (profile: InventoryProfile): Promise<InventoryProfile[]> =>
+      ipcRenderer.invoke('inventory:saveProfile', profile),
+    deleteProfile: (id: string): Promise<InventoryProfile[]> =>
+      ipcRenderer.invoke('inventory:deleteProfile', id),
+    drift: (nodeId: number, profileId: string): Promise<ConfigDrift[]> =>
+      ipcRenderer.invoke('inventory:drift', nodeId, profileId),
+    getSettings: (): Promise<InventorySettings> => ipcRenderer.invoke('inventory:getSettings'),
+    setSettings: (settings: InventorySettings): Promise<InventorySettings> =>
+      ipcRenderer.invoke('inventory:setSettings', settings),
+    onChanged: (cb: (nodes: InventoryNode[]) => void): (() => void) => {
+      const handler = (_: unknown, nodes: InventoryNode[]) => {
+        cb(nodes);
+      };
+      ipcRenderer.on('inventory:changed', handler);
+      return () => ipcRenderer.off('inventory:changed', handler);
+    },
+    onReconciled: (cb: (result: ReconcileResult) => void): (() => void) => {
+      const handler = (_: unknown, result: ReconcileResult) => {
+        cb(result);
+      };
+      ipcRenderer.on('inventory:reconciled', handler);
+      return () => ipcRenderer.off('inventory:reconciled', handler);
     },
   },
 
