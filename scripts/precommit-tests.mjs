@@ -36,7 +36,7 @@ const FORCE_FULL_PATTERNS = [
   /^package\.json$/,
   /^pnpm-lock\.yaml$/,
   // Vendored Electron/pnpm pins: only reachable in CI, where the manifest-only skip is off.
-  /^org\.coloradomesh\.SARMesh\.yml$/,
+  /^io\.github\.w9mdm\.SARMesh\.yml$/,
 ];
 
 /**

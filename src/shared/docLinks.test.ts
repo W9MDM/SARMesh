@@ -10,7 +10,7 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../..');
 describe('extractDocLinkTargets', () => {
   it('extracts GitHub blob and relative docs/*.md links', () => {
     const fixture = `
-      href="https://github.com/Colorado-Mesh/mesh-client/blob/main/docs/diagnostics.md"
+      href="https://github.com/W9MDM/SARMesh/blob/main/docs/diagnostics.md"
       [Troubleshooting](docs/troubleshooting.md#section)
       [Broken](docs/missing.md)
     `;

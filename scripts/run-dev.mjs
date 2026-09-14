@@ -25,8 +25,10 @@ export function buildDevConcurrentlyArgs() {
   const mainBuild = `esbuild src/main/index.ts --bundle --platform=node --outfile=dist-electron/main/index.js ${mainEsbuildExternalArgs().join(' ')} --format=cjs --watch`;
   const preloadBuild =
     'esbuild src/preload/index.ts --bundle --platform=node --outfile=dist-electron/preload/index.js --external:electron --format=cjs --watch';
-  const electronLaunch =
-    'node scripts/wait-for-dev.mjs && VITE_DEV_SERVER_URL=http://localhost:5173 ELECTRON_ENABLE_SECURITY_WARNINGS=1 electron .';
+  // `VAR=value cmd` is POSIX-only syntax that cmd.exe cannot parse, so these
+  // are exported into the child environment in runDev() instead of being
+  // prefixed here.
+  const electronLaunch = 'node scripts/wait-for-dev.mjs && electron .';
 
   return [
     '-k',
@@ -58,11 +60,30 @@ export function runDev(argv = process.argv.slice(2), options = {}) {
     return;
   }
 
-  const concurrentlyBin = path.join(projectRoot, 'node_modules', '.bin', 'concurrently');
-  const child = spawnFn(concurrentlyBin, buildDevConcurrentlyArgs(), {
+  // Run concurrently's JS entry with this Node binary rather than the `.bin`
+  // shim. On Windows the extensionless shim is a shell script the OS cannot
+  // execute, and the `.cmd` alternative needs `shell: true`, which would
+  // re-split the quoted esbuild/vite command strings below. Going straight to
+  // the JS avoids both problems and behaves identically on POSIX.
+  const concurrentlyBin = path.join(
+    projectRoot,
+    'node_modules',
+    'concurrently',
+    'dist',
+    'bin',
+    'concurrently.js',
+  );
+  const child = spawnFn(process.execPath, [concurrentlyBin, ...buildDevConcurrentlyArgs()], {
     cwd: projectRoot,
     stdio: 'inherit',
-    env: process.env,
+    env: {
+      ...process.env,
+      VITE_DEV_SERVER_URL: 'http://localhost:5173',
+      ELECTRON_ENABLE_SECURITY_WARNINGS: '1',
+      // VS Code exports this, which makes Electron boot as plain Node and the
+      // window never appears. Dev always wants the real Electron runtime.
+      ELECTRON_RUN_AS_NODE: undefined,
+    },
   });
 
   child.on('error', (err) => {

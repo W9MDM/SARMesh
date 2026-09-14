@@ -8,7 +8,7 @@ export interface BrokenDocLink {
   resolvedPath: string;
 }
 
-const SARMESH_BLOB_RE = /https:\/\/github\.com\/Colorado-Mesh\/sarmesh\/blob\/main\/([^\s"'#)]+)/g;
+const SARMESH_BLOB_RE = /https:\/\/github\.com\/W9MDM\/SARMesh\/blob\/main\/([^\s"'#)]+)/g;
 
 const RELATIVE_DOC_LINK_RE = /\]\((docs\/[^)#]+\.md)/g;
 
