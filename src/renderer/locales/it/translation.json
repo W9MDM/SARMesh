@@ -5097,7 +5097,8 @@
     "rrc": "RRC",
     "remote": "Remoto",
     "games": "Giochi",
-    "aprs": "APRS"
+    "aprs": "APRS",
+    "inventory": "Inventario"
   },
   "takServerPanel": {
     "title": "TAK Server",
@@ -6018,5 +6019,63 @@
     "sendTest": "Invia beacon di prova",
     "recentTitle": "Beacon recenti",
     "recentEmpty": "Non è stato ancora inviato nulla."
+  },
+  "inventoryPanel": {
+    "title": "Inventario radio",
+    "intro": "Ogni radio di proprietà del team, come è configurata, chi la trasporta e qualsiasi configurazione in attesa di essere applicata.",
+    "count": "{{count}} radio",
+    "pendingBanner": "{{count}} resto/i in coda. Ogni radio viene aggiornata automaticamente la prossima volta che si connette: collegala tramite USB o accendila su WiFi.",
+    "addRadio": "Registrare una radio ascoltata sulla rete",
+    "choose": "Scegli una radio...",
+    "register": "Registrati",
+    "filterPlaceholder": "Filtra per tag asset, titolare o team...",
+    "selected": "{{count}} selezionato",
+    "chooseProfile": "Scegli un profilo da mettere in coda...",
+    "queueForSelected": "Coda per selezionato",
+    "applyProfile": "Applicare il profilo",
+    "empty": "Nessuna radio ancora registrata. Collegane uno o registralo qui sopra.",
+    "untagged": "Senza tag",
+    "never": "mai",
+    "neverRead": "mai letto",
+    "neverReadHint": "Non leggere mai. Collega questa radio per catturarne la configurazione.",
+    "selectRadio": "Seleziona radio",
+    "colAsset": "Asset",
+    "colHolder": "Intestazione",
+    "colStatus": "Status",
+    "colConfig": "Config",
+    "colQueued": "In coda",
+    "colSeen": "Visto",
+    "assetTag": "Etichetta risorsa",
+    "assignedTo": "Assegnato a",
+    "team": "Team",
+    "retainedConfig": "Configurazione mantenuta",
+    "captured": "Incassato",
+    "firmware": "Firmware",
+    "longName": "Nome lungo",
+    "region": "Regione",
+    "modemPreset": "Preimpostazione modem",
+    "role": "Ruolo",
+    "channelN": "Canale {{index}}",
+    "queued": "Modifiche in coda",
+    "nothingQueued": "Niente in coda.",
+    "history": "Storia",
+    "cancel": "Annulla",
+    "remove": "Rimuovi",
+    "close": "Chiudi",
+    "status": {
+      "in-service": "In servizio",
+      "deployed": "Distribuito",
+      "maintenance": "Manutenzione",
+      "needs-config": "Necessita di configurazione",
+      "lost": "Perso.",
+      "retired": "Pensionati"
+    },
+    "changeState": {
+      "queued": "In coda",
+      "applying": "Applicazione in corso...",
+      "applied": "Carico",
+      "failed": "Non riuscito",
+      "cancelled": "Cancellati"
+    }
   }
 }

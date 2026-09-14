@@ -5097,7 +5097,8 @@
     "rrc": "RRC",
     "remote": "À distance",
     "games": "Jeux",
-    "aprs": "APRS"
+    "aprs": "APRS",
+    "inventory": "Inventaire"
   },
   "takServerPanel": {
     "title": "Serveur TAK",
@@ -6018,5 +6019,63 @@
     "sendTest": "Envoyer la balise de test",
     "recentTitle": "Balises récentes",
     "recentEmpty": "Rien n'a encore été envoyé."
+  },
+  "inventoryPanel": {
+    "title": "Inventaire radio",
+    "intro": "Chaque radio que l'équipe possède, comment elle est configurée, qui la transporte et toute configuration en attente d'application.",
+    "count": "{{count}} radio(s)",
+    "pendingBanner": "{{count}} modification(s) en attente. Chaque radio est mise à jour automatiquement la prochaine fois qu'elle se connecte — branchez-la sur USB ou affichez-la sur WiFi.",
+    "addRadio": "Enregistrer une radio entendue sur le maillage",
+    "choose": "Choisissez une radio…",
+    "register": "Inscription",
+    "filterPlaceholder": "Filtrer par étiquette d'actif, détenteur ou équipe…",
+    "selected": "{{count}} sélectionné",
+    "chooseProfile": "Choisissez un profil à mettre en file d'attente…",
+    "queueForSelected": "File d'attente pour sélectionné",
+    "applyProfile": "Appliquer le profil",
+    "empty": "Aucune radio enregistrée pour le moment. Connectez-en un ou enregistrez-le ci-dessus.",
+    "untagged": "Non tagué",
+    "never": "jamais",
+    "neverRead": "Je n'en ai jamais lu",
+    "neverReadHint": "Ne lisez jamais. Connectez cette radio pour capturer sa configuration.",
+    "selectRadio": "Sélectionnez Calm Radio",
+    "colAsset": "Actif",
+    "colHolder": "Titulaire",
+    "colStatus": "Statut",
+    "colConfig": "Config",
+    "colQueued": "En file d'attente",
+    "colSeen": "Vu",
+    "assetTag": "Étiquette du véhicule",
+    "assignedTo": "Attribuée à",
+    "team": "Équipe",
+    "retainedConfig": "Configuration retenue",
+    "captured": "تم الالتقاط",
+    "firmware": "Micrologiciel",
+    "longName": "Nom long",
+    "region": "Région",
+    "modemPreset": "Préréglage du modem",
+    "role": "Rôle",
+    "channelN": "Canal {{index}}",
+    "queued": "Modifications mises en file d'attente",
+    "nothingQueued": "Rien n'est mis en file d'attente.",
+    "history": "Historique",
+    "cancel": "Annuler",
+    "remove": "Supprimer",
+    "close": "Fermer",
+    "status": {
+      "in-service": "En service",
+      "deployed": "Déployé",
+      "maintenance": "Maintenance",
+      "needs-config": "Configuration des besoins",
+      "lost": "Perdu",
+      "retired": "Retraité"
+    },
+    "changeState": {
+      "queued": "En file d'attente",
+      "applying": "Application en cours",
+      "applied": "Appliqués",
+      "failed": "Échec",
+      "cancelled": "Annulé"
+    }
   }
 }

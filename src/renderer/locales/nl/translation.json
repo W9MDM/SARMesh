@@ -5097,7 +5097,8 @@
     "rrc": "RRC",
     "remote": "Op afstand",
     "games": "Games",
-    "aprs": "APRS"
+    "aprs": "APRS",
+    "inventory": "Inventariseren"
   },
   "takServerPanel": {
     "title": "TAK-server",
@@ -6018,5 +6019,63 @@
     "sendTest": "Testbaken verzenden",
     "recentTitle": "Recente bakens",
     "recentEmpty": "Er is nog niets verzonden."
+  },
+  "inventoryPanel": {
+    "title": "Radio-inventaris",
+    "intro": "Elke radio die het team bezit, hoe het is geconfigureerd, wie het draagt en elke configuratie die wacht om te worden toegepast.",
+    "count": "{{count}} radio('s)",
+    "pendingBanner": "{{count}} wijziging(en) in de wachtrij. Elke radio wordt automatisch bijgewerkt de volgende keer dat hij verbinding maakt — sluit hem aan via USB of zet hem op wifi.",
+    "addRadio": "Registreer een radio die op het mesh-netwerk is gehoord",
+    "choose": "Kies een radio...",
+    "register": "Aanmelden",
+    "filterPlaceholder": "Filteren op activatag, houder of team...",
+    "selected": "{{count}} geselecteerd",
+    "chooseProfile": "Kies een profiel om in de wachtrij te zetten...",
+    "queueForSelected": "Wachtrij voor geselecteerd",
+    "applyProfile": "Profiel toepassen",
+    "empty": "Nog geen radio's geregistreerd. Sluit er een aan of registreer deze hierboven.",
+    "untagged": "Niet gelabeld",
+    "never": "asla",
+    "neverRead": "nooit gelezen",
+    "neverReadHint": "Nooit lezen. Sluit deze radio aan om de configuratie vast te leggen.",
+    "selectRadio": "Selecteer de radioband:",
+    "colAsset": "Asset",
+    "colHolder": "Houder",
+    "colStatus": "Status",
+    "colConfig": "Config",
+    "colQueued": "In wachtrij geplaatst",
+    "colSeen": "Seen",
+    "assetTag": "Asset Tag",
+    "assignedTo": "Toegewezen aan",
+    "team": "Team",
+    "retainedConfig": "Behouden configuratie",
+    "captured": "Vastgelegd",
+    "firmware": "Firmware",
+    "longName": "Lange naam",
+    "region": "Regio",
+    "modemPreset": "Modem vooraf ingesteld",
+    "role": "Rol",
+    "channelN": "Kanaal {{index}}",
+    "queued": "Wijzigingen in wachtrij",
+    "nothingQueued": "Niets in de wachtrij.",
+    "history": "Historie",
+    "cancel": "Annuleren",
+    "remove": "Verwijderen",
+    "close": "Sluiten",
+    "status": {
+      "in-service": "Werkster",
+      "deployed": "Geïmplementeerd",
+      "maintenance": "Onderhoud",
+      "needs-config": "Configuratie nodig",
+      "lost": "Verloren",
+      "retired": "Gepensioneerd"
+    },
+    "changeState": {
+      "queued": "In wachtrij geplaatst",
+      "applying": "Toepassen",
+      "applied": "Toegepast",
+      "failed": "Mislukt",
+      "cancelled": "Geannuleerd"
+    }
   }
 }

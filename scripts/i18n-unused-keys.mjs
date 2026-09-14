@@ -16,6 +16,8 @@ export const DYNAMIC_T_PREFIXES = [
   { prefix: 'chatPanel.fetchStoreForwardHistoryError.', leafKeys: true },
   { prefix: 'aprsPanel.sink.', leafKeys: true },
   { prefix: 'aprsPanel.trackerType.', leafKeys: true },
+  { prefix: 'inventoryPanel.status.', leafKeys: true },
+  { prefix: 'inventoryPanel.changeState.', leafKeys: true },
   { prefix: 'radioPanel.deviceRoles.', suffixes: ['label', 'description'] },
   { prefix: 'radioPanel.regions.', suffixes: ['label'] },
   { prefix: 'radioPanel.modemPresets.', suffixes: ['label'] },

@@ -5097,7 +5097,8 @@
     "rrc": "RRC",
     "remote": "リモート",
     "games": "ゲーム",
-    "aprs": "APRS"
+    "aprs": "APRS",
+    "inventory": "持ち物"
   },
   "takServerPanel": {
     "title": "TAKサーバー",
@@ -6018,5 +6019,63 @@
     "sendTest": "テストビーコンを送信",
     "recentTitle": "最近のビーコン",
     "recentEmpty": "まだ何も送信されていません。"
+  },
+  "inventoryPanel": {
+    "title": "ラジオインベントリ",
+    "intro": "チームが所有するすべての無線、それがどのように構成されているか、誰がそれを運んでいるか、そして適用されるのを待っているすべての構成。",
+    "count": "{{count}}ラジオ",
+    "pendingBanner": "{{count}}変更待ち。各ラジオは、次回接続時に自動的に更新されます。USB経由で接続するか、WiFiで起動します。",
+    "addRadio": "メッシュで聞こえたラジオを登録する",
+    "choose": "ラジオを選択してください…",
+    "register": "登録する",
+    "filterPlaceholder": "アセットタグ、所有者、またはチームで絞り込む…",
+    "selected": "{{count}}が選択されました",
+    "chooseProfile": "キューに入れるプロフィールを選択…",
+    "queueForSelected": "選択したキュー",
+    "applyProfile": "プロファイルを適用",
+    "empty": "ラジオはまだ登録されていません。接続するか、上記で登録してください。",
+    "untagged": "タグなし",
+    "never": "一度もない",
+    "neverRead": "決して読まない",
+    "neverReadHint": "決して読まないでください。このラジオを接続して、その構成をキャプチャしてください。",
+    "selectRadio": "ラジオを選択",
+    "colAsset": "アセット",
+    "colHolder": "保有者",
+    "colStatus": "ステータス",
+    "colConfig": "構成",
+    "colQueued": "待機リストに追加済み",
+    "colSeen": "視聴済み",
+    "assetTag": "アセットタグ",
+    "assignedTo": "割当先",
+    "team": "チーム",
+    "retainedConfig": "保持された構成",
+    "captured": "奪取",
+    "firmware": "ファームウェア",
+    "longName": "長い名前",
+    "region": "地域",
+    "modemPreset": "モデムプリセット",
+    "role": "役割",
+    "channelN": "チャンネル{{index}}",
+    "queued": "キューに入れられた変更",
+    "nothingQueued": "キューには何も",
+    "history": "歴史",
+    "cancel": "キャンセル",
+    "remove": "削除する",
+    "close": "閉じる",
+    "status": {
+      "in-service": "家庭内労働者",
+      "deployed": "配置済み",
+      "maintenance": "保守",
+      "needs-config": "設定が必要です",
+      "lost": "敗北",
+      "retired": "年金生活者"
+    },
+    "changeState": {
+      "queued": "待機リストに追加済み",
+      "applying": "応用",
+      "applied": "応用編",
+      "failed": "失敗しました",
+      "cancelled": "キャンセル済み"
+    }
   }
 }

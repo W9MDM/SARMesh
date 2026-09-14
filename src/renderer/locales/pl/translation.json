@@ -5177,7 +5177,8 @@
     "rrc": "RRC",
     "remote": "Zdalny",
     "games": "Gry",
-    "aprs": "APRS"
+    "aprs": "APRS",
+    "inventory": "Inwentaryzacja"
   },
   "takServerPanel": {
     "title": "Serwer TAK",
@@ -6112,5 +6113,63 @@
     "sendTest": "TEST SYGNALIZATORA",
     "recentTitle": "Najnowsze sygnały nawigacyjne",
     "recentEmpty": "Nic nie wysłano."
+  },
+  "inventoryPanel": {
+    "title": "Inwentaryzacja radiowa",
+    "intro": "Każde radio, które posiada zespół, jak jest skonfigurowane, kto je nosi i każda konfiguracja czekająca na zastosowanie.",
+    "count": "Radio(a) {{count}}",
+    "pendingBanner": "{{count}} zmiana(zmiany) w kolejce. Każde radio jest aktualizowane automatycznie przy następnym połączeniu — podłącz je przez USB lub włącz Wi-Fi.",
+    "addRadio": "Zarejestruj radio słyszalne na siatce",
+    "choose": "Wybierz radio…",
+    "register": "Zarejestruj się",
+    "filterPlaceholder": "Filtruj według tagu zasobu, posiadacza lub zespołu…",
+    "selected": "Wybrano: {{count}}",
+    "chooseProfile": "Wybierz profil do kolejki…",
+    "queueForSelected": "Kolejka dla wybranych",
+    "applyProfile": "Zastosuj profil",
+    "empty": "Brak zarejestrowanych radioodbiorników. Podłącz jeden lub zarejestruj go powyżej.",
+    "untagged": "Nieoznakowane",
+    "never": "nigdy",
+    "neverRead": "nigdy nie czytaj",
+    "neverReadHint": "Nigdy nie czytaj. Podłącz to radio, aby przechwycić jego konfigurację.",
+    "selectRadio": "\"Wybierz pasmo radiowe\"",
+    "colAsset": "Składnik aktywa",
+    "colHolder": "Posiadacz",
+    "colStatus": "Status",
+    "colConfig": "Konfiguracja",
+    "colQueued": "W kolejce",
+    "colSeen": "Obejrzane",
+    "assetTag": "Znacznik zasobu",
+    "assignedTo": "Przypisane do",
+    "team": "Zespół",
+    "retainedConfig": "Zachowana konfiguracja",
+    "captured": "Pochwycony",
+    "firmware": "Oprogramowanie sprzętowe",
+    "longName": "Długa nazwa",
+    "region": "Region",
+    "modemPreset": "Ustawienia wstępne modemu",
+    "role": "ROLA",
+    "channelN": "Kanał {{index}}",
+    "queued": "Zmiany w kolejce",
+    "nothingQueued": "Nic nie było w kolejce.",
+    "history": "Historia",
+    "cancel": "Anuluj",
+    "remove": "Usuń",
+    "close": "Zamknięty",
+    "status": {
+      "in-service": "W eksploatacji",
+      "deployed": "Deployed",
+      "maintenance": "Konserwacja",
+      "needs-config": "Wymaga konfiguracji",
+      "lost": "Utracone",
+      "retired": "Emeryci i renciści"
+    },
+    "changeState": {
+      "queued": "W kolejce",
+      "applying": "Aplikowanie",
+      "applied": "Zastosowano",
+      "failed": "Zakończone niepowodzeniem",
+      "cancelled": "Anulowane"
+    }
   }
 }

@@ -157,6 +157,7 @@ import {
   ChannelUtilizationChart,
   DiagnosticsPanel,
   GamesPanel,
+  InventoryPanel,
   MapPanel,
   ModulePanel,
   NomadNetworkPanel,
@@ -194,6 +195,7 @@ import {
   findFilteredTabIndexForPanel,
   GAMES_PANEL_INDEX,
   GRAPH_PANEL_INDEX,
+  INVENTORY_PANEL_INDEX,
   MAP_TAB_PANEL_INDEX,
   MODULES_PANEL_INDEX,
   NODES_PANEL_INDEX,
@@ -4390,6 +4392,28 @@ function AppContent() {
                                   ? meshcorePanelActions.importPrivateKey
                                   : undefined
                               }
+                            />
+                          </Suspense>
+                        </ErrorBoundary>
+                      ) : null}
+                    </div>
+                    <div
+                      id={`panel-${INVENTORY_PANEL_INDEX}`}
+                      role="tabpanel"
+                      aria-labelledby={`tab-${Math.max(0, findFilteredTabIndexForPanel(selectByProtocol(tabsByProtocol, protocol), INVENTORY_PANEL_INDEX))}`}
+                      hidden={activePanelIndex !== INVENTORY_PANEL_INDEX}
+                      className="w-full min-w-0"
+                    >
+                      {activePanelIndex === INVENTORY_PANEL_INDEX ? (
+                        <ErrorBoundary>
+                          <Suspense fallback={<PanelSkeleton />}>
+                            <InventoryPanel
+                              nodes={[
+                                ...selectByProtocol(uiNodesByProtocol, protocol).values(),
+                              ].map((n) => ({
+                                nodeId: n.node_id,
+                                label: n.long_name || n.short_name || String(n.node_id),
+                              }))}
                             />
                           </Suspense>
                         </ErrorBoundary>

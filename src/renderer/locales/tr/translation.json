@@ -5097,7 +5097,8 @@
     "rrc": "RRC",
     "remote": "Uzak",
     "games": "Oyun",
-    "aprs": "APRS"
+    "aprs": "APRS",
+    "inventory": "Envanter"
   },
   "takServerPanel": {
     "title": "TAK Sunucusu",
@@ -6018,5 +6019,63 @@
     "sendTest": "Test fenerini gönder",
     "recentTitle": "Son işaretler",
     "recentEmpty": "Henüz bir şey gönderilmedi."
+  },
+  "inventoryPanel": {
+    "title": "Radyo Envanteri",
+    "intro": "Takımın sahip olduğu her telsiz, nasıl yapılandırıldığı, kimin taşıdığı ve uygulanmayı bekleyen herhangi bir yapılandırma.",
+    "count": "{{count}} radyo(lar)",
+    "pendingBanner": "{{count}} değişiklik(ler) kuyruğa alındı. Her radyo bir dahaki sefere bağlandığında otomatik olarak güncellenir — USB üzerinden takın veya WiFi'ye getirin.",
+    "addRadio": "Ağda duyulan bir radyoyu kaydedin",
+    "choose": "Bir radyo seçin…",
+    "register": "Kaydol",
+    "filterPlaceholder": "Varlık etiketine, sahibine veya ekibine göre filtreleyin…",
+    "selected": "{{count}} seçildi",
+    "chooseProfile": "Kuyruğa eklemek için bir profil seçin…",
+    "queueForSelected": "Seçilenler için kuyruk",
+    "applyProfile": "Profili Uygula",
+    "empty": "Henüz kayıtlı radyo yok. Birini bağlayın veya yukarıdan kaydedin.",
+    "untagged": "Etiketlenmemiş",
+    "never": "gülümseyecek",
+    "neverRead": "Hiç okunmaz",
+    "neverReadHint": "Asla okumayın. Yapılandırmasını yakalamak için bu radyoyu bağlayın.",
+    "selectRadio": "Radyo seç",
+    "colAsset": "Varlık",
+    "colHolder": "Mukim",
+    "colStatus": "Durum",
+    "colConfig": "Yapılandırma",
+    "colQueued": "Sırada Sırada",
+    "colSeen": "Görülen",
+    "assetTag": "Bilgisayar Etiketi",
+    "assignedTo": "Atanan",
+    "team": "Ekip",
+    "retainedConfig": "Muhafaza edilen konfigürasyon",
+    "captured": "Yakalanan",
+    "firmware": "Yazılım",
+    "longName": "Uzun İsim",
+    "region": "Bölge",
+    "modemPreset": "Modem ön ayarı",
+    "role": "Rol",
+    "channelN": "Kanal {{index}}",
+    "queued": "Kuyruktaki değişiklikler",
+    "nothingQueued": "Hiçbir şey sıraya girmedi.",
+    "history": "Tarih",
+    "cancel": "İptal",
+    "remove": "Kaldır",
+    "close": "Kapat",
+    "status": {
+      "in-service": "Hizmette",
+      "deployed": "Mevzilenen",
+      "maintenance": "Bakım",
+      "needs-config": "Yapılandırma gerekiyor",
+      "lost": "Mağlubiyet",
+      "retired": "Emekli"
+    },
+    "changeState": {
+      "queued": "Sırada Sırada",
+      "applying": "Uygulayan",
+      "applied": "Uygulandı",
+      "failed": "Başarısız",
+      "cancelled": "İptal Edildi"
+    }
   }
 }

@@ -5138,7 +5138,8 @@
     "rrc": "RRC",
     "remote": "Vzdálený přístup",
     "games": "Herní aktivity",
-    "aprs": "APRS"
+    "aprs": "APRS",
+    "inventory": "Skladová zásoba"
   },
   "takServerPanel": {
     "title": "Server TAK",
@@ -6066,5 +6067,63 @@
     "sendTest": "Poslat testovací maják",
     "recentTitle": "Nedávné majáky",
     "recentEmpty": "Zatím nebylo nic odesláno."
+  },
+  "inventoryPanel": {
+    "title": "Inventář rádia",
+    "intro": "Každé rádio, které tým vlastní, jak je nakonfigurováno, kdo ho nese a jakákoli konfigurace, která čeká na použití.",
+    "count": "{{count}} rádio(y)",
+    "pendingBanner": "{{count}} změny ve frontě. Každé rádio se při příštím připojení automaticky aktualizuje — připojte ho přes USB nebo ho přeneste na WiFi.",
+    "addRadio": "Zaregistrujte rádio slyšené na síti",
+    "choose": "Vyberte rádio…",
+    "register": "Zaregistrovat",
+    "filterPlaceholder": "Filtrovat podle značky aktiva, držitele nebo týmu...",
+    "selected": "{{count}} vybráno",
+    "chooseProfile": "Vyberte profil, který chcete zařadit do fronty...",
+    "queueForSelected": "Fronta pro vybrané",
+    "applyProfile": "Aplikovat profil",
+    "empty": "Zatím nejsou registrována žádná rádia. Připojte ji nebo ji zaregistrujte výše.",
+    "untagged": "Odštítkováno",
+    "never": "nikdy",
+    "neverRead": "Nikdy nečíst z",
+    "neverReadHint": "Nikdy nečtěte. Připojte toto rádio k zachycení jeho konfigurace.",
+    "selectRadio": "Zvolit komunikační pásmo",
+    "colAsset": "Aktiva",
+    "colHolder": "držák",
+    "colStatus": "Status",
+    "colConfig": "Nastavení",
+    "colQueued": "Ve frontě",
+    "colSeen": "Shlédnuté",
+    "assetTag": "Značka aktiva",
+    "assignedTo": "Přiřazeno k",
+    "team": "Tým",
+    "retainedConfig": "Zachovaná konfigurace",
+    "captured": "zachycené množství CO2,",
+    "firmware": "Firmware",
+    "longName": "Název dlouhý",
+    "region": "Kraj",
+    "modemPreset": "Přednastavení modemu",
+    "role": "Role",
+    "channelN": "Kanál {{index}}",
+    "queued": "Změny ve frontě",
+    "nothingQueued": "Nic ve frontě.",
+    "history": "Dějepis",
+    "cancel": "Zrušit",
+    "remove": "Odstranit",
+    "close": "Zavřít",
+    "status": {
+      "in-service": "Ve službě",
+      "deployed": "Nasazen",
+      "maintenance": "Údržba",
+      "needs-config": "Vyžaduje konfiguraci",
+      "lost": "Ztraceni",
+      "retired": "Důchodci"
+    },
+    "changeState": {
+      "queued": "Ve frontě",
+      "applying": "Uplatňování",
+      "applied": "Přihláška podána",
+      "failed": "Nezdařilo se",
+      "cancelled": "Zrušeno"
+    }
   }
 }

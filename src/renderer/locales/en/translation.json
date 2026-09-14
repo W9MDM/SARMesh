@@ -5756,7 +5756,8 @@
     "graph": "Graph",
     "topology": "Network topology",
     "admin": "Administration",
-    "aprs": "APRS"
+    "aprs": "APRS",
+    "inventory": "Inventory"
   },
   "takServerPanel": {
     "title": "TAK Server",
@@ -6018,5 +6019,63 @@
     "sendTest": "Send test beacon",
     "recentTitle": "Recent beacons",
     "recentEmpty": "Nothing sent yet."
+  },
+  "inventoryPanel": {
+    "title": "Radio Inventory",
+    "intro": "Every radio the team owns, how it is configured, who is carrying it, and any configuration waiting to be applied.",
+    "count": "{{count}} radio(s)",
+    "pendingBanner": "{{count}} change(s) queued. Each radio is updated automatically the next time it connects — plug it in over USB, or bring it up on WiFi.",
+    "addRadio": "Register a radio heard on the mesh",
+    "choose": "Choose a radio…",
+    "register": "Register",
+    "filterPlaceholder": "Filter by asset tag, holder or team…",
+    "selected": "{{count}} selected",
+    "chooseProfile": "Choose a profile to queue…",
+    "queueForSelected": "Queue for selected",
+    "applyProfile": "Apply profile",
+    "empty": "No radios registered yet. Connect one, or register it above.",
+    "untagged": "Untagged",
+    "never": "never",
+    "neverRead": "never read",
+    "neverReadHint": "Never read. Connect this radio to capture its configuration.",
+    "selectRadio": "Select radio",
+    "colAsset": "Asset",
+    "colHolder": "Holder",
+    "colStatus": "Status",
+    "colConfig": "Config",
+    "colQueued": "Queued",
+    "colSeen": "Seen",
+    "assetTag": "Asset tag",
+    "assignedTo": "Assigned to",
+    "team": "Team",
+    "retainedConfig": "Retained configuration",
+    "captured": "Captured",
+    "firmware": "Firmware",
+    "longName": "Long name",
+    "region": "Region",
+    "modemPreset": "Modem preset",
+    "role": "Role",
+    "channelN": "Channel {{index}}",
+    "queued": "Queued changes",
+    "nothingQueued": "Nothing queued.",
+    "history": "History",
+    "cancel": "Cancel",
+    "remove": "Remove",
+    "close": "Close",
+    "status": {
+      "in-service": "In service",
+      "deployed": "Deployed",
+      "maintenance": "Maintenance",
+      "needs-config": "Needs config",
+      "lost": "Lost",
+      "retired": "Retired"
+    },
+    "changeState": {
+      "queued": "Queued",
+      "applying": "Applying",
+      "applied": "Applied",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    }
   }
 }

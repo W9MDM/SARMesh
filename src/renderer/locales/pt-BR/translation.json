@@ -5097,7 +5097,8 @@
     "rrc": "RRC",
     "remote": "Remoto",
     "games": "Jogos",
-    "aprs": "APRs"
+    "aprs": "APRs",
+    "inventory": "Inventário"
   },
   "takServerPanel": {
     "title": "Servidor TAK",
@@ -6018,5 +6019,63 @@
     "sendTest": "Enviar baliza de teste",
     "recentTitle": "Beacons recentes",
     "recentEmpty": "Nada foi enviado ainda."
+  },
+  "inventoryPanel": {
+    "title": "Inventário de Rádio",
+    "intro": "Cada rádio que a equipe possui, como ele é configurado, quem o está carregando e qualquer configuração que esteja aguardando para ser aplicada.",
+    "count": "{{count}} rádio(s)",
+    "pendingBanner": "{{count}} alteração(ões) na fila. Cada rádio é atualizado automaticamente na próxima vez que se conectar — conecte-o por USB ou ligue-o por Wi-Fi.",
+    "addRadio": "Registre um rádio ouvido na malha",
+    "choose": "Escolha um rádio...",
+    "register": "Registro",
+    "filterPlaceholder": "Filtrar por tag de ativo, titular ou equipe...",
+    "selected": "{{count}} selecionado",
+    "chooseProfile": "Escolha um perfil para enfileirar...",
+    "queueForSelected": "Fila para selecionados",
+    "applyProfile": "Aplicar perfil",
+    "empty": "Ainda não há rádios registrados. Conecte um ou registre-o acima.",
+    "untagged": "Sem etiqueta",
+    "never": "nunca",
+    "neverRead": "nunca li",
+    "neverReadHint": "Nunca leia. Conecte este rádio para capturar sua configuração.",
+    "selectRadio": "Selecionar rádio",
+    "colAsset": "Ativo",
+    "colHolder": "Titular",
+    "colStatus": "Status",
+    "colConfig": "Configurações",
+    "colQueued": "Na fila",
+    "colSeen": "Visto",
+    "assetTag": "Tag de Ativo",
+    "assignedTo": "Atribuído a",
+    "team": "Equipe",
+    "retainedConfig": "Configuração retida",
+    "captured": "Capturado",
+    "firmware": "Firmware",
+    "longName": "Nome Completo",
+    "region": "Região",
+    "modemPreset": "Predefinição do modem",
+    "role": "Função",
+    "channelN": "Canal {{index}}",
+    "queued": "Alterações na fila",
+    "nothingQueued": "Nada na fila.",
+    "history": "Histórico",
+    "cancel": "Cancelar",
+    "remove": "Remover",
+    "close": "Fechar",
+    "status": {
+      "in-service": "Em serviço",
+      "deployed": "Implantado",
+      "maintenance": "Manutenção",
+      "needs-config": "Precisa de configuração",
+      "lost": "Perdidos",
+      "retired": "Aposentado"
+    },
+    "changeState": {
+      "queued": "Na fila",
+      "applying": "Aplicando",
+      "applied": "Aplicado",
+      "failed": "Falha",
+      "cancelled": "Cancelado"
+    }
   }
 }

@@ -2,6 +2,7 @@ import {
   Blocks,
   ChartBar,
   ChartPie,
+  ClipboardList,
   Code,
   Crosshair,
   FileChartColumn,
@@ -69,6 +70,8 @@ export function TabIcon({ name }: { name: string }) {
       return <Radio {...p} />;
     case 'Rooms':
       return <House {...p} />;
+    case 'Inventory':
+      return <ClipboardList {...p} />;
     case 'APRS':
       return <SatelliteDish {...p} />;
     case 'TAK':

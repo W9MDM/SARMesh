@@ -5097,7 +5097,8 @@
     "rrc": "RRC",
     "remote": "Remoto",
     "games": "Juegos",
-    "aprs": "APRS"
+    "aprs": "APRS",
+    "inventory": "Inventario"
   },
   "takServerPanel": {
     "title": "Servidor TAK",
@@ -6018,5 +6019,63 @@
     "sendTest": "Enviar baliza de prueba",
     "recentTitle": "Balizas recientes",
     "recentEmpty": "Aún no se ha enviado nada."
+  },
+  "inventoryPanel": {
+    "title": "Inventario de radio",
+    "intro": "Cada radio que posee el equipo, cómo se configura, quién la lleva y cualquier configuración que esté a la espera de ser aplicada.",
+    "count": "{{count}} radio(s)",
+    "pendingBanner": "{{count}} cambio(s) en cola. Cada radio se actualiza automáticamente la próxima vez que se conecte: conéctela a través de USB o súbala a WiFi.",
+    "addRadio": "Registre una radio que se escucha en la malla",
+    "choose": "Elige una radio...",
+    "register": "Caja registradora",
+    "filterPlaceholder": "Filtrar por etiqueta de activo, titular o equipo...",
+    "selected": "{{count}} seleccionado",
+    "chooseProfile": "Elige un perfil para poner en cola...",
+    "queueForSelected": "Cola para seleccionado",
+    "applyProfile": "Aplicar el perfil",
+    "empty": "Aún no hay radios registrados. Conecta uno o regístralo arriba.",
+    "untagged": "Sin etiquetar",
+    "never": "están",
+    "neverRead": "nunca leer",
+    "neverReadHint": "Nunca lea. Conecte esta radio para capturar su configuración.",
+    "selectRadio": "Seleccionar banda de señal móvil",
+    "colAsset": "Activo",
+    "colHolder": "Titular",
+    "colStatus": "Sincronizar el estado de confirmación de la reserva con el pedido Woo correspondiente",
+    "colConfig": "Config",
+    "colQueued": "En cola",
+    "colSeen": "Visto",
+    "assetTag": "Etiqueta de Inmovilizado",
+    "assignedTo": "Asignado a",
+    "team": "Equipo",
+    "retainedConfig": "Configuración retenida",
+    "captured": "Capturado",
+    "firmware": "Firmware",
+    "longName": "Nombre largo",
+    "region": "Región",
+    "modemPreset": "Módem preestablecido",
+    "role": "Función",
+    "channelN": "Canal {{index}}",
+    "queued": "Cambios en cola",
+    "nothingQueued": "Nada en cola.",
+    "history": "Historia",
+    "cancel": "Cancelar",
+    "remove": "Eliminar",
+    "close": "Cerrar",
+    "status": {
+      "in-service": "En servicio",
+      "deployed": "Desplegado",
+      "maintenance": "Mantenimiento",
+      "needs-config": "Necesita configuración",
+      "lost": "Perdido",
+      "retired": "Jubilado"
+    },
+    "changeState": {
+      "queued": "En cola",
+      "applying": "Aplica",
+      "applied": "Aplicada",
+      "failed": "Fallido",
+      "cancelled": "Cancelada"
+    }
   }
 }

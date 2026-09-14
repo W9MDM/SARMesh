@@ -5097,7 +5097,8 @@
     "rrc": "RRC",
     "remote": "Jarak jauh",
     "games": "Game",
-    "aprs": "APRS"
+    "aprs": "APRS",
+    "inventory": "Inventory"
   },
   "takServerPanel": {
     "title": "Server TAK",
@@ -6018,5 +6019,63 @@
     "sendTest": "Kirim suar uji",
     "recentTitle": "Beacon terbaru",
     "recentEmpty": "Belum ada yang terkirim."
+  },
+  "inventoryPanel": {
+    "title": "Inventaris Radio",
+    "intro": "Setiap radio yang dimiliki tim, cara konfigurasi, siapa yang membawanya, dan konfigurasi apa pun yang menunggu untuk diterapkan.",
+    "count": "{{count}} radio",
+    "pendingBanner": "{{count}} perubahan antrean. Setiap radio diperbarui secara otomatis saat berikutnya terhubung — pasang melalui USB, atau bawa ke WiFi.",
+    "addRadio": "Daftarkan radio yang terdengar di mesh",
+    "choose": "Pilih radio…",
+    "register": "Daftar",
+    "filterPlaceholder": "Filter berdasarkan tag aset, pemegang, atau tim…",
+    "selected": "{{count}} dipilih",
+    "chooseProfile": "Pilih profil untuk mengantre…",
+    "queueForSelected": "Antrean untuk dipilih",
+    "applyProfile": "Terapkan profil",
+    "empty": "Belum ada radio yang terdaftar. Hubungkan satu, atau daftarkan di atas.",
+    "untagged": "Belum dicocokkan",
+    "never": "tak pernah",
+    "neverRead": "tidak pernah membaca",
+    "neverReadHint": "Jangan pernah membaca. Hubungkan radio ini untuk menangkap konfigurasinya.",
+    "selectRadio": "Pilih radio",
+    "colAsset": "Aset",
+    "colHolder": "pemegang",
+    "colStatus": "Status",
+    "colConfig": "Konfigurasi",
+    "colQueued": "Diantrekan",
+    "colSeen": "Terlihat",
+    "assetTag": "Tag Aset",
+    "assignedTo": "Ditugaskan ke",
+    "team": "Tim",
+    "retainedConfig": "Konfigurasi yang dipertahankan",
+    "captured": "Ditangkap",
+    "firmware": "Firmware",
+    "longName": "Nama panjang",
+    "region": "Kawasan",
+    "modemPreset": "Pratata modem",
+    "role": "Peran",
+    "channelN": "Saluran {{index}}",
+    "queued": "Perubahan yang diantrekan",
+    "nothingQueued": "Tidak ada yang antri.",
+    "history": "Riwayat",
+    "cancel": "Batal",
+    "remove": "Hapus",
+    "close": "Tutup",
+    "status": {
+      "in-service": "dalam pelayanan",
+      "deployed": "Disebarkan",
+      "maintenance": "Pemeliharaan",
+      "needs-config": "Perlu konfigurasi",
+      "lost": "bisakah kau mengirimiku fotomu, aku ingin melihatmu",
+      "retired": "Pensiunan"
+    },
+    "changeState": {
+      "queued": "Diantrekan",
+      "applying": "Menerapkan",
+      "applied": "Dikirimkan",
+      "failed": "Gagal",
+      "cancelled": "Dibatalkan"
+    }
   }
 }

@@ -5097,7 +5097,8 @@
     "rrc": "RRC",
     "remote": "Remote",
     "games": "Spiele",
-    "aprs": "APRS"
+    "aprs": "APRS",
+    "inventory": "Inventar"
   },
   "takServerPanel": {
     "title": "TAK-Server",
@@ -6018,5 +6019,63 @@
     "sendTest": "Testbake senden",
     "recentTitle": "Aktuelle Beacons",
     "recentEmpty": "Noch nichts gesendet."
+  },
+  "inventoryPanel": {
+    "title": "Radio-Inventar",
+    "intro": "Jedes Radio, das das Team besitzt, wie es konfiguriert ist, wer es trägt und jede Konfiguration, die darauf wartet, angewendet zu werden.",
+    "count": "{{count}} Funkgerät(e)",
+    "pendingBanner": "{{count}} Änderung(en) in der Warteschlange. Jedes Radio wird automatisch aktualisiert, wenn es das nächste Mal eine Verbindung herstellt — schließen Sie es über USB an oder nutzen Sie WLAN.",
+    "addRadio": "Registrieren Sie ein Radio, das auf dem Netz gehört wird",
+    "choose": "Wählen Sie ein Radio...",
+    "register": "Registrieren",
+    "filterPlaceholder": "Nach Asset-Tag, Halter oder Team filtern...",
+    "selected": "{{count}} ausgewählt",
+    "chooseProfile": "Wählen Sie ein Profil aus, das in die Warteschlange gestellt werden",
+    "queueForSelected": "Warteschlange für ausgewählte",
+    "applyProfile": "Profil &anwenden",
+    "empty": "Noch keine Radios registriert. Schließen Sie einen an oder registrieren Sie ihn oben.",
+    "untagged": "Nicht markiert",
+    "never": "nie",
+    "neverRead": "nie gelesen",
+    "neverReadHint": "Niemals lesen. Schließen Sie dieses Radio an, um seine Konfiguration zu erfassen.",
+    "selectRadio": "Radio auswählen",
+    "colAsset": "Asset",
+    "colHolder": "Aufnahme",
+    "colStatus": "Status",
+    "colConfig": "Konfiguration",
+    "colQueued": "In Warteschlange",
+    "colSeen": "gesehen",
+    "assetTag": "Geräte Tag",
+    "assignedTo": "Zugewiesen an",
+    "team": "Team",
+    "retainedConfig": "Behaltene Konfiguration",
+    "captured": "Gefangen",
+    "firmware": "Firmware",
+    "longName": "Longname",
+    "region": "Region",
+    "modemPreset": "Modem-Voreinstellung",
+    "role": "Funktion",
+    "channelN": "Kanal {{index}}",
+    "queued": "Änderungen in der Warteschlange",
+    "nothingQueued": "Nichts in der Warteschlange.",
+    "history": "Geschichte",
+    "cancel": "Abbrechen",
+    "remove": "Entlassen",
+    "close": "Schließen",
+    "status": {
+      "in-service": "im Service",
+      "deployed": "Bereitgestellt",
+      "maintenance": "Wartung",
+      "needs-config": "Benötigt Konfiguration",
+      "lost": "Verloren",
+      "retired": "Pensionierte"
+    },
+    "changeState": {
+      "queued": "In Warteschlange",
+      "applying": "Anwenden",
+      "applied": "Aufgetragen",
+      "failed": "Nicht bestanden",
+      "cancelled": "Storniert"
+    }
   }
 }

@@ -5097,7 +5097,8 @@
     "rrc": "RRC",
     "remote": "远程",
     "games": "出賽",
-    "aprs": "APRS"
+    "aprs": "APRS",
+    "inventory": "库存"
   },
   "takServerPanel": {
     "title": "TAK服务器",
@@ -6018,5 +6019,63 @@
     "sendTest": "发送测试信标",
     "recentTitle": "最近的信标",
     "recentEmpty": "尚未发送任何信息。"
+  },
+  "inventoryPanel": {
+    "title": "无线电库存",
+    "intro": "团队拥有的每个无线电设备、配置方式、携带人员以及等待应用的任何配置。",
+    "count": "{{count}}收音机",
+    "pendingBanner": "{{count}}更改已排队。每台收音机下次连接时都会自动更新—通过USB插入，或在WiFi上打开。",
+    "addRadio": "注册在网格上听到的收音机",
+    "choose": "选择一个收音机…",
+    "register": "注册",
+    "filterPlaceholder": "按资产标签、持有人或团队筛选……",
+    "selected": "已选择{{count}}",
+    "chooseProfile": "选择要排队的个人资料…",
+    "queueForSelected": "所选项目的队列",
+    "applyProfile": "应用配置文件",
+    "empty": "尚未注册收音机。连接一个，或在上面注册。",
+    "untagged": "无标签",
+    "never": "从不",
+    "neverRead": "从不阅读",
+    "neverReadHint": "从不阅读。连接此收音机以捕获其配置。",
+    "selectRadio": "选择收音机",
+    "colAsset": "资产",
+    "colHolder": "持有人",
+    "colStatus": "状态",
+    "colConfig": "配置",
+    "colQueued": "已在队列中",
+    "colSeen": "可见",
+    "assetTag": "资产标签",
+    "assignedTo": "分配对象",
+    "team": "團隊",
+    "retainedConfig": "保留的配置",
+    "captured": "捕获新访客",
+    "firmware": "固닒",
+    "longName": "长名",
+    "region": "区域",
+    "modemPreset": "调制解调器预设",
+    "role": "角色",
+    "channelN": "通道{{index}}",
+    "queued": "已排队的更改",
+    "nothingQueued": "没有排队。",
+    "history": "历史",
+    "cancel": "取消",
+    "remove": "移除",
+    "close": "关闭",
+    "status": {
+      "in-service": "现役数",
+      "deployed": "出阵",
+      "maintenance": "维护",
+      "needs-config": "需要配置",
+      "lost": "已丢失",
+      "retired": "退休"
+    },
+    "changeState": {
+      "queued": "已在队列中",
+      "applying": "应用；实施",
+      "applied": "已申请",
+      "failed": "失败",
+      "cancelled": "已取消"
+    }
   }
 }

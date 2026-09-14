@@ -5097,7 +5097,8 @@
     "rrc": "RRC",
     "remote": "원격",
     "games": "게임",
-    "aprs": "APRS"
+    "aprs": "APRS",
+    "inventory": "소지품"
   },
   "takServerPanel": {
     "title": "TAK 서버",
@@ -6018,5 +6019,63 @@
     "sendTest": "테스트 비콘 보내기",
     "recentTitle": "최근 비콘",
     "recentEmpty": "아직 전송된 것이 없습니다."
+  },
+  "inventoryPanel": {
+    "title": "라디오 인벤토리",
+    "intro": "팀이 소유한 모든 라디오, 구성 방법, 운반자 및 적용 대기 중인 모든 구성.",
+    "count": "{{count}} 라디오",
+    "pendingBanner": "{{count}} 변경이 대기 중입니다. 각 라디오는 다음에 연결할 때 자동으로 업데이트됩니다. USB를 통해 연결하거나 WiFi에 연결하세요.",
+    "addRadio": "메시에 들리는 라디오 등록",
+    "choose": "라디오 선택…",
+    "register": "회원가입",
+    "filterPlaceholder": "자산 태그, 소유자 또는 팀별로 필터링...",
+    "selected": "{{count}} 선택됨",
+    "chooseProfile": "대기할 프로필 선택...",
+    "queueForSelected": "선택한 항목에 대한 대기열",
+    "applyProfile": "프로필 적용",
+    "empty": "아직 라디오가 등록되지 않았습니다. 하나를 연결하거나 위에 등록하십시오.",
+    "untagged": "태그되지 않음",
+    "never": "전혀 없음",
+    "neverRead": "읽지 않음",
+    "neverReadHint": "절대 읽지 마십시오. 이 라디오를 연결하여 구성을 캡처하십시오.",
+    "selectRadio": "라디오 선택",
+    "colAsset": "자산",
+    "colHolder": "홀더",
+    "colStatus": "상태",
+    "colConfig": "구성",
+    "colQueued": "대기열",
+    "colSeen": "시청 완료",
+    "assetTag": "자산 태그",
+    "assignedTo": "할당",
+    "team": "팀",
+    "retainedConfig": "유지 구성",
+    "captured": "체포되었습니다!",
+    "firmware": "펌웨어",
+    "longName": "긴 이름",
+    "region": "지역",
+    "modemPreset": "모뎀 사전 설정",
+    "role": "역할",
+    "channelN": "채널 {{index}}",
+    "queued": "대기 중인 변경 사항",
+    "nothingQueued": "대기 중인 항목이 없습니다.",
+    "history": "기록",
+    "cancel": "취소",
+    "remove": "제거",
+    "close": "닫기",
+    "status": {
+      "in-service": "용역에",
+      "deployed": "출진 중",
+      "maintenance": "점검",
+      "needs-config": "설정 필요",
+      "lost": ": 분실",
+      "retired": "사용 중지됨"
+    },
+    "changeState": {
+      "queued": "대기열",
+      "applying": "신청 중",
+      "applied": "적용",
+      "failed": "실패함",
+      "cancelled": "취소"
+    }
   }
 }
