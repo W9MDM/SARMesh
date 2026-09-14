@@ -39,11 +39,11 @@ Open `manifest.json` first when triaging: `appVersion` is package semver; **`bui
 
 Works on macOS, Windows, Linux (.deb / .rpm / AppImage), and Flatpak. Local data paths:
 
-| Install                   | Log / DB location                                    |
-| ------------------------- | ---------------------------------------------------- |
-| macOS                     | `~/Library/Application Support/sarmesh/`             |
-| Windows                   | `%APPDATA%\sarmesh\`                                 |
-| Linux (native / AppImage) | `~/.config/sarmesh/`                                 |
+| Install                   | Log / DB location                                |
+| ------------------------- | ------------------------------------------------ |
+| macOS                     | `~/Library/Application Support/sarmesh/`         |
+| Windows                   | `%APPDATA%\sarmesh\`                             |
+| Linux (native / AppImage) | `~/.config/sarmesh/`                             |
 | Flatpak                   | `~/.var/app/net.nwimesh.SARMesh/config/sarmesh/` |
 
 **Copy Debug Snapshot** (clipboard JSON) and **Log → Export** remain available under Data Management and the Log panel.

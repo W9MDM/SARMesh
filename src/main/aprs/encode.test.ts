@@ -154,6 +154,7 @@ describe('frameForTrackedClient', () => {
         nodeId: 1,
         callsign: 'TEAM1',
         team: 'Alpha',
+        trackerType: 'ground-team',
         symbolTable: '/',
         symbolCode: '[',
         enabled: true,
@@ -167,7 +168,14 @@ describe('frameForTrackedClient', () => {
 
   it('skips absent comment parts rather than leaving gaps', () => {
     const frame = frameForTrackedClient(
-      { nodeId: 1, callsign: 'TEAM1', symbolTable: '/', symbolCode: '[', enabled: true },
+      {
+        nodeId: 1,
+        callsign: 'TEAM1',
+        trackerType: 'ground-team',
+        symbolTable: '/',
+        symbolCode: '[',
+        enabled: true,
+      },
       { latitude: 1, longitude: 1, time: Date.UTC(2026, 8, 14, 17, 5) },
       'via SARMesh',
     );

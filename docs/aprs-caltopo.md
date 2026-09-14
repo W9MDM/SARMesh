@@ -101,21 +101,21 @@ choice drives two things:
 so a K9 team looks like a dog everywhere, and nobody has to know that `/p` means
 "rover".
 
-| Type             | APRS symbol | Notes                                    |
-| ---------------- | ----------- | ---------------------------------------- |
-| Ground team      | `/[`        | Jogger / human — a person on foot        |
+| Type             | APRS symbol | Notes                                      |
+| ---------------- | ----------- | ------------------------------------------ |
+| Ground team      | `/[`        | Jogger / human — a person on foot          |
 | K9 team          | `/p`        | "Rover (puppy)", the usual dog-team symbol |
-| Hasty team       | `/b`        |                                          |
+| Hasty team       | `/b`        |                                            |
 | UTV / ATV        | `/j`        | Jeep; the closest standard off-road symbol |
-| Vehicle          | `/>`        | Car                                      |
-| Truck            | `/k`        |                                          |
-| Ambulance        | `/a`        |                                          |
-| Helicopter       | `/X`        |                                          |
-| Aircraft         | `/'`        | Small aircraft                           |
-| Boat             | `/s`        |                                          |
-| Command post     | `/W`        |                                          |
-| Base             | `/-`        | House / QTH, for a fixed incident base   |
-| Repeater / relay | `/#`        | Digipeater, for a deployed relay node    |
+| Vehicle          | `/>`        | Car                                        |
+| Truck            | `/k`        |                                            |
+| Ambulance        | `/a`        |                                            |
+| Helicopter       | `/X`        |                                            |
+| Aircraft         | `/'`        | Small aircraft                             |
+| Boat             | `/s`        |                                            |
+| Command post     | `/W`        |                                            |
+| Base             | `/-`        | House / QTH, for a fixed incident base     |
+| Repeater / relay | `/#`        | Digipeater, for a deployed relay node      |
 
 These symbol codes are from the APRS Protocol Reference 1.0.1 primary table. They
 are what other APRS software renders, so they are not free to change once teams

@@ -212,13 +212,13 @@ Both tag-triggered workflows must complete before the release is fully populated
 3. Confirm the release **tag** is `vX.Y.Z` (not `untagged-*` — a wrong tag breaks the in-app updater footer)
 4. Confirm artifacts:
 
-| Platform      | Artifacts                                                                           |
-| ------------- | ----------------------------------------------------------------------------------- |
-| macOS         | `.dmg` and `.zip` (x64 and arm64)                                                   |
-| Linux         | `.AppImage`, `.deb`, `.rpm` (x64 and arm64)                                         |
-| Linux Flatpak | `net.nwimesh.SARMesh-x86_64.flatpak`, `net.nwimesh.SARMesh-aarch64.flatpak` |
-| Windows x64   | `SARMesh-Setup-{version}.exe`                                                       |
-| Windows arm64 | `SARMesh-Setup-{version}-arm64.exe` (Windows 11 on ARM — not the x64 installer)     |
+| Platform      | Artifacts                                                                       |
+| ------------- | ------------------------------------------------------------------------------- |
+| macOS         | `.dmg` and `.zip` (x64 and arm64)                                               |
+| Linux         | `.AppImage`, `.deb`, `.rpm` (x64 and arm64)                                     |
+| Linux Flatpak | `net.nwimesh.SARMesh-x86_64.flatpak`, `net.nwimesh.SARMesh-aarch64.flatpak`     |
+| Windows x64   | `SARMesh-Setup-{version}.exe`                                                   |
+| Windows arm64 | `SARMesh-Setup-{version}-arm64.exe` (Windows 11 on ARM — not the x64 installer) |
 
 1. Paste or edit release notes (use the block printed by `pnpm run release`, or GitHub’s generated notes)
 2. Optionally smoke-test downloads on one platform per family

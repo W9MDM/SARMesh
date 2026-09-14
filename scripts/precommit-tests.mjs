@@ -43,11 +43,7 @@ const FORCE_FULL_PATTERNS = [
  * Dependency-manifest paths, plus the Flatpak manifest the pre-commit pnpm sync re-stages
  * alongside them. A commit containing only these cannot change source behavior.
  */
-const MANIFEST_ONLY_PATHS = new Set([
-  'package.json',
-  'pnpm-lock.yaml',
-  'net.nwimesh.SARMesh.yml',
-]);
+const MANIFEST_ONLY_PATHS = new Set(['package.json', 'pnpm-lock.yaml', 'net.nwimesh.SARMesh.yml']);
 
 /**
  * @param {Iterable<string>} stagedPaths
