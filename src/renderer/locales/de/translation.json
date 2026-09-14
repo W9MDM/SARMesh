@@ -48,7 +48,9 @@
     "reticulumTxBufferingNamed": "Puffern von ausgehenden Paketen auf \"{{name}}\" (Host-TX-Warteschlange entleert).",
     "footerUpstreamTitle": "Fork von Mesh-Client von Colorado Mesh",
     "footerUpstreamLabel": "basiert auf Mesh-Client",
-    "footerSlogan": "Such- und Rettungseinsätze im Mesh."
+    "footerSlogan": "Such- und Rettungseinsätze im Mesh.",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "Die Einstellung für die Nachrichtenaufbewahrung konnte nicht gespeichert werden.",
@@ -819,7 +821,9 @@
     "colorPurple": "Violett",
     "delete": "Löschen",
     "copy": "Kopieren",
-    "copied": "Kopiert"
+    "copied": "Kopiert",
+    "discord": "Discord",
+    "website": "Webseite"
   },
   "configApplyNotice": {
     "persistNote": "Angewandte Einstellungen werden im Flash-Speicher des Geräts gespeichert und bleiben beim Neustart erhalten.",

@@ -1,4 +1,4 @@
-appId: com.sarmesh.app
+appId: net.nwimesh.sarmesh
 productName: SARMesh
 protocols:
   - name: SARMesh LXMF
@@ -44,7 +44,7 @@ mac:
   # Hardened runtime improves tamper resistance; required for notarized distribution.
   hardenedRuntime: true
   preAutoEntitlements: true
-  helperBundleId: com.sarmesh.app.helper
+  helperBundleId: net.nwimesh.sarmesh.helper
   extendInfo:
     NSBluetoothAlwaysUsageDescription: 'SARMesh needs Bluetooth to communicate with Meshtastic devices.'
     NSMicrophoneUsageDescription: 'SARMesh needs the microphone for Reticulum LXST voice calls.'
@@ -93,7 +93,7 @@ linux:
   icon: resources/icons/linux/
   desktop:
     entry:
-      StartupWMClass: 'com.sarmesh.app'
+      StartupWMClass: 'net.nwimesh.sarmesh'
       Categories: 'Utility;Network;'
   extraResources:
     - from: ./copyright

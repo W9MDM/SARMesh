@@ -2,7 +2,7 @@
 Name=SARMesh
 Comment=Meshtastic, MeshCore, and Reticulum mesh network client
 Exec=sarmesh %U
-Icon=io.github.w9mdm.SARMesh
+Icon=net.nwimesh.SARMesh
 Type=Application
 Categories=Utility;Network;HamRadio;
 StartupWMClass=sarmesh

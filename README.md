@@ -423,11 +423,11 @@ Architecture and API: [docs/reticulum.md](docs/reticulum.md). Games wire parity:
 - **Windows (Intel/AMD x64):** `SARMesh-Setup-{version}.exe`
 - **Windows 11 on ARM (Snapdragon, etc.):** `SARMesh-Setup-{version}-arm64.exe` — do not use the x64 installer on native ARM hardware.
 
-**Flatpak** bundles (`io.github.w9mdm.SARMesh-x86_64.flatpak` and `io.github.w9mdm.SARMesh-aarch64.flatpak`) are published on each version tag for Flatpak-enabled Linux:
+**Flatpak** bundles (`net.nwimesh.SARMesh-x86_64.flatpak` and `net.nwimesh.SARMesh-aarch64.flatpak`) are published on each version tag for Flatpak-enabled Linux:
 
 ```bash
-flatpak install --user ./io.github.w9mdm.SARMesh-x86_64.flatpak # or -aarch64
-flatpak run io.github.w9mdm.SARMesh
+flatpak install --user ./net.nwimesh.SARMesh-x86_64.flatpak # or -aarch64
+flatpak run net.nwimesh.SARMesh
 ```
 
 VMware guests and other GPU edge cases: [Flatpak troubleshooting](docs/troubleshooting.md#flatpak-vmwgfx-driver-missing-vmware-on-macos).

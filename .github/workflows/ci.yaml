@@ -42,7 +42,7 @@ jobs:
           filters: |
             flatpak:
               - 'flatpak/**'
-              - 'io.github.w9mdm.SARMesh.yml'
+              - 'net.nwimesh.SARMesh.yml'
               - '.npmrc'
               - 'package.json'
               - 'pnpm-lock.yaml'
@@ -157,10 +157,10 @@ jobs:
         run: sudo apt-get install -y desktop-file-utils appstream
 
       - name: Validate desktop file
-        run: desktop-file-validate flatpak/io.github.w9mdm.SARMesh.desktop
+        run: desktop-file-validate flatpak/net.nwimesh.SARMesh.desktop
 
       - name: Validate metainfo
-        run: appstreamcli validate --no-net flatpak/io.github.w9mdm.SARMesh.metainfo.xml
+        run: appstreamcli validate --no-net flatpak/net.nwimesh.SARMesh.metainfo.xml
 
   # Cheap always-on check:* scanners (pre-commit / release). Blocks --no-verify / web edits.
   policy-scanners:

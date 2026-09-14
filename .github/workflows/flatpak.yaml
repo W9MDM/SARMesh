@@ -201,12 +201,12 @@ jobs:
           node scripts/write-flatpak-ci-build-info.mjs
 
       # flatpak/flatpak-github-actions v6 appends -${arch} to the artifact name on upload;
-      # keep bundle arch-agnostic here to avoid io.github.w9mdm.SARMesh-aarch64-aarch64.flatpak.
+      # keep bundle arch-agnostic here to avoid net.nwimesh.SARMesh-aarch64-aarch64.flatpak.
       # upload-artifact: false — we upload once after smoke (+ optional -run{N} rename on dispatch).
       - uses: flatpak/flatpak-github-actions/flatpak-builder@401fe28a8384095fc1531b9d320b292f0ee45adb
         with:
-          bundle: io.github.w9mdm.SARMesh.flatpak
-          manifest-path: io.github.w9mdm.SARMesh.yml
+          bundle: net.nwimesh.SARMesh.flatpak
+          manifest-path: net.nwimesh.SARMesh.yml
           arch: ${{ matrix.arch }}
           branch: stable
           cache-key: flatpak-builder-${{ matrix.arch }}-${{ github.sha }}
@@ -215,14 +215,14 @@ jobs:
       - name: Smoke test Flatpak install
         run: |
           set -euo pipefail
-          flatpak install --assumeyes ./io.github.w9mdm.SARMesh.flatpak
+          flatpak install --assumeyes ./net.nwimesh.SARMesh.flatpak
 
-          flatpak run --branch=stable --command=sh io.github.w9mdm.SARMesh -c \
+          flatpak run --branch=stable --command=sh net.nwimesh.SARMesh -c \
             'test -x /app/lib/sarmesh/electron/electron;
             test -f /app/lib/sarmesh/resources/reticulum-sidecar/mesh-client-reticulum'
 
           set +e
-          out=$(dbus-run-session xvfb-run -a timeout 20s flatpak run --branch=stable io.github.w9mdm.SARMesh 2>&1)
+          out=$(dbus-run-session xvfb-run -a timeout 20s flatpak run --branch=stable net.nwimesh.SARMesh 2>&1)
           code=$?
           set -e
           printf '%s\n' "$out"
@@ -248,9 +248,9 @@ jobs:
       - name: Upload Flatpak bundle
         uses: actions/upload-artifact@v7
         with:
-          name: io.github.w9mdm.SARMesh.flatpak-${{ matrix.arch }}.flatpak
+          name: net.nwimesh.SARMesh.flatpak-${{ matrix.arch }}.flatpak
           path: |
-            io.github.w9mdm.SARMesh*.flatpak
+            net.nwimesh.SARMesh*.flatpak
           if-no-files-found: error
           retention-days: 30
 
@@ -277,7 +277,7 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          pattern: 'io.github.w9mdm.SARMesh.flatpak-*.flatpak'
+          pattern: 'net.nwimesh.SARMesh.flatpak-*.flatpak'
           path: flatpak-dist
 
       - name: Flatten arch-suffixed bundles for release

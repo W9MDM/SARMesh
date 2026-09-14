@@ -7,7 +7,7 @@ ELECTRON="${APP_ROOT}/electron/electron"
 # package.json "main"; launch via "." from APP_ROOT
 MAIN_REL=dist-electron/main/index.js
 
-export TMPDIR="${XDG_RUNTIME_DIR:-/tmp}/app/${FLATPAK_ID:-io.github.w9mdm.SARMesh}"
+export TMPDIR="${XDG_RUNTIME_DIR:-/tmp}/app/${FLATPAK_ID:-net.nwimesh.SARMesh}"
 mkdir -p "$TMPDIR"
 export CHROME_WRAPPER=/app/bin/sarmesh
 

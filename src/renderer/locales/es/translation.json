@@ -48,7 +48,9 @@
     "reticulumTxBufferingNamed": "Almacenar en búfer los paquetes salientes en \"{{name}}\" (agotamiento de la cola de TX del host).",
     "footerUpstreamTitle": "Bifurcado de Mesh-Client de Colorado Mesh",
     "footerUpstreamLabel": "basado en Mesh-Client",
-    "footerSlogan": "Operaciones de búsqueda y rescate en malla."
+    "footerSlogan": "Operaciones de búsqueda y rescate en malla.",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "Error al guardar la configuración de retención de mensajes.",
@@ -819,7 +821,9 @@
     "colorPurple": "Morado",
     "delete": "Borrar",
     "copy": "Copiar",
-    "copied": "Copiado"
+    "copied": "Copiado",
+    "discord": "Discord",
+    "website": "Sitio web"
   },
   "configApplyNotice": {
     "persistNote": "Los ajustes aplicados se guardan en la memoria flash del dispositivo y persisten durante los reinicios.",

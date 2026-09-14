@@ -48,7 +48,9 @@
     "reticulumTxBufferingNamed": "Buforowanie pakietów wychodzących na \"{{name}}\" (opróżnianie kolejki hosta w TX).",
     "footerUpstreamTitle": "Fork Mesh-Client od Colorado Mesh",
     "footerUpstreamLabel": "oparte na Mesh-Client",
-    "footerSlogan": "Operacje poszukiwawczo-ratownicze w sieci mesh."
+    "footerSlogan": "Operacje poszukiwawczo-ratownicze w sieci mesh.",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "Nie udało się zapisać ustawienia przechowywania wiadomości.",
@@ -857,7 +859,9 @@
     "colorPurple": "Fioletowy/a/e",
     "delete": "Usuwać",
     "copy": "Kopiuj",
-    "copied": "Skopiowano"
+    "copied": "Skopiowano",
+    "discord": "Discord",
+    "website": "Strona internetowa"
   },
   "configApplyNotice": {
     "persistNote": "Zastosowane ustawienia są zapisywane w pamięci flash urządzenia i utrzymują się po ponownym uruchomieniu.",

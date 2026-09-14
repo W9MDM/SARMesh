@@ -4722,6 +4722,26 @@ function AppContent() {
               <span className="min-w-0">
                 {t('app.footerSlogan')}{' '}
                 <a
+                  href="https://nwimesh.net/"
+                  title={t('app.footerWebsiteTitle')}
+                  className="text-slate-400 underline decoration-slate-600/80 underline-offset-2 transition-colors hover:text-slate-300"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('common.website')}
+                </a>
+                {' • '}
+                <a
+                  href="https://discord.gg/4wQ5SWPBfQ"
+                  title={t('app.footerDiscordTitle')}
+                  className="text-slate-400 underline decoration-slate-600/80 underline-offset-2 transition-colors hover:text-slate-300"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t('common.discord')}
+                </a>
+                {' • '}
+                <a
                   href="https://github.com/W9MDM/SARMesh"
                   title={t('app.footerGithubTitle')}
                   className="text-slate-400 underline decoration-slate-600/80 underline-offset-2 transition-colors hover:text-slate-300"

@@ -56,7 +56,7 @@ if [ "$deps_changed" -eq 1 ] && [ -s "$STAGED_LIST" ]; then
   while IFS= read -r f || [ -n "$f" ]; do
     [ -n "$f" ] || continue
     case "$f" in
-      package.json | pnpm-lock.yaml | io.github.w9mdm.SARMesh.yml) ;;
+      package.json | pnpm-lock.yaml | net.nwimesh.SARMesh.yml) ;;
       *)
         manifest_only=0
         break
@@ -164,8 +164,8 @@ if staged_match '^(flatpak/|org\.coloradomesh\.SARMesh\.yml|package\.json|script
   # build, so re-pin from package.json and re-stage before verifying.
   if staged_match '^package\.json$'; then
     node scripts/sync-flatpak-electron.mjs || fail 'scripts/sync-flatpak-electron.mjs'
-    if ! git diff --quiet -- io.github.w9mdm.SARMesh.yml; then
-      git add io.github.w9mdm.SARMesh.yml || fail 'git add (flatpak manifest sync)'
+    if ! git diff --quiet -- net.nwimesh.SARMesh.yml; then
+      git add net.nwimesh.SARMesh.yml || fail 'git add (flatpak manifest sync)'
     fi
   fi
   pnpm run check:flatpak || fail 'pnpm run check:flatpak'

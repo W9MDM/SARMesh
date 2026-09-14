@@ -60,7 +60,7 @@ PY
   return 0
 }
 
-METAINFO_FILE="flatpak/io.github.w9mdm.SARMesh.metainfo.xml"
+METAINFO_FILE="flatpak/net.nwimesh.SARMesh.metainfo.xml"
 
 read_package_version() {
   node -p "require('./package.json').version"
@@ -161,7 +161,7 @@ push_release_main_with_rebase() {
 
 commit_tag_and_push_release() {
   local new_version="$1"
-  git add package.json pnpm-lock.yaml io.github.w9mdm.SARMesh.yml
+  git add package.json pnpm-lock.yaml net.nwimesh.SARMesh.yml
   [ -f "$METAINFO_FILE" ] && git add "$METAINFO_FILE"
   git commit -m "chore: release $new_version"
 
@@ -211,7 +211,7 @@ finish_pending_release() {
   if ! pnpm run check:flatpak; then
     print_error "MetaInfo does not match package.json."
     print_error "Do NOT re-run \`pnpm run release\` (that would bump again)."
-    print_error "Fix flatpak/io.github.w9mdm.SARMesh.metainfo.xml top <release version=\"$clean_version\">, then: pnpm run release --finish"
+    print_error "Fix flatpak/net.nwimesh.SARMesh.metainfo.xml top <release version=\"$clean_version\">, then: pnpm run release --finish"
     exit 1
   fi
 

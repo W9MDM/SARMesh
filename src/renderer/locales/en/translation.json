@@ -48,7 +48,9 @@
     "scrollToTop": "↑ Top",
     "footerGithubTitle": "SARMesh on GitHub",
     "footerUpstreamTitle": "Forked from Mesh-Client by Colorado Mesh",
-    "footerUpstreamLabel": "built on Mesh-Client"
+    "footerUpstreamLabel": "built on Mesh-Client",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "Failed to save message retention setting.",
@@ -819,7 +821,9 @@
     "colorAmber": "Amber",
     "colorRed": "Red",
     "colorPurple": "Purple",
-    "emDash": "—"
+    "emDash": "—",
+    "discord": "Discord",
+    "website": "Website"
   },
   "configApplyNotice": {
     "persistNote": "Applied settings are saved to the device's flash memory and persist across reboots.",

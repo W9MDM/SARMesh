@@ -48,7 +48,9 @@
     "reticulumTxBufferingNamed": "Menyangga paket keluar pada \"{{name}}\" (pengeringan antrian TX tuan rumah).",
     "footerUpstreamTitle": "Fork dari Mesh-Client oleh Colorado Mesh",
     "footerUpstreamLabel": "dibangun di atas Mesh-Client",
-    "footerSlogan": "Operasi pencarian dan penyelamatan berbasis mesh."
+    "footerSlogan": "Operasi pencarian dan penyelamatan berbasis mesh.",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "Gagal menyimpan setelan retensi pesan.",
@@ -819,7 +821,9 @@
     "colorPurple": "Ungu",
     "delete": "Menghapus",
     "copy": "Menyalin",
-    "copied": "Disalin"
+    "copied": "Disalin",
+    "discord": "Discord",
+    "website": "Situs web"
   },
   "configApplyNotice": {
     "persistNote": "Pengaturan yang diterapkan disimpan ke memori flash perangkat dan bertahan selama reboot.",

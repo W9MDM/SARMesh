@@ -48,7 +48,9 @@
     "reticulumTxBufferingNamed": "\"{{name}}\" 에서 아웃바운드 패킷 버퍼링 (호스트 TX 대기열 배수).",
     "footerUpstreamTitle": "Colorado Mesh의 Mesh-Client에서 포크",
     "footerUpstreamLabel": "Mesh-Client 기반",
-    "footerSlogan": "수색 및 구조 메시 운용."
+    "footerSlogan": "수색 및 구조 메시 운용.",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "메시지 보관 설정을 저장하지 못했습니다.",
@@ -819,7 +821,9 @@
     "colorPurple": "자색",
     "delete": "삭제",
     "copy": "복사",
-    "copied": "복사됨"
+    "copied": "복사됨",
+    "discord": "Discord",
+    "website": "웹사이트"
   },
   "configApplyNotice": {
     "persistNote": "적용된 설정은 장치의 플래시 메모리에 저장되며 재부팅 시에도 지속됩니다.",

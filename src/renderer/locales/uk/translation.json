@@ -48,7 +48,9 @@
     "reticulumTxBufferingNamed": "Буферизація вихідних пакетів на \"{{name}}\" (витікання черги TX хоста).",
     "footerUpstreamTitle": "Форк Mesh-Client від Colorado Mesh",
     "footerUpstreamLabel": "на основі Mesh-Client",
-    "footerSlogan": "Пошуково-рятувальні операції в mesh-мережі."
+    "footerSlogan": "Пошуково-рятувальні операції в mesh-мережі.",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "Не вдалося зберегти налаштування збереження повідомлень.",
@@ -857,7 +859,9 @@
     "colorPurple": "Фіолетовий",
     "delete": "Видалити",
     "copy": "Копіювати",
-    "copied": "Скопійовано"
+    "copied": "Скопійовано",
+    "discord": "Discord",
+    "website": "Веб-сайт"
   },
   "configApplyNotice": {
     "persistNote": "Застосовані налаштування зберігаються у флеш-пам'яті пристрою та зберігаються під час перезавантаження.",

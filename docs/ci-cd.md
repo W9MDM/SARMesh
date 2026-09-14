@@ -141,9 +141,9 @@ A matrix builds **x86_64** and **aarch64** in parallel. Both use the same privil
 
 1. **`schema-release-compare`** — same compare as Build Binaries / Release; uploads `READ-ME-FIRST-flatpak.md` and feeds `write-schema-upgrade-notice.mjs` so bumped schemas embed `SCHEMA-UPGRADE.txt` under Flatpak `resources/`
 2. Builds the Reticulum sidecar on bare Ubuntu runners, then generates `flatpak/generated-sources.json` via `flatpak-node-generator`
-3. Stamps CI build info (`test` on dispatch / `release` on tag), builds from `io.github.w9mdm.SARMesh.yml` with offline pnpm sources
-4. Smoke-installs the unstamped local bundle; on **dispatch only**, renames to `io.github.w9mdm.SARMesh-run{N}.flatpak`
-5. Uploads `io.github.w9mdm.SARMesh.flatpak-{x86_64,aarch64}.flatpak` artifacts (file basename stamped on test builds) plus per-arch `flatpak-schema-warning-*`
+3. Stamps CI build info (`test` on dispatch / `release` on tag), builds from `net.nwimesh.SARMesh.yml` with offline pnpm sources
+4. Smoke-installs the unstamped local bundle; on **dispatch only**, renames to `net.nwimesh.SARMesh-run{N}.flatpak`
+5. Uploads `net.nwimesh.SARMesh.flatpak-{x86_64,aarch64}.flatpak` artifacts (file basename stamped on test builds) plus per-arch `flatpak-schema-warning-*`
 
 On **version tag pushes**, a `publish` job waits for the Electron `prepare-github-release` draft (`ci-wait-github-draft-release.mjs`), then attaches both **clean-named** bundles with `ci-upload-release-assets.mjs` (never creates a release). aarch64 is the primary ARM Linux install path (release `build.yaml` only produces x86_64 AppImage/deb/rpm).
 
@@ -443,8 +443,8 @@ CI focuses on lint, typecheck, build, cheap always-on policy scanners, Flatpak m
 | Workflow       | When                       | Filename stamp                                                                                                                                                                                                                    |
 | -------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `build.yaml`   | Always (dispatch-only)     | After `dist:*`, `scripts/rename-test-build-artifacts.mjs` renames AppImage/deb/rpm/DMG/ZIP/Setup under `release/` to include `-run{GITHUB_RUN_NUMBER}` (e.g. `SARMesh-5.26.0-run214.AppImage`, `SARMesh-Setup-5.26.0-run214.exe`) |
-| `flatpak.yaml` | `workflow_dispatch` only   | After in-job smoke, rename to `io.github.w9mdm.SARMesh-run{N}.flatpak`, then upload                                                                                                                                               |
-| `flatpak.yaml` | tag `v*` (release publish) | Clean `io.github.w9mdm.SARMesh.flatpak` (no `-run{N}`)                                                                                                                                                                            |
+| `flatpak.yaml` | `workflow_dispatch` only   | After in-job smoke, rename to `net.nwimesh.SARMesh-run{N}.flatpak`, then upload                                                                                                                                               |
+| `flatpak.yaml` | tag `v*` (release publish) | Clean `net.nwimesh.SARMesh.flatpak` (no `-run{N}`)                                                                                                                                                                            |
 | `release.yaml` | tag publish                | Clean electron-builder names (no rename step)                                                                                                                                                                                     |
 
 `packaging-smoke` on Build Binaries downloads **stamped** names (Windows Setup matcher accepts default or `-run{N}`). Flatpak smoke always uses the unstamped local path **before** rename. Manual Flatpak runs use Actions run title **`Build Flatpak (no release)`**; tag runs use **`Build Flatpak`**.

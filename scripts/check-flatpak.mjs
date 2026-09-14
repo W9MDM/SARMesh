@@ -15,14 +15,14 @@ import { FLATPAK_BUILD_INFO_EXPORT_SNIPPET } from './write-flatpak-ci-build-info
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
-const METAINFO = path.join(ROOT, 'flatpak', 'io.github.w9mdm.SARMesh.metainfo.xml');
-const DESKTOP = path.join(ROOT, 'flatpak', 'io.github.w9mdm.SARMesh.desktop');
-const MANIFEST = path.join(ROOT, 'io.github.w9mdm.SARMesh.yml');
+const METAINFO = path.join(ROOT, 'flatpak', 'net.nwimesh.SARMesh.metainfo.xml');
+const DESKTOP = path.join(ROOT, 'flatpak', 'net.nwimesh.SARMesh.desktop');
+const MANIFEST = path.join(ROOT, 'net.nwimesh.SARMesh.yml');
 const FLATPAK_WORKFLOW = path.join(ROOT, '.github/workflows/flatpak.yaml');
 const CI_WORKFLOW = path.join(ROOT, '.github/workflows/ci.yaml');
 const WRAPPER = path.join(ROOT, 'flatpak', 'sarmesh-wrapper.sh');
 const PKG = path.join(ROOT, 'package.json');
-const EXPECTED_APP_ID = 'io.github.w9mdm.SARMesh';
+const EXPECTED_APP_ID = 'net.nwimesh.SARMesh';
 const EXPECTED_MAIN = 'dist-electron/main/index.js';
 const EXPECTED_ELECTRON = '/app/lib/sarmesh/electron/electron';
 const SEMVER_PATTERN = /(\d+\.\d+\.\d+)/;
@@ -108,19 +108,19 @@ function checkMetainfoAppId() {
 function checkManifestAppId() {
   const violations = [];
   if (!fs.existsSync(MANIFEST)) {
-    violations.push({ file: 'io.github.w9mdm.SARMesh.yml', message: 'manifest file missing' });
+    violations.push({ file: 'net.nwimesh.SARMesh.yml', message: 'manifest file missing' });
     return violations;
   }
 
   const yaml = fs.readFileSync(MANIFEST, 'utf8');
   const m = yaml.match(/^app-id:\s*(.+)$/m);
   if (!m) {
-    violations.push({ file: 'io.github.w9mdm.SARMesh.yml', message: 'missing app-id field' });
+    violations.push({ file: 'net.nwimesh.SARMesh.yml', message: 'missing app-id field' });
     return violations;
   }
   if (m[1].trim() !== EXPECTED_APP_ID) {
     violations.push({
-      file: 'io.github.w9mdm.SARMesh.yml',
+      file: 'net.nwimesh.SARMesh.yml',
       message: `app-id is "${m[1].trim()}", expected "${EXPECTED_APP_ID}"`,
     });
   }

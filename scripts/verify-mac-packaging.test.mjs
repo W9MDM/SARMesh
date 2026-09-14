@@ -24,7 +24,7 @@ import {
 
 const DEVELOPER_ID_CODESIGN_DV = [
   'Executable=/Applications/SARMesh.app/Contents/MacOS/SARMesh',
-  'Identifier=com.sarmesh.app',
+  'Identifier=net.nwimesh.sarmesh',
   'Format=app bundle with Mach-O thin (arm64)',
   'Authority=Developer ID Application: Example Developer (ABCD123456)',
   'Authority=Developer ID Certification Authority',
@@ -35,7 +35,7 @@ const DEVELOPER_ID_CODESIGN_DV = [
 
 const ADHOC_CODESIGN_DV = [
   'Executable=/tmp/SARMesh.app/Contents/MacOS/SARMesh',
-  'Identifier=com.sarmesh.app',
+  'Identifier=net.nwimesh.sarmesh',
   'Signature=adhoc',
   'TeamIdentifier=not set',
 ].join('\n');

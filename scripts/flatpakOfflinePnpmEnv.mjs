@@ -65,7 +65,7 @@ export function parseSARMeshModuleBuildEnv(yaml) {
  * @param {string} [fileRel]
  * @returns {{ file: string, message: string }[]}
  */
-export function offlinePnpmEnvContractViolations(yaml, fileRel = 'io.github.w9mdm.SARMesh.yml') {
+export function offlinePnpmEnvContractViolations(yaml, fileRel = 'net.nwimesh.SARMesh.yml') {
   const env = parseSARMeshModuleBuildEnv(yaml);
   /** @type {{ file: string, message: string }[]} */
   const violations = [];

@@ -14,7 +14,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 describe('manifestCiBuildInfoExportViolations', () => {
   it('accepts the real Flatpak manifest', () => {
-    const doc = yaml.load(fs.readFileSync(path.join(ROOT, 'io.github.w9mdm.SARMesh.yml'), 'utf8'));
+    const doc = yaml.load(fs.readFileSync(path.join(ROOT, 'net.nwimesh.SARMesh.yml'), 'utf8'));
     expect(manifestCiBuildInfoExportViolations(doc, 'manifest')).toEqual([]);
   });
 
@@ -87,7 +87,7 @@ describe('flatpakWorkflowTestBuildContractViolations', () => {
 
 describe('Electron archive sources', () => {
   it('keep strip-components: 0 in the real manifest', () => {
-    const manifest = fs.readFileSync(path.join(ROOT, 'io.github.w9mdm.SARMesh.yml'), 'utf8');
+    const manifest = fs.readFileSync(path.join(ROOT, 'net.nwimesh.SARMesh.yml'), 'utf8');
     const blocks = manifest
       .split(/^\s*- type: archive\s*$/m)
       .filter((block) => /electron-v[\d.]+-linux-(?:x64|arm64)\.zip/.test(block));

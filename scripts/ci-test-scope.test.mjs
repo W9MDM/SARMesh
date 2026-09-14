@@ -57,7 +57,7 @@ describe('ci-test-scope planning', () => {
     'package.json',
     'patches/debug@4.4.3.patch',
     'pnpm-lock.yaml',
-    'io.github.w9mdm.SARMesh.yml',
+    'net.nwimesh.SARMesh.yml',
     'tsconfig.main.json',
     'vitest.config.mts',
   ])('fails closed to the full suite when %s changes', (filePath) => {

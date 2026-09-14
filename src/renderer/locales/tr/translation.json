@@ -48,7 +48,9 @@
     "reticulumTxBufferingNamed": "\"{{name}}\" üzerinde giden paketler arabelleğe alınıyor (ana bilgisayar TX kuyruğu boşaltılıyor).",
     "footerUpstreamTitle": "Colorado Mesh tarafından Mesh-Client çatallaması",
     "footerUpstreamLabel": "Mesh-Client üzerine kurulu",
-    "footerSlogan": "Arama kurtarma mesh operasyonları."
+    "footerSlogan": "Arama kurtarma mesh operasyonları.",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "Mesaj saklama ayarı kaydedilemedi.",
@@ -819,7 +821,9 @@
     "colorPurple": "Mor",
     "delete": "Silmek",
     "copy": "Kopyala",
-    "copied": "Kopyalandı"
+    "copied": "Kopyalandı",
+    "discord": "Discord",
+    "website": "Web sitesi"
   },
   "configApplyNotice": {
     "persistNote": "Uygulanan ayarlar cihazın flash belleğine kaydedilir ve yeniden başlatmalarda devam eder.",

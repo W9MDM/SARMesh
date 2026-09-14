@@ -48,7 +48,9 @@
     "reticulumTxBufferingNamed": "正在缓冲“{{name}}”上的出站数据包（主机TX队列排出）。",
     "footerUpstreamTitle": "基于 Colorado Mesh 的 Mesh-Client 分支",
     "footerUpstreamLabel": "基于 Mesh-Client 构建",
-    "footerSlogan": "搜救网状网络行动。"
+    "footerSlogan": "搜救网状网络行动。",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "无法保存邮件保留设置。",
@@ -819,7 +821,9 @@
     "colorPurple": "紫色",
     "delete": "删除",
     "copy": "复制",
-    "copied": "已复制"
+    "copied": "已复制",
+    "discord": "Discord",
+    "website": "网站"
   },
   "configApplyNotice": {
     "persistNote": "应用的设置将保存到设备的闪存中，并在重新启动后保持不变。",

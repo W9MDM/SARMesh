@@ -48,7 +48,9 @@
     "reticulumTxBufferingNamed": "Bufferen van uitgaande pakketten op \"{{name}}\" (TX-wachtrij van host loopt leeg).",
     "footerUpstreamTitle": "Fork van Mesh-Client door Colorado Mesh",
     "footerUpstreamLabel": "gebouwd op Mesh-Client",
-    "footerSlogan": "Mesh-operaties voor opsporing en redding."
+    "footerSlogan": "Mesh-operaties voor opsporing en redding.",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "Kan de instelling voor het bewaren van berichten niet opslaan.",
@@ -819,7 +821,9 @@
     "colorPurple": "Paars",
     "delete": "Verwijderen",
     "copy": "Kopiëren",
-    "copied": "Gekopieerd"
+    "copied": "Gekopieerd",
+    "discord": "Discord",
+    "website": "Website"
   },
   "configApplyNotice": {
     "persistNote": "Toegepaste instellingen worden opgeslagen in het flashgeheugen van het apparaat en blijven bestaan tijdens het opnieuw opstarten.",

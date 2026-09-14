@@ -74,13 +74,13 @@ describe('stampedInstallerName', () => {
   });
 
   it('stamps Flatpak and is idempotent', () => {
-    expect(stampedInstallerName('io.github.w9mdm.SARMesh.flatpak', 214)).toBe(
-      'io.github.w9mdm.SARMesh-run214.flatpak',
+    expect(stampedInstallerName('net.nwimesh.SARMesh.flatpak', 214)).toBe(
+      'net.nwimesh.SARMesh-run214.flatpak',
     );
-    expect(stampedInstallerName('io.github.w9mdm.SARMesh-run214.flatpak', 214)).toBe(
-      'io.github.w9mdm.SARMesh-run214.flatpak',
+    expect(stampedInstallerName('net.nwimesh.SARMesh-run214.flatpak', 214)).toBe(
+      'net.nwimesh.SARMesh-run214.flatpak',
     );
-    expect(hasRunStamp('io.github.w9mdm.SARMesh-run214.flatpak')).toBe(true);
+    expect(hasRunStamp('net.nwimesh.SARMesh-run214.flatpak')).toBe(true);
   });
 });
 
@@ -89,7 +89,7 @@ describe('shouldRenameInstaller', () => {
     expect(shouldRenameInstaller('SARMesh-5.26.0.AppImage')).toBe(true);
     expect(shouldRenameInstaller('SARMesh Setup 5.26.0.exe')).toBe(true);
     expect(shouldRenameInstaller('SARMesh-Setup-5.26.0.exe')).toBe(true);
-    expect(shouldRenameInstaller('io.github.w9mdm.SARMesh.flatpak')).toBe(true);
+    expect(shouldRenameInstaller('net.nwimesh.SARMesh.flatpak')).toBe(true);
     expect(shouldRenameInstaller('READ-ME-FIRST-test-build.md')).toBe(false);
     expect(shouldRenameInstaller('SARMesh.exe')).toBe(false);
     expect(shouldRenameInstaller('SARMesh-5.26.0.AppImage.blockmap')).toBe(false);

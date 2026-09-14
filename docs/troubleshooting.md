@@ -44,7 +44,7 @@ Works on macOS, Windows, Linux (.deb / .rpm / AppImage), and Flatpak. Local data
 | macOS                     | `~/Library/Application Support/sarmesh/`             |
 | Windows                   | `%APPDATA%\sarmesh\`                                 |
 | Linux (native / AppImage) | `~/.config/sarmesh/`                                 |
-| Flatpak                   | `~/.var/app/io.github.w9mdm.SARMesh/config/sarmesh/` |
+| Flatpak                   | `~/.var/app/net.nwimesh.SARMesh/config/sarmesh/` |
 
 **Copy Debug Snapshot** (clipboard JSON) and **Log → Export** remain available under Data Management and the Log panel.
 
@@ -420,7 +420,7 @@ Or extract the ZIP with `ditto -xk` (not 7-Zip) and verify that tree. If the mou
 
 ### Flatpak: `vmwgfx: driver missing` (VMware on macOS)
 
-**Symptom**: `flatpak run io.github.w9mdm.SARMesh` fails or exits after Mesa logs `vmwgfx: driver missing` (use `flatpak -v run ...` to see it). Common on **Linux guests in VMware Fusion or Workstation with a macOS host**, including **aarch64** Ubuntu/ARM VMs.
+**Symptom**: `flatpak run net.nwimesh.SARMesh` fails or exits after Mesa logs `vmwgfx: driver missing` (use `flatpak -v run ...` to see it). Common on **Linux guests in VMware Fusion or Workstation with a macOS host**, including **aarch64** Ubuntu/ARM VMs.
 
 **Cause**: The Flatpak uses the same GPU stack as the x86_64 bundle (`--device=all`, Wayland/X11). It expects a working virtual GPU in the guest. On macOS-hosted VMware, **3D acceleration / `vmwgfx` is often off or unsupported** unless you enable it in the VM settings — without that, Mesa cannot open the VMware DRI driver and Electron’s GPU process fails.
 
@@ -434,13 +434,13 @@ Or extract the ZIP with `ditto -xk` (not 7-Zip) and verify that tree. If the mou
    ```
 4. Reinstall or rerun the Flatpak:
    ```bash
-   flatpak run io.github.w9mdm.SARMesh
+   flatpak run net.nwimesh.SARMesh
    ```
 
 **Workaround** (software rendering when the host cannot expose `vmwgfx`):
 
 ```bash
-SARMESH_DISABLE_GPU=1 flatpak run io.github.w9mdm.SARMesh
+SARMESH_DISABLE_GPU=1 flatpak run net.nwimesh.SARMesh
 ```
 
 When `/sys/class/drm` is visible inside the sandbox, the wrapper may auto-detect `vmwgfx` and set `SARMESH_DISABLE_GPU=1` if DRI is unreliable there. Opt out of auto-detection: `SARMESH_DISABLE_GPU=0 flatpak run ...`. Force GPU despite detection: `SARMESH_ENABLE_GPU=1 flatpak run ...`.
@@ -448,14 +448,14 @@ When `/sys/class/drm` is visible inside the sandbox, the wrapper may auto-detect
 **Reinstall a release bundle** after downloading a new `.flatpak` from [GitHub Releases](https://github.com/W9MDM/SARMesh/releases):
 
 ```bash
-flatpak uninstall --user io.github.w9mdm.SARMesh
-flatpak install --user ./io.github.w9mdm.SARMesh-aarch64.flatpak # or -x86_64
-flatpak run io.github.w9mdm.SARMesh
+flatpak uninstall --user net.nwimesh.SARMesh
+flatpak install --user ./net.nwimesh.SARMesh-aarch64.flatpak # or -x86_64
+flatpak run net.nwimesh.SARMesh
 ```
 
 ### Flatpak: immediate exit on Arch / CachyOS / Wayland (#598)
 
-**Symptom**: `flatpak run io.github.w9mdm.SARMesh` prints `Command failed` right after `Running 'bwrap … -- sarmesh'` with no window. Common on **Arch, CachyOS, KDE Plasma 6, and Hyprland** (pure Wayland). The AppImage from the same release often works.
+**Symptom**: `flatpak run net.nwimesh.SARMesh` prints `Command failed` right after `Running 'bwrap … -- sarmesh'` with no window. Common on **Arch, CachyOS, KDE Plasma 6, and Hyprland** (pure Wayland). The AppImage from the same release often works.
 
 **Cause**: The Flatpak sandbox mounts an empty `/tmp/.X11-unix`, so Electron cannot fall back to X11 unless the wrapper passes Wayland/Ozone flags. Older bundles also omitted Chromium sandbox flags and `TMPDIR` setup that zypak expects. A different immediate exit with `No usable sandbox!` on hardened hosts is covered in [Flatpak: "No usable sandbox!" on Ubuntu 23.10+ / hardened Linux](#flatpak-no-usable-sandbox-on-ubuntu-2310--hardened-linux).
 
@@ -466,11 +466,11 @@ The log line `F: /lib32 does not exist in runtime` is **harmless** on x86_64-onl
 1. Reinstall the latest `.flatpak` from [GitHub Releases](https://github.com/W9MDM/SARMesh/releases) (bundles after the #598 fix include an updated wrapper).
 2. Run with debug logging if it still fails:
    ```bash
-   ZYPAK_DEBUG=1 flatpak run io.github.w9mdm.SARMesh
+   ZYPAK_DEBUG=1 flatpak run net.nwimesh.SARMesh
    ```
 3. Inspect the installed payload:
    ```bash
-   flatpak run --command=sh io.github.w9mdm.SARMesh
+   flatpak run --command=sh net.nwimesh.SARMesh
    # inside sandbox:
    ls -l /app/lib/sarmesh/electron/electron
    ls -l /app/lib/sarmesh/resources/reticulum-sidecar/mesh-client-reticulum
@@ -480,20 +480,20 @@ The log line `F: /lib32 does not exist in runtime` is **harmless** on x86_64-onl
 **Workarounds**:
 
 ```bash
-SARMESH_DISABLE_GPU=1 flatpak run io.github.w9mdm.SARMesh
+SARMESH_DISABLE_GPU=1 flatpak run net.nwimesh.SARMesh
 ```
 
 **Reinstall**:
 
 ```bash
-flatpak uninstall --user io.github.w9mdm.SARMesh
-flatpak install --user ./io.github.w9mdm.SARMesh-x86_64.flatpak
-flatpak run io.github.w9mdm.SARMesh
+flatpak uninstall --user net.nwimesh.SARMesh
+flatpak install --user ./net.nwimesh.SARMesh-x86_64.flatpak
+flatpak run net.nwimesh.SARMesh
 ```
 
 ### Flatpak: "No usable sandbox!" on Ubuntu 23.10+ / hardened Linux
 
-**Symptom**: `flatpak run io.github.w9mdm.SARMesh` exits immediately with no window. The terminal may show `zypak-helper` lines (for example `Wait found events, but sd-event found none`) followed by:
+**Symptom**: `flatpak run net.nwimesh.SARMesh` exits immediately with no window. The terminal may show `zypak-helper` lines (for example `Wait found events, but sd-event found none`) followed by:
 
 ```text
 FATAL:content/browser/zygote_host/zygote_host_impl_linux.cc:129] No usable sandbox!
@@ -506,7 +506,7 @@ FATAL:content/browser/zygote_host/zygote_host_impl_linux.cc:129] No usable sandb
 **Workaround** (skip the probe, force `--no-sandbox` on first launch):
 
 ```bash
-SARMESH_NO_SANDBOX=1 flatpak run io.github.w9mdm.SARMesh
+SARMESH_NO_SANDBOX=1 flatpak run net.nwimesh.SARMesh
 ```
 
 The **outer Flatpak bubblewrap sandbox** still isolates the app when Chromium runs with `--no-sandbox`; only the inner Chromium namespace sandbox is relaxed.

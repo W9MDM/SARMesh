@@ -48,7 +48,9 @@
     "reticulumTxBufferingNamed": "Буферизация исходящих пакетов на \"{{name}}\" (слив очереди TX хоста).",
     "footerUpstreamTitle": "Форк Mesh-Client от Colorado Mesh",
     "footerUpstreamLabel": "на основе Mesh-Client",
-    "footerSlogan": "Поисково-спасательные операции в mesh-сети."
+    "footerSlogan": "Поисково-спасательные операции в mesh-сети.",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "Не удалось сохранить настройки хранения сообщений.",
@@ -857,7 +859,9 @@
     "colorPurple": "Пурпурный",
     "delete": "Удалить",
     "copy": "Скопировать",
-    "copied": "Скопировано"
+    "copied": "Скопировано",
+    "discord": "Discord",
+    "website": "Веб-сайт"
   },
   "configApplyNotice": {
     "persistNote": "Примененные настройки сохраняются во флэш-памяти устройства и сохраняются при перезагрузке.",

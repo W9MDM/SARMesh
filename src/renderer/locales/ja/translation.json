@@ -48,7 +48,9 @@
     "reticulumTxBufferingNamed": "\"{{name}}\"上の発信パケットのバッファリング（ホストTXキュー排出）。",
     "footerUpstreamTitle": "Colorado Mesh の Mesh-Client からのフォーク",
     "footerUpstreamLabel": "Mesh-Client がベース",
-    "footerSlogan": "捜索救助のためのメッシュ運用。"
+    "footerSlogan": "捜索救助のためのメッシュ運用。",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "メッセージ保持設定の保存に失敗しました。",
@@ -819,7 +821,9 @@
     "colorPurple": "紫",
     "delete": "消去",
     "copy": "コピー",
-    "copied": "コピーしました"
+    "copied": "コピーしました",
+    "discord": "Discord",
+    "website": "Webサイト"
   },
   "configApplyNotice": {
     "persistNote": "適用された設定はデバイスのフラッシュメモリに保存され、再起動後も保持されます。",

@@ -48,7 +48,9 @@
     "reticulumTxBufferingNamed": "Mise en mémoire tampon des paquets sortants sur « {{name}} » (vidange de la file d'attente TX de l'hôte).",
     "footerUpstreamTitle": "Dérivé de Mesh-Client par Colorado Mesh",
     "footerUpstreamLabel": "basé sur Mesh-Client",
-    "footerSlogan": "Opérations de recherche et sauvetage sur maillage."
+    "footerSlogan": "Opérations de recherche et sauvetage sur maillage.",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "Impossible d'enregistrer le paramètre de rétention des messages.",
@@ -819,7 +821,9 @@
     "colorPurple": "Violet",
     "delete": "Supprimer",
     "copy": "Copier",
-    "copied": "Copié"
+    "copied": "Copié",
+    "discord": "Discord",
+    "website": "Site web"
   },
   "configApplyNotice": {
     "persistNote": "Les paramètres appliqués sont enregistrés dans la mémoire flash de l'appareil et persistent lors des redémarrages.",

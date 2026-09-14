@@ -48,7 +48,9 @@
     "reticulumTxBufferingNamed": "Buffer dei pacchetti in uscita su \"{{name}}\" (svuotamento della coda TX dell'host).",
     "footerUpstreamTitle": "Fork di Mesh-Client di Colorado Mesh",
     "footerUpstreamLabel": "basato su Mesh-Client",
-    "footerSlogan": "Operazioni di ricerca e soccorso su rete mesh."
+    "footerSlogan": "Operazioni di ricerca e soccorso su rete mesh.",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "Impossibile salvare l'impostazione di conservazione dei messaggi.",
@@ -819,7 +821,9 @@
     "colorPurple": "Viola",
     "delete": "Eliminare",
     "copy": "Copia",
-    "copied": "Copiati"
+    "copied": "Copiati",
+    "discord": "Discord",
+    "website": "Sito web"
   },
   "configApplyNotice": {
     "persistNote": "Le impostazioni applicate vengono salvate nella memoria flash del dispositivo e persistono durante i riavvii.",

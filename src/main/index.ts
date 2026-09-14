@@ -210,7 +210,7 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.sarmesh.app');
+  app.setAppUserModelId('net.nwimesh.sarmesh');
 }
 
 /** Trusted Help menu / About credits URLs (static, not user-controlled). */

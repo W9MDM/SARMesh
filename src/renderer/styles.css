@@ -4,23 +4,23 @@
 @source not './**/*.test.{ts,tsx}';
 
 @theme {
-  --color-app-bg: #020617;
-  --color-sidebar-active-bg: #1e293b;
-  --color-brand-green: #86efac;
+  --color-app-bg: #0b0b0a;
+  --color-sidebar-active-bg: #1c1c1a;
+  --color-brand-green: #f04747;
   --color-bright-green: var(--color-brand-green);
-  --color-readable-green: #15803d;
-  --color-deep-black: #0f172a;
-  --color-secondary-dark: #334155;
-  --color-muted: #94a3b8;
+  --color-readable-green: #d92b2b;
+  --color-deep-black: #141412;
+  --color-secondary-dark: #272725;
+  --color-muted: #a4a39c;
   /* Chat incoming (channel): opaque border + rgba fill so the edge never
      color-mixes to a light/white ring on Chromium/Electron. */
-  --color-chat-incoming-bg: rgb(30 41 59 / 0.38);
-  --color-chat-incoming-border: #1e293b;
+  --color-chat-incoming-bg: rgb(28 28 26 / 0.38);
+  --color-chat-incoming-border: #272725;
   /* Message actions bar background — hidden by default (opacity 0); toggled to
      fully opaque via App → Colors "Show background" checkbox (see applyThemeColors). */
-  --color-message-actions-bar-bg: rgb(15 23 42 / 0);
+  --color-message-actions-bar-bg: rgb(20 20 18 / 0);
   /* Message action button hover color */
-  --color-message-action-button-hover: #94a3b8;
+  --color-message-action-button-hover: #a4a39c;
 }
 
 /* Leaflet container needs explicit height */

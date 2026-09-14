@@ -126,13 +126,13 @@ export const NATIVE_TARGETS = {
     {
       name: 'Validate desktop file',
       command: 'desktop-file-validate',
-      args: ['flatpak/io.github.w9mdm.SARMesh.desktop'],
+      args: ['flatpak/net.nwimesh.SARMesh.desktop'],
       optionalTool: 'desktop-file-validate',
     },
     {
       name: 'Validate metainfo',
       command: 'appstreamcli',
-      args: ['validate', '--no-net', 'flatpak/io.github.w9mdm.SARMesh.metainfo.xml'],
+      args: ['validate', '--no-net', 'flatpak/net.nwimesh.SARMesh.metainfo.xml'],
       optionalTool: 'appstreamcli',
     },
   ],

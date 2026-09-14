@@ -44,7 +44,7 @@ describe('precommit-tests skip', () => {
 describe('precommit-tests manifest-only fast path', () => {
   it('recognizes dependency manifests and the flatpak manifest the pnpm sync re-stages', () => {
     expect(isManifestOnlyCommit(['package.json', 'pnpm-lock.yaml'])).toBe(true);
-    expect(isManifestOnlyCommit(['package.json', 'io.github.w9mdm.SARMesh.yml'])).toBe(true);
+    expect(isManifestOnlyCommit(['package.json', 'net.nwimesh.SARMesh.yml'])).toBe(true);
     expect(isManifestOnlyCommit(['package.json', 'src/main/index.ts'])).toBe(false);
     expect(isManifestOnlyCommit(['package.json', 'README.md'])).toBe(false);
     expect(isManifestOnlyCommit([])).toBe(false);

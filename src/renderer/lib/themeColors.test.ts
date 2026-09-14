@@ -92,7 +92,7 @@ describe('themeColors', () => {
     it('migrates persisted legacy readableGreen (#16a34a) to accessible default', () => {
       localStorage.setItem(THEME_COLORS_STORAGE_KEY, JSON.stringify({ readableGreen: '#16a34a' }));
       const colors = loadThemeColors();
-      expect(colors.readableGreen).toBe('#15803d');
+      expect(colors.readableGreen).toBe(DEFAULT_THEME_COLORS.readableGreen);
       expect(localStorage.getItem(THEME_COLORS_STORAGE_KEY)).toBeNull();
     });
 
@@ -130,8 +130,8 @@ describe('themeColors', () => {
       const applied = applyThemeColors({ ...DEFAULT_THEME_COLORS, readableGreen: '#16a34a' });
       const call = setProp.mock.calls.find(([prop]) => prop === '--color-readable-green');
       expect(call).toBeDefined();
-      expect(call![1]).toBe('#15803d');
-      expect(applied?.readableGreen).toBe('#15803d');
+      expect(call![1]).toBe(DEFAULT_THEME_COLORS.readableGreen);
+      expect(applied?.readableGreen).toBe(DEFAULT_THEME_COLORS.readableGreen);
       expect(localStorage.getItem(THEME_COLORS_STORAGE_KEY)).toBeNull();
       vi.restoreAllMocks();
     });

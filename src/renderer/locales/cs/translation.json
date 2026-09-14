@@ -48,7 +48,9 @@
     "reticulumTxBufferingNamed": "Vyrovnávání odchozích paketů na \"{{name}}\" (vypouštění fronty hostitele TX).",
     "footerUpstreamTitle": "Odvozeno z Mesh-Client od Colorado Mesh",
     "footerUpstreamLabel": "postaveno na Mesh-Client",
-    "footerSlogan": "Pátrací a záchranné mesh operace."
+    "footerSlogan": "Pátrací a záchranné mesh operace.",
+    "footerWebsiteTitle": "NWI Mesh Net",
+    "footerDiscordTitle": "NWI Mesh Net Discord"
   },
   "appPanel": {
     "failedSaveRetention": "Nastavení uchovávání zpráv se nepodařilo uložit.",
@@ -839,7 +841,9 @@
     "colorPurple": "Fialová",
     "delete": "Vymazat",
     "copy": "Kopírovat",
-    "copied": "Zkopírováno"
+    "copied": "Zkopírováno",
+    "discord": "Discord",
+    "website": "webové stránky"
   },
   "configApplyNotice": {
     "persistNote": "Použitá nastavení jsou uložena do flash paměti zařízení a přetrvávají při restartu.",

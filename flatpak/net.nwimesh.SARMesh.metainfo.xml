@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.w9mdm.SARMesh</id>
+  <id>net.nwimesh.SARMesh</id>
   <name>SARMesh</name>
   <summary>Search and rescue mesh client with an APRS bridge for CalTopo</summary>
   <!-- metadata_license covers the AppStream metadata file itself, not the application -->
@@ -14,14 +14,14 @@
       messaging across all three protocols simultaneously.
     </p>
   </description>
-  <launchable type="desktop-id">io.github.w9mdm.SARMesh.desktop</launchable>
-  <url type="homepage">https://github.com/W9MDM/SARMesh</url>
+  <launchable type="desktop-id">net.nwimesh.SARMesh.desktop</launchable>
+  <url type="homepage">https://nwimesh.net/</url>
   <url type="bugtracker">https://github.com/W9MDM/SARMesh/issues</url>
   <content_rating type="oars-1.1"/>
   <releases>
     <release version="1.0.0" date="2026-09-14"/>
   </releases>
-  <developer id="io.github.w9mdm">
-    <name>W9MDM</name>
+  <developer id="net.nwimesh">
+    <name>NWI Mesh Net</name>
   </developer>
 </component>

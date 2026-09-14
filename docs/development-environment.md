@@ -363,7 +363,7 @@ For a release-quality local Flatpak, use `cargo build --release` with `rns-stack
 **4. Build and install locally**
 
 ```bash
-flatpak-builder --user --install --force-clean build-dir io.github.w9mdm.SARMesh.yml
+flatpak-builder --user --install --force-clean build-dir net.nwimesh.SARMesh.yml
 ```
 
 This installs the app into your user Flatpak store.
@@ -371,15 +371,15 @@ This installs the app into your user Flatpak store.
 **5. Run**
 
 ```bash
-flatpak run io.github.w9mdm.SARMesh
+flatpak run net.nwimesh.SARMesh
 ```
 
 **6. Produce a `.flatpak` bundle** (for sharing without a repo)
 
 ```bash
 flatpak build-bundle ~/.local/share/flatpak/repo \
-  io.github.w9mdm.SARMesh.flatpak \
-  io.github.w9mdm.SARMesh stable
+  net.nwimesh.SARMesh.flatpak \
+  net.nwimesh.SARMesh stable
 ```
 
 Installing a `.flatpak` file creates a one-off remote named like `sarmesh-origin` (not `flathub`); that is expected. The ref branch is `stable` (release CI sets this; older artifacts used `master`). Version is shown in MetaInfo / `flatpak info`, not in the remote name.
@@ -387,9 +387,9 @@ Installing a `.flatpak` file creates a one-off remote named like `sarmesh-origin
 **Reinstall after downloading a new bundle**
 
 ```bash
-flatpak uninstall --user io.github.w9mdm.SARMesh
-flatpak install --user ./io.github.w9mdm.SARMesh-aarch64.flatpak
-flatpak run io.github.w9mdm.SARMesh
+flatpak uninstall --user net.nwimesh.SARMesh
+flatpak install --user ./net.nwimesh.SARMesh-aarch64.flatpak
+flatpak run net.nwimesh.SARMesh
 ```
 
 **Runtime issues** (GPU, VMware guests): see [Flatpak: `vmwgfx: driver missing` (VMware on macOS)](troubleshooting.md#flatpak-vmwgfx-driver-missing-vmware-on-macos).
@@ -400,7 +400,7 @@ flatpak run io.github.w9mdm.SARMesh
 
 ```bash
 flatpak run --command=flatpak-builder-lint org.freedesktop.Sdk \
-  manifest io.github.w9mdm.SARMesh.yml
+  manifest net.nwimesh.SARMesh.yml
 ```
 
 #### Test
