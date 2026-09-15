@@ -6076,6 +6076,11 @@
       "applied": "応用編",
       "failed": "失敗しました",
       "cancelled": "キャンセル済み"
-    }
+    },
+    "export": "書き出し",
+    "exportCsv": "CSV をエクスポート",
+    "import": "インポート",
+    "exported": "{{count}}ラジオをエクスポートしました。",
+    "imported": "インポート済み： {{added}}が追加され、{{updated}}が更新されました。"
   }
 }

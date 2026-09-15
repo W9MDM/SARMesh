@@ -6076,6 +6076,11 @@
       "applied": "Dikirimkan",
       "failed": "Gagal",
       "cancelled": "Dibatalkan"
-    }
+    },
+    "export": "Ekspor",
+    "exportCsv": "Ekspor CSV",
+    "import": "Impor",
+    "exported": "Mengekspor radio {{count}}.",
+    "imported": "Diimpor: {{added}} ditambahkan, {{updated}} diperbarui."
   }
 }

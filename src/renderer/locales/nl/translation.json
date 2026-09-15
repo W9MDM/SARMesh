@@ -6076,6 +6076,11 @@
       "applied": "Toegepast",
       "failed": "Mislukt",
       "cancelled": "Geannuleerd"
-    }
+    },
+    "export": "Export",
+    "exportCsv": "CSV exporteren",
+    "import": "Importeren",
+    "exported": "{{count}} radio('s) geëxporteerd.",
+    "imported": "Geïmporteerd: {{added}} toegevoegd, {{updated}} bijgewerkt."
   }
 }

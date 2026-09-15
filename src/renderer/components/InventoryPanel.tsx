@@ -58,6 +58,7 @@ export function InventoryPanel({ nodes = [] }: InventoryPanelProps): React.JSX.E
   const [detailId, setDetailId] = useState<number | null>(null);
   const [batchProfile, setBatchProfile] = useState('');
   const [pendingNode, setPendingNode] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
 
   const registeredIds = useMemo(() => new Set(inventory.map((node) => node.nodeId)), [inventory]);
   const unregistered = nodes.filter((node) => !registeredIds.has(node.nodeId));
@@ -105,6 +106,43 @@ export function InventoryPanel({ nodes = [] }: InventoryPanelProps): React.JSX.E
         <span className="text-muted text-xs">
           {t('inventoryPanel.count', { count: inventory.length })}
         </span>
+        <button
+          type="button"
+          className="rounded bg-slate-700 px-3 py-1 text-xs"
+          onClick={() => {
+            void window.electronAPI.inventory.exportFile().then((r) => {
+              if (!r.cancelled) setNotice(t('inventoryPanel.exported', { count: r.nodes ?? 0 }));
+            });
+          }}
+        >
+          {t('inventoryPanel.export')}
+        </button>
+        <button
+          type="button"
+          className="rounded bg-slate-700 px-3 py-1 text-xs"
+          onClick={() => {
+            void window.electronAPI.inventory.exportCsv();
+          }}
+        >
+          {t('inventoryPanel.exportCsv')}
+        </button>
+        <button
+          type="button"
+          className="rounded bg-slate-700 px-3 py-1 text-xs"
+          onClick={() => {
+            void window.electronAPI.inventory.importFile('merge').then((r) => {
+              if (r.cancelled || !r.summary) return;
+              setNotice(
+                t('inventoryPanel.imported', {
+                  added: r.summary.added,
+                  updated: r.summary.updated,
+                }),
+              );
+            });
+          }}
+        >
+          {t('inventoryPanel.import')}
+        </button>
       </header>
 
       <p className="text-muted text-sm">{t('inventoryPanel.intro')}</p>
@@ -118,6 +156,12 @@ export function InventoryPanel({ nodes = [] }: InventoryPanelProps): React.JSX.E
       {error ? (
         <p className="rounded border border-red-800 bg-red-950/40 p-2 text-sm text-red-300">
           {error}
+        </p>
+      ) : null}
+
+      {notice ? (
+        <p className="rounded border border-emerald-800 bg-emerald-950/30 p-2 text-sm text-emerald-300">
+          {notice}
         </p>
       ) : null}
 

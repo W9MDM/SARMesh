@@ -16,8 +16,11 @@ import { app } from 'electron';
 import type {
   AssetStatus,
   ConfigDrift,
+  ImportStrategy,
+  ImportSummary,
   InventoryConfig,
   InventoryEvent,
+  InventoryExport,
   InventoryNode,
   InventoryProfile,
   InventorySettings,
@@ -28,6 +31,7 @@ import type {
 } from '../shared/inventory-types';
 import {
   DEFAULT_INVENTORY_SETTINGS,
+  INVENTORY_EXPORT_VERSION,
   MAX_HISTORY_PER_NODE,
   MAX_INVENTORY_NODES,
 } from '../shared/inventory-types';
@@ -344,6 +348,80 @@ export class InventoryManager extends EventEmitter {
     );
     this.persist();
     return this.list();
+  }
+
+  // ----------------------------------------------------------- export/import
+
+  /** A portable copy of the register, for backup or handing to another leader. */
+  buildExport(): InventoryExport {
+    return {
+      format: 'sarmesh-inventory',
+      version: INVENTORY_EXPORT_VERSION,
+      exportedAt: Date.now(),
+      nodes: this.list(),
+      profiles: this.listProfiles(),
+    };
+  }
+
+  /**
+   * Merge or replace the register from an exported file.
+   *
+   * `merge` is the default because combining two leaders' registers is the
+   * common case and must not lose either side. On a collision the imported
+   * record wins, but the existing audit trail is preserved and extended: the
+   * history of a radio is the part that must never be silently dropped.
+   */
+  applyImport(data: InventoryExport, strategy: ImportStrategy = 'merge'): ImportSummary {
+    const summary: ImportSummary = {
+      added: 0,
+      updated: 0,
+      skipped: 0,
+      profilesAdded: 0,
+      strategy,
+    };
+
+    if (strategy === 'replace') {
+      this.nodes = new Map();
+      this.profiles = new Map();
+    }
+
+    for (const incoming of data.nodes) {
+      if (!Number.isFinite(incoming.nodeId)) {
+        summary.skipped += 1;
+        continue;
+      }
+      if (this.nodes.size >= MAX_INVENTORY_NODES && !this.nodes.has(incoming.nodeId)) {
+        summary.skipped += 1;
+        continue;
+      }
+
+      const existing = this.nodes.get(incoming.nodeId);
+      const normalized = this.normalize(incoming);
+
+      if (!existing) {
+        this.nodes.set(normalized.nodeId, normalized);
+        summary.added += 1;
+        continue;
+      }
+
+      // Keep both trails, oldest first, so an imported record cannot erase what
+      // this machine already recorded about the radio.
+      const history = [...existing.history, ...normalized.history]
+        .sort((a, b) => a.time - b.time)
+        .slice(-MAX_HISTORY_PER_NODE);
+
+      this.nodes.set(normalized.nodeId, { ...existing, ...normalized, history });
+      summary.updated += 1;
+    }
+
+    for (const profile of data.profiles ?? []) {
+      if (!profile?.id) continue;
+      if (!this.profiles.has(profile.id)) summary.profilesAdded += 1;
+      this.profiles.set(profile.id, profile);
+    }
+
+    this.persist();
+    return summary;
   }
 
   private appendHistory(node: InventoryNode, kind: InventoryEvent['kind'], detail: string): void {

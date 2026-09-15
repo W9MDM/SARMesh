@@ -218,3 +218,117 @@ describe('computeDrift', () => {
     expect(computeDrift({ capturedAt: 0 }, undefined)).toEqual([]);
   });
 });
+
+describe('export and import', () => {
+  let manager: InstanceType<typeof InventoryManager>;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'sarmesh-inventory-io-'));
+    manager = new InventoryManager();
+    manager.load();
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('round-trips the register through an export', () => {
+    manager.register(1, { assetTag: 'SAR-001', assignedTo: 'Alpha' });
+    manager.queueChange(1, 'Season config', { lora: { region: 'US' } });
+    manager.saveProfile({ id: 'p1', name: 'County', config: {}, updatedAt: 0 });
+
+    const payload = manager.buildExport();
+    expect(payload.format).toBe('sarmesh-inventory');
+
+    const fresh = new InventoryManager();
+    fresh.load();
+    const summary = fresh.applyImport(payload, 'replace');
+
+    expect(summary.added).toBe(1);
+    expect(fresh.get(1)?.assetTag).toBe('SAR-001');
+    // A queued change must survive the trip, or a handover loses pending work.
+    expect(fresh.outstandingChanges(1)).toHaveLength(1);
+    expect(fresh.listProfiles()).toHaveLength(1);
+  });
+
+  it('merges without losing radios this machine already had', () => {
+    manager.register(1, { assetTag: 'MINE' });
+    manager.register(2, { assetTag: 'ALSO-MINE' });
+
+    const summary = manager.applyImport(
+      {
+        format: 'sarmesh-inventory',
+        version: 1,
+        exportedAt: 0,
+        nodes: [
+          { nodeId: 2, assetTag: 'THEIRS', status: 'in-service', pendingChanges: [], history: [] },
+          { nodeId: 3, assetTag: 'NEW', status: 'in-service', pendingChanges: [], history: [] },
+        ],
+        profiles: [],
+      },
+      'merge',
+    );
+
+    expect(summary).toMatchObject({ added: 1, updated: 1 });
+    expect(manager.get(1)?.assetTag).toBe('MINE');
+    expect(manager.get(2)?.assetTag).toBe('THEIRS');
+    expect(manager.get(3)?.assetTag).toBe('NEW');
+  });
+
+  it('keeps both audit trails on a collision rather than overwriting one', () => {
+    manager.register(1, { assetTag: 'SAR-001' });
+    manager.addNote(1, 'checked by this machine');
+
+    manager.applyImport(
+      {
+        format: 'sarmesh-inventory',
+        version: 1,
+        exportedAt: 0,
+        nodes: [
+          {
+            nodeId: 1,
+            assetTag: 'SAR-001',
+            status: 'in-service',
+            pendingChanges: [],
+            history: [
+              { time: Date.now() + 1000, kind: 'note', detail: 'checked by the other leader' },
+            ],
+          },
+        ],
+        profiles: [],
+      },
+      'merge',
+    );
+
+    const details = manager.get(1)?.history.map((h) => h.detail) ?? [];
+    expect(details).toContain('checked by this machine');
+    expect(details).toContain('checked by the other leader');
+  });
+
+  it('discards the current register under the replace strategy', () => {
+    manager.register(1, { assetTag: 'GONE' });
+    manager.applyImport(
+      { format: 'sarmesh-inventory', version: 1, exportedAt: 0, nodes: [], profiles: [] },
+      'replace',
+    );
+    expect(manager.list()).toHaveLength(0);
+  });
+
+  it('skips records with no usable node id instead of failing the whole import', () => {
+    const summary = manager.applyImport(
+      {
+        format: 'sarmesh-inventory',
+        version: 1,
+        exportedAt: 0,
+        nodes: [
+          { nodeId: Number.NaN, status: 'in-service', pendingChanges: [], history: [] },
+          { nodeId: 5, status: 'in-service', pendingChanges: [], history: [] },
+        ],
+        profiles: [],
+      },
+      'merge',
+    );
+    expect(summary.skipped).toBe(1);
+    expect(summary.added).toBe(1);
+  });
+});

@@ -34,6 +34,8 @@ import type {
 } from '../shared/electron-api.types';
 import type {
   ConfigDrift,
+  ImportStrategy,
+  ImportSummary,
   InventoryConfig,
   InventoryNode,
   InventoryProfile,
@@ -1142,6 +1144,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getSettings: (): Promise<InventorySettings> => ipcRenderer.invoke('inventory:getSettings'),
     setSettings: (settings: InventorySettings): Promise<InventorySettings> =>
       ipcRenderer.invoke('inventory:setSettings', settings),
+    exportFile: (): Promise<{ cancelled: boolean; path?: string; nodes?: number }> =>
+      ipcRenderer.invoke('inventory:exportFile'),
+    exportCsv: (): Promise<{ cancelled: boolean; path?: string }> =>
+      ipcRenderer.invoke('inventory:exportCsv'),
+    importFile: (
+      strategy: ImportStrategy,
+    ): Promise<{ cancelled: boolean; summary?: ImportSummary }> =>
+      ipcRenderer.invoke('inventory:importFile', strategy),
     onChanged: (cb: (nodes: InventoryNode[]) => void): (() => void) => {
       const handler = (_: unknown, nodes: InventoryNode[]) => {
         cb(nodes);

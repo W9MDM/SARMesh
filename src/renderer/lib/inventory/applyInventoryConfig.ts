@@ -18,9 +18,7 @@ import {
 
 /** The subset of the runtime's actions this needs. */
 export interface ApplyActions {
-  setConfig: (payload: {
-    payloadVariant: { case: string; value: Record<string, unknown> };
-  }) => Promise<void>;
+  setConfig: (payload: unknown) => Promise<void>;
   setDeviceChannel: (channel: {
     index: number;
     role: number;
@@ -29,14 +27,22 @@ export interface ApplyActions {
       psk: Uint8Array;
       uplinkEnabled: boolean;
       downlinkEnabled: boolean;
+      positionPrecision: number;
     };
   }) => Promise<void>;
-  setOwner: (owner: { longName?: string; shortName?: string }) => Promise<void>;
+  setOwner: (owner: { longName: string; shortName: string; isLicensed: boolean }) => Promise<void>;
   commitConfig: () => Promise<void>;
 }
 
 /** Live config slices read off the radio, merged onto so partials do not blank fields. */
 export type ConfigSlices = Record<string, unknown> | undefined;
+
+/** The radio's current owner, so a partial name change cannot blank the rest. */
+export interface CurrentOwner {
+  longName: string;
+  shortName: string;
+  isLicensed: boolean;
+}
 
 export interface ApplyStep {
   label: string;
@@ -91,6 +97,7 @@ export async function applyInventoryConfig(
   config: InventoryConfig,
   slices: ConfigSlices,
   actions: ApplyActions,
+  currentOwner?: CurrentOwner,
 ): Promise<ApplyOutcome> {
   const steps: ApplyStep[] = [];
   let touched = false;
@@ -101,6 +108,8 @@ export async function applyInventoryConfig(
       steps.push({ label, ok: true });
       return true;
     } catch (err) {
+      // catch-no-log-ok: captured into steps; the caller records it in the
+      // radio's audit trail and surfaces it in the queue
       steps.push({ label, ok: false, error: err instanceof Error ? err.message : String(err) });
       return false;
     }
@@ -113,10 +122,17 @@ export async function applyInventoryConfig(
     await actions.setConfig({ payloadVariant: { case: section, value: merged } });
   };
 
-  if (config.owner && (config.owner.longName || config.owner.shortName)) {
-    const owner = config.owner;
+  if (config.owner && (config.owner.longName ?? config.owner.shortName)) {
+    // setOwner writes the whole record, so merge onto the radio's current owner:
+    // a change that sets only the long name must not blank the short name or
+    // silently clear the licensed flag.
+    const owner = {
+      longName: config.owner.longName ?? currentOwner?.longName ?? '',
+      shortName: config.owner.shortName ?? currentOwner?.shortName ?? '',
+      isLicensed: currentOwner?.isLicensed ?? false,
+    };
     touched = true;
-    if (!(await run('owner', () => actions.setOwner({ ...owner })))) {
+    if (!(await run('owner', () => actions.setOwner(owner)))) {
       return { steps, ok: false, rebooted: false };
     }
   }
@@ -179,6 +195,9 @@ export async function applyInventoryConfig(
           psk: decodePsk(channel.psk),
           uplinkEnabled: channel.uplinkEnabled,
           downlinkEnabled: channel.downlinkEnabled,
+          // The register does not manage position precision; 0 keeps the
+          // radio's channel default rather than narrowing it.
+          positionPrecision: 0,
         },
       }),
     );

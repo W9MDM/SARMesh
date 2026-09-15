@@ -130,6 +130,7 @@ import { useAppTrayUnreadSync } from './hooks/useAppTrayUnreadSync';
 import { useConnectionView } from './hooks/useConnectionView';
 import { useContactGroups } from './hooks/useContactGroups';
 import { useProtocolDbRefresh } from './hooks/useDbRefresh';
+import { useInventoryAutoApply } from './hooks/useInventoryAutoApply';
 import { useLongSessionMaintenance } from './hooks/useLongSessionMaintenance';
 import { useMeshcoreDistanceFilterHint } from './hooks/useMeshcoreDistanceFilterHint';
 import type { useMeshcorePanelActions } from './hooks/useMeshcorePanelActions';
@@ -1102,6 +1103,30 @@ function AppContent() {
       ),
     [meshtasticUiNodes, meshtasticConnectionView.state.myNodeNum, meshcoreRuntime.selfInfo?.name],
   );
+  const meshtasticApplyActions = useMemo(
+    () => ({
+      setConfig: meshtasticPanelActions.setConfig,
+      setDeviceChannel: meshtasticPanelActions.setDeviceChannel,
+      setOwner: meshtasticPanelActions.setOwner,
+      commitConfig: meshtasticPanelActions.commitConfig,
+    }),
+    [meshtasticPanelActions],
+  );
+
+  // Radios on the register get their queued configuration applied, and their
+  // retained configuration captured, as soon as they finish connecting.
+  useInventoryAutoApply({
+    status: meshtasticConnectionView.state.status,
+    myNodeNum: meshtasticConnectionView.state.myNodeNum,
+    configSlices: meshtasticRuntime.meshtasticConfigSlices,
+    channels: meshtasticRuntime.channelConfigs,
+    firmwareVersion: meshtasticConnectionView.state.firmwareVersion,
+    ownerLongName: meshtasticUiNodes.get(meshtasticConnectionView.state.myNodeNum)?.long_name,
+    ownerShortName: meshtasticUiNodes.get(meshtasticConnectionView.state.myNodeNum)?.short_name,
+    currentOwner: meshtasticRuntime.deviceOwner ?? undefined,
+    actions: meshtasticApplyActions,
+  });
+
   const securityMeshcoreNodeIdByProtocol = useMemo(
     () => protocolRecord(undefined as number | undefined, meshcoreConnectionView.state.myNodeNum),
     [meshcoreConnectionView.state.myNodeNum],

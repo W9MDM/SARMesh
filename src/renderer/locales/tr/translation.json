@@ -6076,6 +6076,11 @@
       "applied": "Uygulandı",
       "failed": "Başarısız",
       "cancelled": "İptal Edildi"
-    }
+    },
+    "export": "İhr.",
+    "exportCsv": "CSV olarak dışa aktar",
+    "import": "İthal",
+    "exported": "{{count}} radyo dışa aktarıldı.",
+    "imported": "İçe aktarıldı: {{added}} eklendi, {{updated}} güncellendi."
   }
 }

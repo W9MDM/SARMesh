@@ -168,3 +168,38 @@ export const DEFAULT_INVENTORY_SETTINGS: InventorySettings = {
 /** Bound the register so a corrupt file cannot exhaust memory. */
 export const MAX_INVENTORY_NODES = 2000;
 export const MAX_HISTORY_PER_NODE = 200;
+
+// ------------------------------------------------------------ export/import
+
+/** Current on-disk and export format version. */
+export const INVENTORY_EXPORT_VERSION = 1;
+
+/**
+ * A portable copy of the register, for backup or for handing to another team
+ * leader. Self-describing so an import can refuse a file it does not understand
+ * rather than silently mangling it.
+ */
+export interface InventoryExport {
+  format: 'sarmesh-inventory';
+  version: number;
+  exportedAt: number;
+  nodes: InventoryNode[];
+  profiles: InventoryProfile[];
+}
+
+/**
+ * How an import treats records already present.
+ *
+ * `merge` keeps existing radios and adds or updates from the file — the safe
+ * default when combining two leaders' registers. `replace` discards the current
+ * register entirely, for restoring a backup.
+ */
+export type ImportStrategy = 'merge' | 'replace';
+
+export interface ImportSummary {
+  added: number;
+  updated: number;
+  skipped: number;
+  profilesAdded: number;
+  strategy: ImportStrategy;
+}

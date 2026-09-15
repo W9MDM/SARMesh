@@ -17,6 +17,8 @@ import type {
 } from './games-types';
 import type {
   ConfigDrift,
+  ImportStrategy,
+  ImportSummary,
   InventoryConfig,
   InventoryNode,
   InventoryProfile,
@@ -1224,6 +1226,11 @@ export interface ElectronAPI {
     drift: (nodeId: number, profileId: string) => Promise<ConfigDrift[]>;
     getSettings: () => Promise<InventorySettings>;
     setSettings: (settings: InventorySettings) => Promise<InventorySettings>;
+    exportFile: () => Promise<{ cancelled: boolean; path?: string; nodes?: number }>;
+    exportCsv: () => Promise<{ cancelled: boolean; path?: string }>;
+    importFile: (
+      strategy: ImportStrategy,
+    ) => Promise<{ cancelled: boolean; summary?: ImportSummary }>;
     onChanged: (cb: (nodes: InventoryNode[]) => void) => () => void;
     onReconciled: (cb: (result: ReconcileResult) => void) => () => void;
   };

@@ -6076,6 +6076,11 @@
       "applied": "已申请",
       "failed": "失败",
       "cancelled": "已取消"
-    }
+    },
+    "export": "导出",
+    "exportCsv": "导出 CSV",
+    "import": "进口",
+    "exported": "已导出{{count}}收音机。",
+    "imported": "已导入： {{added}}已添加， {{updated}}已更新。"
   }
 }

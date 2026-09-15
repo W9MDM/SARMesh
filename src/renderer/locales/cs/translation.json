@@ -6124,6 +6124,11 @@
       "applied": "Přihláška podána",
       "failed": "Nezdařilo se",
       "cancelled": "Zrušeno"
-    }
+    },
+    "export": "Export",
+    "exportCsv": "Export CSV",
+    "import": "Import",
+    "exported": "Exportováno {{count}} rádio(y).",
+    "imported": "Importováno: {{added}} přidáno, {{updated}} aktualizováno."
   }
 }

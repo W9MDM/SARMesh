@@ -6076,6 +6076,11 @@
       "applied": "Appliqués",
       "failed": "Échec",
       "cancelled": "Annulé"
-    }
+    },
+    "export": "Export",
+    "exportCsv": "Export CSV",
+    "import": "Importer",
+    "exported": "Radio(s) {{count}} exportée (s).",
+    "imported": "Importé : {{added}} ajouté, {{updated}} mis à jour."
   }
 }

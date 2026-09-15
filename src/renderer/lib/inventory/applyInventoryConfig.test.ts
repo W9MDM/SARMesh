@@ -142,3 +142,28 @@ describe('applyInventoryConfig', () => {
     expect(outcome.rebooted).toBe(false);
   });
 });
+
+describe('owner writes', () => {
+  it('merges onto the current owner so a partial change blanks nothing', async () => {
+    const a = actions();
+    await applyInventoryConfig({ owner: { longName: 'Alpha Team' } }, undefined, a, {
+      longName: 'Old Name',
+      shortName: 'OLD',
+      isLicensed: true,
+    });
+
+    expect(a.setOwner).toHaveBeenCalledWith({
+      longName: 'Alpha Team',
+      // The change said nothing about these, so they must survive it.
+      shortName: 'OLD',
+      isLicensed: true,
+    });
+  });
+
+  it('does not write an owner when the change carries no name', async () => {
+    const a = actions();
+    const outcome = await applyInventoryConfig({ owner: {} }, undefined, a);
+    expect(a.setOwner).not.toHaveBeenCalled();
+    expect(outcome.rebooted).toBe(false);
+  });
+});

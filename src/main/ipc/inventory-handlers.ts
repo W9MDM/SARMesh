@@ -1,15 +1,20 @@
-import { ipcMain } from 'electron';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
+import { app, dialog, ipcMain } from 'electron';
 
 import type {
   AssetStatus,
+  ImportStrategy,
   InventoryConfig,
+  InventoryExport,
   InventoryNode,
   InventoryProfile,
   InventorySettings,
   NodeConfigSnapshot,
   ReconcileResult,
 } from '../../shared/inventory-types';
-import { ASSET_STATUSES } from '../../shared/inventory-types';
+import { ASSET_STATUSES, INVENTORY_EXPORT_VERSION } from '../../shared/inventory-types';
 import { computeDrift, type InventoryManager } from '../inventory-manager';
 import { sanitizeLogMessage } from '../log-service';
 import { assertIpcSender } from '../validate-ipc-sender';
@@ -343,6 +348,80 @@ export function registerInventoryIpcHandlers(deps: InventoryIpcDeps): void {
     return computeDrift(node?.lastKnownConfig, profile);
   });
 
+  // -- export / import
+
+  ipcMain.handle('inventory:exportFile', async (event) => {
+    assertIpcSender(event, 'inventory:exportFile');
+    const stamp = new Date().toISOString().slice(0, 10);
+    const result = await dialog.showSaveDialog({
+      title: 'Export radio inventory',
+      defaultPath: path.join(app.getPath('documents'), `sarmesh-inventory-${stamp}.json`),
+      filters: [{ name: 'SARMesh inventory', extensions: ['json'] }],
+    });
+    if (result.canceled || !result.filePath) return { cancelled: true as const };
+
+    const payload = getInventoryManager().buildExport();
+    await fs.writeFile(result.filePath, JSON.stringify(payload, null, 2), 'utf8');
+    return { cancelled: false as const, path: result.filePath, nodes: payload.nodes.length };
+  });
+
+  ipcMain.handle('inventory:exportCsv', async (event) => {
+    assertIpcSender(event, 'inventory:exportCsv');
+    const stamp = new Date().toISOString().slice(0, 10);
+    const result = await dialog.showSaveDialog({
+      title: 'Export radio inventory as CSV',
+      defaultPath: path.join(app.getPath('documents'), `sarmesh-inventory-${stamp}.csv`),
+      filters: [{ name: 'CSV', extensions: ['csv'] }],
+    });
+    if (result.canceled || !result.filePath) return { cancelled: true as const };
+
+    await fs.writeFile(result.filePath, buildInventoryCsv(getInventoryManager().list()), 'utf8');
+    return { cancelled: false as const, path: result.filePath };
+  });
+
+  ipcMain.handle('inventory:importFile', async (event, strategy: unknown) => {
+    assertIpcSender(event, 'inventory:importFile');
+    const mode: ImportStrategy = strategy === 'replace' ? 'replace' : 'merge';
+
+    const result = await dialog.showOpenDialog({
+      title: 'Import radio inventory',
+      properties: ['openFile'],
+      filters: [{ name: 'SARMesh inventory', extensions: ['json'] }],
+    });
+    const file = result.filePaths[0];
+    if (result.canceled || !file) return { cancelled: true as const };
+
+    return guard('inventory:importFile', async () => {
+      const raw = await fs.readFile(file, 'utf8');
+      const parsed = JSON.parse(raw) as Partial<InventoryExport>;
+
+      // Refuse a file we do not understand rather than mangling the register.
+      if (parsed.format !== 'sarmesh-inventory') {
+        throw new Error('That file is not a SARMesh inventory export.');
+      }
+      if (typeof parsed.version !== 'number' || parsed.version > INVENTORY_EXPORT_VERSION) {
+        throw new Error(
+          `That export was written by a newer SARMesh (format ${String(parsed.version)}). Update first.`,
+        );
+      }
+      if (!Array.isArray(parsed.nodes)) {
+        throw new Error('That export has no radio records.');
+      }
+
+      const summary = getInventoryManager().applyImport(
+        {
+          format: 'sarmesh-inventory',
+          version: parsed.version,
+          exportedAt: parsed.exportedAt ?? Date.now(),
+          nodes: parsed.nodes,
+          profiles: Array.isArray(parsed.profiles) ? parsed.profiles : [],
+        },
+        mode,
+      );
+      return { cancelled: false as const, summary };
+    });
+  });
+
   // -- settings
 
   ipcMain.handle('inventory:getSettings', (event) => {
@@ -360,4 +439,53 @@ export function registerInventoryIpcHandlers(deps: InventoryIpcDeps): void {
       } satisfies InventorySettings);
     });
   });
+}
+
+/** Agency-readable property list. Deliberately excludes PSKs. */
+export function buildInventoryCsv(nodes: InventoryNode[]): string {
+  const header = [
+    'asset_tag',
+    'node_id',
+    'label',
+    'assigned_to',
+    'team',
+    'status',
+    'hw_model',
+    'firmware',
+    'region',
+    'modem_preset',
+    'role',
+    'primary_channel',
+    'queued_changes',
+    'last_seen',
+    'last_configured',
+  ];
+
+  // Quote any cell containing a comma, quote or newline, doubling inner quotes.
+  const cell = (value: string): string =>
+    /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+
+  const rows = nodes.map((node) => {
+    const config = node.lastKnownConfig;
+    const primary = config?.channels?.find((channel) => channel.role === 'PRIMARY');
+    return [
+      node.assetTag ?? '',
+      `!${(node.nodeId >>> 0).toString(16).padStart(8, '0')}`,
+      node.label ?? '',
+      node.assignedTo ?? '',
+      node.team ?? '',
+      node.status,
+      node.hwModel ?? '',
+      node.firmwareVersion ?? '',
+      config?.lora?.region ?? '',
+      config?.lora?.modemPreset ?? '',
+      config?.device?.role ?? '',
+      primary?.name ?? '',
+      String(node.pendingChanges.filter((c) => c.state === 'queued').length),
+      node.lastSeen ? new Date(node.lastSeen).toISOString() : '',
+      node.lastConfiguredAt ? new Date(node.lastConfiguredAt).toISOString() : '',
+    ].map(cell);
+  });
+
+  return [header.join(','), ...rows.map((row) => row.join(','))].join('\n');
 }

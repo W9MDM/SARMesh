@@ -6076,6 +6076,11 @@
       "applied": "적용",
       "failed": "실패함",
       "cancelled": "취소"
-    }
+    },
+    "export": "내보내기",
+    "exportCsv": "CSV(엑셀)로 내보내기",
+    "import": "가져오기",
+    "exported": "{{count}} 라디오를 내보냈습니다.",
+    "imported": "가져옴: {{added}} 추가됨, {{updated}} 업데이트됨."
   }
 }
