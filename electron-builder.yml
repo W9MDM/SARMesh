@@ -36,6 +36,13 @@ extraResources:
     to: reticulum-sidecar
     filter:
       - '**/*'
+      # staged/ is the per-arch build output beforePack copies FROM. Without this
+      # exclusion every installer also ships staged/<platform>-<arch>/ for every
+      # arch built in the run — so a multi-arch build puts both architectures'
+      # sidecars in each installer, on top of the correct one. Nothing reads
+      # staged/ at runtime: the app and the bundle verifier both look only at
+      # resources/reticulum-sidecar/<binary>.
+      - '!staged/**'
   - from: resources/icons/linux/256x256.png
     to: 256x256.png
   - from: resources/icons/mac/macos-menubar-icon-Template/macos-menubar-icon-Template.png
