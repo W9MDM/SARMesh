@@ -45,6 +45,10 @@ jobs:
     permissions:
       contents: read
     strategy:
+      # A platform that cannot build must not destroy the other platforms'
+      # artifacts. Without this, an unsignable macOS job cancels Linux and
+      # Windows mid-build and the run produces nothing at all.
+      fail-fast: false
       matrix:
         include:
           - os: macos-latest
@@ -147,12 +151,30 @@ jobs:
           SARMESH_BUILD_WORKFLOW: Build Binaries (no release)
         run: node scripts/ci-write-build-info-env.mjs
 
+      - name: Configure macOS code signing
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        env:
+          CSC_LINK_SECRET: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD_SECRET: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          if [ -n "$CSC_LINK_SECRET" ]; then
+            echo "CSC_LINK=$CSC_LINK_SECRET" >> "$GITHUB_ENV"
+            echo "CSC_KEY_PASSWORD=$CSC_KEY_PASSWORD_SECRET" >> "$GITHUB_ENV"
+            echo "CSC_IDENTITY_AUTO_DISCOVERY=true" >> "$GITHUB_ENV"
+            echo "macOS signing certificate configured."
+          else
+            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+            echo "No CSC_LINK secret - building macOS UNSIGNED (test build)."
+          fi
+
       - name: Build
         env:
-          # ── macOS code signing (only effective on macOS runners) ────────────
-          CSC_LINK: ${{ matrix.os == 'macos-latest' && secrets.CSC_LINK || '' }}
-          CSC_KEY_PASSWORD: ${{ matrix.os == 'macos-latest' && secrets.CSC_KEY_PASSWORD || '' }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ matrix.os == 'macos-latest' && secrets.CSC_LINK && 'true' || 'false' }}
+          # macOS signing vars are exported by the step above, and only when a
+          # certificate secret actually exists. Setting CSC_LINK to '' here made
+          # electron-builder path-resolve the empty value to the workspace root
+          # and fail with "not a file" importing a certificate this fork has not
+          # configured.
           # ── macOS notarization ─────────────────────────────────────────────
           APPLE_ID: ${{ matrix.os == 'macos-latest' && secrets.APPLE_ID || '' }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.os == 'macos-latest' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
