@@ -137,10 +137,7 @@ async fn main() -> ExitCode {
     }
 
     if !is_loopback_host(&cli.host)
-        && std::env::var("SARMESH_RETICULUM_BIND_ALL")
-            .ok()
-            .as_deref()
-            != Some("1")
+        && std::env::var("SARMESH_RETICULUM_BIND_ALL").ok().as_deref() != Some("1")
     {
         error!(
             host = %cli.host,

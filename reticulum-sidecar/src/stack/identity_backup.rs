@@ -272,8 +272,8 @@ pub fn parse_identity_backup(
     match format {
         RATSPEAK_IDENTITY_V2 => parse_v2_backup(backup, passphrase),
         RATSPEAK_IDENTITY_V1 => parse_v1_backup(backup),
-        "sarmesh.identity.v1" => Err(
-            "sarmesh.identity.v1 metadata-only backups are no longer supported; use a Ratspeak .rsi or raw Reticulum identity file"
+        "mesh-client.identity.v1" => Err(
+            "mesh-client.identity.v1 metadata-only backups are no longer supported; use a Ratspeak .rsi or raw Reticulum identity file"
                 .into(),
         ),
         _ => Err("unsupported backup format".into()),
@@ -375,7 +375,7 @@ mod tests {
         );
         assert_ne!(
             backup.get("format").and_then(|v| v.as_str()),
-            Some("sarmesh.identity.v1")
+            Some("mesh-client.identity.v1")
         );
 
         let vault = backup.get("vault").cloned().unwrap();
@@ -461,9 +461,9 @@ mod tests {
     }
 
     #[test]
-    fn rejects_sarmesh_v1_metadata() {
+    fn rejects_mesh_client_v1_metadata() {
         let backup = serde_json::json!({
-            "format": "sarmesh.identity.v1",
+            "format": "mesh-client.identity.v1",
             "identity_hash": "aa",
             "lxmf_hash": "bb",
             "display_name": "x",
