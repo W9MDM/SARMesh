@@ -173,8 +173,8 @@ export function parseGithubLinkNext(linkHeader) {
  * @returns {Promise<Array<{ tag_name?: string, name?: string, draft?: boolean, prerelease?: boolean }>>}
  */
 export async function fetchAllGithubReleases(opts = {}) {
-  const owner = opts.owner ?? 'Colorado-Mesh';
-  const repo = opts.repo ?? 'sarmesh';
+  const owner = opts.owner ?? 'W9MDM';
+  const repo = opts.repo ?? 'SARMesh';
   const headers = opts.headers ?? {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
@@ -204,8 +204,8 @@ export async function fetchAllGithubReleases(opts = {}) {
  * @returns {Promise<{ tag: string, schema: number } | null>}
  */
 export async function fetchLatestPublishedReleaseSchema(opts = {}) {
-  const owner = opts.owner ?? 'Colorado-Mesh';
-  const repo = opts.repo ?? 'sarmesh';
+  const owner = opts.owner ?? 'W9MDM';
+  const repo = opts.repo ?? 'SARMesh';
   const token = opts.token ?? process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN;
   const headers = {
     Accept: 'application/vnd.github+json',

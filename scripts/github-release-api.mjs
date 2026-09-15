@@ -9,7 +9,7 @@ import path from 'node:path';
 
 import { releaseMatchesTag, versionFromTrustedTag } from './github-release-version.mjs';
 
-export const OWNER = 'Colorado-Mesh';
+export const OWNER = 'W9MDM';
 export const REPO = 'sarmesh';
 export const API_ROOT = `https://api.github.com/repos/${OWNER}/${REPO}`;
 

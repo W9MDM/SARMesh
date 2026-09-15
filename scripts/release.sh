@@ -174,7 +174,7 @@ commit_tag_and_push_release() {
   print_success "--------------------------------------------------------"
   print_success "Success! $new_version has been pushed."
   print_success "GitHub Actions will now begin building the distributables."
-  echo "Check progress at: https://github.com/Colorado-Mesh/mesh-client/actions"
+  echo "Check progress at: https://github.com/W9MDM/SARMesh/actions"
   print_warning "Releases are created as drafts — review artifacts, then publish on GitHub."
   print_success "--------------------------------------------------------"
 }
@@ -307,7 +307,7 @@ EOF
 
   echo ""
   echo "### Full Changelog"
-  echo "[\`$last_tag...$new_version\`](https://github.com/Colorado-Mesh/mesh-client/compare/$last_tag...$new_version)"
+  echo "[\`$last_tag...$new_version\`](https://github.com/W9MDM/SARMesh/compare/$last_tag...$new_version)"
 
   echo ""
   print_header "========================================"

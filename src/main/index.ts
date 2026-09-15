@@ -1224,8 +1224,8 @@ if (process.platform === 'linux') {
 function getAppIconPath() {
   if (process.platform === 'win32') {
     return app.isPackaged
-      ? path.join(process.resourcesPath, 'colorado-mesh.ico')
-      : path.join(__dirname, '../../resources/icons/win/colorado-mesh.ico');
+      ? path.join(process.resourcesPath, 'sarmesh.ico')
+      : path.join(__dirname, '../../resources/icons/win/sarmesh.ico');
   }
   if (process.platform === 'darwin') {
     return app.isPackaged

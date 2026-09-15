@@ -27,6 +27,21 @@ export default async function beforePack(context) {
 
   const stagedPath = resolveStagedSidecarPathForPackContext(projectRoot, platform, context.arch);
   if (!existsSync(stagedPath)) {
+    // The sidecar is a Rust binary, so a machine without a Rust toolchain cannot
+    // produce one and therefore cannot make a local test build at all. This
+    // opt-out unblocks that, and only that: it is never set in CI or by any
+    // dist:* script, so a real release still fails hard rather than shipping an
+    // app whose Reticulum features are silently absent. The app already handles
+    // the missing binary at runtime (RETICULUM_SIDECAR_BUNDLED_MISSING).
+    if (process.env.SARMESH_ALLOW_MISSING_SIDECAR === '1') {
+      console.warn(
+        `[beforePack] WARNING: no Reticulum sidecar for ${platform}/${context.arch}. ` +
+          'SARMESH_ALLOW_MISSING_SIDECAR=1 is set, so packaging continues. This build is ' +
+          'for TESTING ONLY — Reticulum/LXMF features will be unavailable in it. ' +
+          'Do not distribute it as a release.',
+      );
+      return;
+    }
     throw new Error(
       `[beforePack] Staged Reticulum sidecar missing for ${platform} arch ${context.arch}: ${stagedPath}. Run node scripts/build-reticulum-sidecar-release.mjs --platform ${platform} before dist.`,
     );

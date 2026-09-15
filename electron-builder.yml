@@ -15,16 +15,23 @@ files:
 asarUnpack:
   - 'node_modules/systeminformation/**/*'
   - 'node_modules/@stoprocent/**/*'
+# Native deps ship N-API prebuilds (@serialport/bindings-cpp, @stoprocent/noble),
+# which are ABI-stable across Node and Electron, and scripts/rebuild-native.mjs
+# already handles rebuilds at install time. Letting electron-builder run
+# @electron/rebuild again is redundant and hard-fails on any machine without
+# Visual Studio — or with a space in the project path.
+npmRebuild: false
+
 publish:
   provider: github
-  owner: Colorado-Mesh
-  repo: sarmesh
+  owner: W9MDM
+  repo: SARMesh
   # Keep GitHub Releases as drafts until a maintainer publishes manually.
   releaseType: draft
 beforePack: scripts/electron-builder-before-pack.mjs
 extraResources:
-  - from: resources/icons/win/colorado-mesh.ico
-    to: colorado-mesh.ico
+  - from: resources/icons/win/sarmesh.ico
+    to: sarmesh.ico
   - from: resources/reticulum-sidecar
     to: reticulum-sidecar
     filter:
@@ -106,7 +113,7 @@ win:
       arch:
         - x64
         - arm64
-  icon: resources/icons/win/colorado-mesh.ico
+  icon: resources/icons/win/sarmesh.ico
 nsis:
   buildUniversalInstaller: false
   # WoA: Nsis7z cannot reliably extract ARM64 LZMA app-arm64.7z (main exe missing).

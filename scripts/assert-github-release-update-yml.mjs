@@ -106,9 +106,7 @@ export async function resolveReleaseForUpdateYmlAssert(tag, token, releaseId) {
 export async function downloadReleaseAssetText(assetApiUrl, token) {
   if (
     typeof assetApiUrl !== 'string' ||
-    !/^https:\/\/api\.github\.com\/repos\/Colorado-Mesh\/sarmesh\/releases\/assets\/\d+$/.test(
-      assetApiUrl,
-    )
+    !/^https:\/\/api\.github\.com\/repos\/W9MDM\/SARMesh\/releases\/assets\/\d+$/.test(assetApiUrl)
   ) {
     throw new Error(`Unexpected release asset URL: ${String(assetApiUrl)}`);
   }
