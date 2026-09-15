@@ -94,9 +94,23 @@ function assertDebDescriptionAscii(label, debPath) {
   if (description.includes('??')) {
     fail(`${label} Description contains mojibake "??": ${JSON.stringify(description)}`);
   }
-  if (!description.includes('Windows with BLE')) {
-    fail(`${label} Description missing expected wording: ${JSON.stringify(description)}`);
+  // The point of this check is that the description survived packaging intact,
+  // not that it contains any particular marketing wording. Asserting a magic
+  // substring meant the guard broke the moment the description legitimately
+  // changed, so compare against the actual source of truth: electron-builder
+  // derives the deb Description from package.json `description`.
+  if (description !== expectedDebDescription()) {
+    fail(
+      `${label} Description does not match package.json: ${JSON.stringify(description)} ` +
+        `(expected ${JSON.stringify(expectedDebDescription())})`,
+    );
   }
+}
+
+/** package.json `description`, which electron-builder uses as the deb Description. */
+function expectedDebDescription() {
+  const pkg = JSON.parse(readFileSync(path.join(projectRoot, 'package.json'), 'utf-8'));
+  return String(pkg.description ?? '').trim();
 }
 
 function main() {
