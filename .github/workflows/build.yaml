@@ -159,9 +159,11 @@ jobs:
           CSC_KEY_PASSWORD_SECRET: ${{ secrets.CSC_KEY_PASSWORD }}
         run: |
           if [ -n "$CSC_LINK_SECRET" ]; then
-            echo "CSC_LINK=$CSC_LINK_SECRET" >> "$GITHUB_ENV"
-            echo "CSC_KEY_PASSWORD=$CSC_KEY_PASSWORD_SECRET" >> "$GITHUB_ENV"
-            echo "CSC_IDENTITY_AUTO_DISCOVERY=true" >> "$GITHUB_ENV"
+            {
+              echo "CSC_LINK=$CSC_LINK_SECRET"
+              echo "CSC_KEY_PASSWORD=$CSC_KEY_PASSWORD_SECRET"
+              echo "CSC_IDENTITY_AUTO_DISCOVERY=true"
+            } >> "$GITHUB_ENV"
             echo "macOS signing certificate configured."
           else
             echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
