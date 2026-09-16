@@ -1573,7 +1573,15 @@
     "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
     "bluetoothMac": "KOMPUTER MAC z Bluetooth",
     "bluetoothId": "Identyfikator Bluetooth",
-    "reticulumAutoResendOnAnnounce": "Ponów nieudane próby wysłania wiadomości, gdy współpracownik ogłosi"
+    "reticulumAutoResendOnAnnounce": "Ponów nieudane próby wysłania wiadomości, gdy współpracownik ogłosi",
+    "discovery": {
+      "title": "Węzły znalezione w tej sieci",
+      "rescan": "Szukaj ponownie",
+      "searching": "Wyszukiwanie radiotelefonów…",
+      "idle": "Wyszukiwanie nie jest aktywne.",
+      "error": "Wyszukiwanie niedostępne: {{message}}. Zapora systemu Windows musi zezwalać na przychodzące UDP 5353.",
+      "scopeHint": "Znajduje węzły Wi-Fi tylko w tej sieci VLAN. Przekroczenie podsieci wymaga reflektora mDNS."
+    }
   },
   "contactGroupsModal": {
     "failedLoadMembers": "Nie udało się załadować członków: {{message}}",
@@ -6112,7 +6120,10 @@
     "longitude": "Długość geograficzna",
     "sendTest": "TEST SYGNALIZATORA",
     "recentTitle": "Najnowsze sygnały nawigacyjne",
-    "recentEmpty": "Nic nie wysłano."
+    "recentEmpty": "Nic nie wysłano.",
+    "rosterSearch": "Szukaj śledzonych radiotelefonów",
+    "rosterSearchPlaceholder": "Szukaj według znaku wywoławczego, zespołu, identyfikatora węzła lub typu",
+    "rosterNoMatch": "Żaden śledzony radiotelefon nie pasuje do „{{query}}”."
   },
   "inventoryPanel": {
     "title": "Inwentaryzacja radiowa",

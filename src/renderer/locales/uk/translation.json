@@ -1573,7 +1573,15 @@
     "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} дБм",
     "bluetoothMac": "Bluetooth MAC",
     "bluetoothId": "Ідентифікатор Bluetooth",
-    "reticulumAutoResendOnAnnounce": "Повторіть невдалі повідомлення, коли вузол оголошує"
+    "reticulumAutoResendOnAnnounce": "Повторіть невдалі повідомлення, коли вузол оголошує",
+    "discovery": {
+      "title": "Вузли, знайдені в цій мережі",
+      "rescan": "Шукати знову",
+      "searching": "Пошук радіостанцій…",
+      "idle": "Пошук не виконується.",
+      "error": "Пошук недоступний: {{message}}. Брандмауер Windows має дозволяти вхідний UDP 5353.",
+      "scopeHint": "Знаходить вузли Wi-Fi лише в цій мережі VLAN. Для виходу за межі підмережі потрібен рефлектор mDNS."
+    }
   },
   "contactGroupsModal": {
     "failedLoadMembers": "Не вдалося завантажити учасників: {{message}}",
@@ -6112,7 +6120,10 @@
     "longitude": "Довгота",
     "sendTest": "Надіслати тестовий маяк",
     "recentTitle": "Останні маяки",
-    "recentEmpty": "Ще нічого не надіслано."
+    "recentEmpty": "Ще нічого не надіслано.",
+    "rosterSearch": "Пошук відстежуваних радіостанцій",
+    "rosterSearchPlaceholder": "Пошук за позивним, командою, ідентифікатором вузла або типом",
+    "rosterNoMatch": "Жодна відстежувана радіостанція не відповідає запиту «{{query}}»."
   },
   "inventoryPanel": {
     "title": "Радіоінвентаризація",

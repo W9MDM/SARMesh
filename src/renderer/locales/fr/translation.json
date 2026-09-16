@@ -1535,7 +1535,15 @@
     "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
     "bluetoothMac": "Bluetooth MAC",
     "bluetoothId": "Bluetooth ID",
-    "reticulumAutoResendOnAnnounce": "Réessayer les messages ayant échoué lorsqu'un pair annonce"
+    "reticulumAutoResendOnAnnounce": "Réessayer les messages ayant échoué lorsqu'un pair annonce",
+    "discovery": {
+      "title": "Nœuds trouvés sur ce réseau",
+      "rescan": "Relancer la recherche",
+      "searching": "Recherche de radios…",
+      "idle": "Aucune recherche en cours.",
+      "error": "Recherche indisponible : {{message}}. Le pare-feu Windows doit autoriser l'UDP 5353 entrant.",
+      "scopeHint": "Trouve les nœuds Wi-Fi sur ce VLAN uniquement. Le franchissement de sous-réseaux nécessite un réflecteur mDNS."
+    }
   },
   "contactGroupsModal": {
     "failedLoadMembers": "Échec du chargement des membres : {{message}}",
@@ -6018,7 +6026,10 @@
     "longitude": "Longitude",
     "sendTest": "Envoyer la balise de test",
     "recentTitle": "Balises récentes",
-    "recentEmpty": "Rien n'a encore été envoyé."
+    "recentEmpty": "Rien n'a encore été envoyé.",
+    "rosterSearch": "Rechercher des radios suivies",
+    "rosterSearchPlaceholder": "Rechercher par indicatif, équipe, ID de nœud ou type",
+    "rosterNoMatch": "Aucune radio suivie ne correspond à « {{query}} »."
   },
   "inventoryPanel": {
     "title": "Inventaire radio",

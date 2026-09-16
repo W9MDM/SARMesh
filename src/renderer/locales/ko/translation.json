@@ -1535,7 +1535,15 @@
     "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
     "bluetoothMac": "블루투스 맥",
     "bluetoothId": "블루투스 ID",
-    "reticulumAutoResendOnAnnounce": "동료가 알릴 때 실패한 메시지 재시도"
+    "reticulumAutoResendOnAnnounce": "동료가 알릴 때 실패한 메시지 재시도",
+    "discovery": {
+      "title": "이 네트워크에서 찾은 노드",
+      "rescan": "다시 검색",
+      "searching": "무전기를 검색하는 중…",
+      "idle": "검색하지 않음.",
+      "error": "검색을 사용할 수 없습니다: {{message}}. Windows 방화벽에서 인바운드 UDP 5353을 허용해야 합니다.",
+      "scopeHint": "이 VLAN의 Wi-Fi 노드만 찾습니다. 서브넷을 넘어가려면 mDNS 리플렉터가 필요합니다."
+    }
   },
   "contactGroupsModal": {
     "failedLoadMembers": "멤버를 로드하지 못했습니다: {{message}}",
@@ -6018,7 +6026,10 @@
     "longitude": "경도(입력무관)",
     "sendTest": "테스트 비콘 보내기",
     "recentTitle": "최근 비콘",
-    "recentEmpty": "아직 전송된 것이 없습니다."
+    "recentEmpty": "아직 전송된 것이 없습니다.",
+    "rosterSearch": "추적 중인 무전기 검색",
+    "rosterSearchPlaceholder": "호출부호, 팀, 노드 ID 또는 유형으로 검색",
+    "rosterNoMatch": "“{{query}}”와 일치하는 추적 중인 무전기가 없습니다."
   },
   "inventoryPanel": {
     "title": "라디오 인벤토리",

@@ -1535,7 +1535,15 @@
     "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
     "bluetoothMac": "Bluetooth MAC",
     "bluetoothId": "Bluetooth-ID",
-    "reticulumAutoResendOnAnnounce": "Probeer mislukte berichten opnieuw wanneer een collega aankondigt"
+    "reticulumAutoResendOnAnnounce": "Probeer mislukte berichten opnieuw wanneer een collega aankondigt",
+    "discovery": {
+      "title": "Knooppunten gevonden op dit netwerk",
+      "rescan": "Opnieuw zoeken",
+      "searching": "Zoeken naar radio's…",
+      "idle": "Er wordt niet gezocht.",
+      "error": "Zoeken niet beschikbaar: {{message}}. Windows Firewall moet inkomende UDP 5353 toestaan.",
+      "scopeHint": "Vindt alleen Wi-Fi-knooppunten op dit VLAN. Het overschrijden van subnetten vereist een mDNS-reflector."
+    }
   },
   "contactGroupsModal": {
     "failedLoadMembers": "Kan leden niet laden: {{message}}",
@@ -6018,7 +6026,10 @@
     "longitude": "Lengtegraad (longtitude)",
     "sendTest": "Testbaken verzenden",
     "recentTitle": "Recente bakens",
-    "recentEmpty": "Er is nog niets verzonden."
+    "recentEmpty": "Er is nog niets verzonden.",
+    "rosterSearch": "Gevolgde radio's zoeken",
+    "rosterSearchPlaceholder": "Zoeken op roepnaam, team, knooppunt-ID of type",
+    "rosterNoMatch": "Geen gevolgde radio komt overeen met “{{query}}”."
   },
   "inventoryPanel": {
     "title": "Radio-inventaris",

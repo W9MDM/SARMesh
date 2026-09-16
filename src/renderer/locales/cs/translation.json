@@ -1555,7 +1555,15 @@
     "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
     "bluetoothMac": "Bluetooth MAC",
     "bluetoothId": "Bluetooth ID",
-    "reticulumAutoResendOnAnnounce": "Opakujte neúspěšné zprávy, když kolega oznámí"
+    "reticulumAutoResendOnAnnounce": "Opakujte neúspěšné zprávy, když kolega oznámí",
+    "discovery": {
+      "title": "Uzly nalezené v této síti",
+      "rescan": "Hledat znovu",
+      "searching": "Hledání radiostanic…",
+      "idle": "Hledání neprobíhá.",
+      "error": "Vyhledávání není k dispozici: {{message}}. Brána firewall systému Windows musí povolit příchozí UDP 5353.",
+      "scopeHint": "Najde uzly Wi-Fi pouze v této VLAN. Překročení podsítí vyžaduje reflektor mDNS."
+    }
   },
   "contactGroupsModal": {
     "failedLoadMembers": "Nepodařilo se načíst členy: {{message}}",
@@ -6066,7 +6074,10 @@
     "longitude": "Zeměpisná délka",
     "sendTest": "Poslat testovací maják",
     "recentTitle": "Nedávné majáky",
-    "recentEmpty": "Zatím nebylo nic odesláno."
+    "recentEmpty": "Zatím nebylo nic odesláno.",
+    "rosterSearch": "Hledat sledované radiostanice",
+    "rosterSearchPlaceholder": "Hledat podle volací značky, týmu, ID uzlu nebo typu",
+    "rosterNoMatch": "Dotazu „{{query}}“ neodpovídá žádná sledovaná radiostanice."
   },
   "inventoryPanel": {
     "title": "Inventář rádia",

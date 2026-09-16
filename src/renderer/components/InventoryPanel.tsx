@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { AssetStatus, InventoryNode } from '@/shared/inventory-types';
 import { ASSET_STATUSES } from '@/shared/inventory-types';
+import { sortByNodeLabel } from '@/shared/nodeListSort';
 import { formatMeshtasticNodeId } from '@/shared/nodeNameUtils';
 
 import { useInventory } from '../hooks/useInventory';
@@ -61,12 +62,26 @@ export function InventoryPanel({ nodes = [] }: InventoryPanelProps): React.JSX.E
   const [notice, setNotice] = useState<string | null>(null);
 
   const registeredIds = useMemo(() => new Set(inventory.map((node) => node.nodeId)), [inventory]);
-  const unregistered = nodes.filter((node) => !registeredIds.has(node.nodeId));
+  const unregistered = useMemo(
+    () =>
+      sortByNodeLabel(
+        nodes.filter((node) => !registeredIds.has(node.nodeId)),
+        (node) => node.label,
+        (node) => node.nodeId,
+      ),
+    [nodes, registeredIds],
+  );
 
   const visible = useMemo(() => {
+    // The register is the roll call: alphabetical by the tag on the radio.
+    const sorted = sortByNodeLabel(
+      inventory,
+      (node) => node.assetTag ?? node.label ?? node.assignedTo,
+      (node) => node.nodeId,
+    );
     const needle = filter.trim().toLowerCase();
-    if (!needle) return inventory;
-    return inventory.filter((node) =>
+    if (!needle) return sorted;
+    return sorted.filter((node) =>
       [node.assetTag, node.label, node.team, node.assignedTo, String(node.nodeId)]
         .filter(Boolean)
         .some((field) => field?.toLowerCase().includes(needle)),

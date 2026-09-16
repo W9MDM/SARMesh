@@ -1535,7 +1535,15 @@
     "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
     "bluetoothMac": "Bluetooth MAC",
     "bluetoothId": "Bluetooth-ID",
-    "reticulumAutoResendOnAnnounce": "Wiederholen Sie fehlgeschlagene Nachrichten, wenn ein Peer dies ankündigt"
+    "reticulumAutoResendOnAnnounce": "Wiederholen Sie fehlgeschlagene Nachrichten, wenn ein Peer dies ankündigt",
+    "discovery": {
+      "title": "In diesem Netzwerk gefundene Knoten",
+      "rescan": "Erneut suchen",
+      "searching": "Suche nach Funkgeräten…",
+      "idle": "Es wird nicht gesucht.",
+      "error": "Suche nicht verfügbar: {{message}}. Die Windows-Firewall muss eingehendes UDP 5353 zulassen.",
+      "scopeHint": "Findet WLAN-Knoten nur in diesem VLAN. Das Überschreiten von Subnetzen erfordert einen mDNS-Reflektor."
+    }
   },
   "contactGroupsModal": {
     "failedLoadMembers": "Mitglieder konnten nicht geladen werden: {{message}}",
@@ -6018,7 +6026,10 @@
     "longitude": "Längengrad",
     "sendTest": "Testbake senden",
     "recentTitle": "Aktuelle Beacons",
-    "recentEmpty": "Noch nichts gesendet."
+    "recentEmpty": "Noch nichts gesendet.",
+    "rosterSearch": "Verfolgte Funkgeräte suchen",
+    "rosterSearchPlaceholder": "Nach Rufzeichen, Team, Knoten-ID oder Typ suchen",
+    "rosterNoMatch": "Kein verfolgtes Funkgerät passt zu „{{query}}“."
   },
   "inventoryPanel": {
     "title": "Radio-Inventar",

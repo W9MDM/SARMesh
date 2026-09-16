@@ -1535,7 +1535,15 @@
     "pickerDeviceAriaWithRssi": "{{name}} {{address}} ， {{rssi}} dBm",
     "bluetoothMac": "蓝牙MAC",
     "bluetoothId": "蓝牙编号：",
-    "reticulumAutoResendOnAnnounce": "当对等体宣布时重试失败的消息"
+    "reticulumAutoResendOnAnnounce": "当对等体宣布时重试失败的消息",
+    "discovery": {
+      "title": "在此网络中找到的节点",
+      "rescan": "重新扫描",
+      "searching": "正在搜索无线电设备…",
+      "idle": "未扫描。",
+      "error": "无法搜索：{{message}}。Windows 防火墙必须允许入站 UDP 5353。",
+      "scopeHint": "仅查找此 VLAN 上的 Wi-Fi 节点。跨越子网需要 mDNS 反射器。"
+    }
   },
   "contactGroupsModal": {
     "failedLoadMembers": "无法加载会员： {{message}}",
@@ -6018,7 +6026,10 @@
     "longitude": "经度",
     "sendTest": "发送测试信标",
     "recentTitle": "最近的信标",
-    "recentEmpty": "尚未发送任何信息。"
+    "recentEmpty": "尚未发送任何信息。",
+    "rosterSearch": "搜索已跟踪的电台",
+    "rosterSearchPlaceholder": "按呼号、队伍、节点 ID 或类型搜索",
+    "rosterNoMatch": "没有与“{{query}}”匹配的已跟踪电台。"
   },
   "inventoryPanel": {
     "title": "无线电库存",

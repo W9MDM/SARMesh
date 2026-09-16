@@ -1535,7 +1535,15 @@
     "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
     "bluetoothMac": "Bluetooth MAC",
     "bluetoothId": "Bluetooth Kimliği",
-    "reticulumAutoResendOnAnnounce": "Bir akran duyuru yaptığında başarısız mesajları yeniden dene"
+    "reticulumAutoResendOnAnnounce": "Bir akran duyuru yaptığında başarısız mesajları yeniden dene",
+    "discovery": {
+      "title": "Bu ağda bulunan düğümler",
+      "rescan": "Yeniden ara",
+      "searching": "Telsizler aranıyor…",
+      "idle": "Arama yapılmıyor.",
+      "error": "Arama kullanılamıyor: {{message}}. Windows Güvenlik Duvarı gelen UDP 5353 bağlantısına izin vermelidir.",
+      "scopeHint": "Yalnızca bu VLAN'daki Wi-Fi düğümlerini bulur. Alt ağları aşmak için bir mDNS yansıtıcısı gerekir."
+    }
   },
   "contactGroupsModal": {
     "failedLoadMembers": "Üyeler yüklenemedi: {{message}}",
@@ -6018,7 +6026,10 @@
     "longitude": "Boylam",
     "sendTest": "Test fenerini gönder",
     "recentTitle": "Son işaretler",
-    "recentEmpty": "Henüz bir şey gönderilmedi."
+    "recentEmpty": "Henüz bir şey gönderilmedi.",
+    "rosterSearch": "Takip edilen telsizleri ara",
+    "rosterSearchPlaceholder": "Çağrı işareti, ekip, düğüm kimliği veya türüne göre ara",
+    "rosterNoMatch": "“{{query}}” ile eşleşen takip edilen telsiz yok."
   },
   "inventoryPanel": {
     "title": "Radyo Envanteri",

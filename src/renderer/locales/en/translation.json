@@ -1535,6 +1535,14 @@
       "pinPairingFailed": "PIN pairing failed: {{msg}}",
       "pinAcceptedNext": "PIN accepted. Pairing completed. Press Connect and select your device to finish connecting.",
       "connectionFailed": "Connection failed"
+    },
+    "discovery": {
+      "title": "Nodes found on this network",
+      "rescan": "Rescan",
+      "searching": "Searching for radios…",
+      "idle": "Not scanning.",
+      "error": "Discovery unavailable: {{message}}. Windows Firewall must allow inbound UDP 5353.",
+      "scopeHint": "Finds Wi-Fi nodes on this VLAN only. Crossing subnets needs an mDNS reflector."
     }
   },
   "contactGroupsModal": {
@@ -6018,7 +6026,10 @@
     "longitude": "Longitude",
     "sendTest": "Send test beacon",
     "recentTitle": "Recent beacons",
-    "recentEmpty": "Nothing sent yet."
+    "recentEmpty": "Nothing sent yet.",
+    "rosterSearch": "Search tracked radios",
+    "rosterSearchPlaceholder": "Search by callsign, team, node ID or type",
+    "rosterNoMatch": "No tracked radio matches “{{query}}”."
   },
   "inventoryPanel": {
     "title": "Radio Inventory",

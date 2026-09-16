@@ -1535,7 +1535,15 @@
     "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
     "bluetoothMac": "Bluetooth MAC",
     "bluetoothId": "ID Bluetooth",
-    "reticulumAutoResendOnAnnounce": "Coba lagi pesan yang gagal saat rekan mengumumkan"
+    "reticulumAutoResendOnAnnounce": "Coba lagi pesan yang gagal saat rekan mengumumkan",
+    "discovery": {
+      "title": "Node yang ditemukan di jaringan ini",
+      "rescan": "Pindai ulang",
+      "searching": "Mencari radio…",
+      "idle": "Tidak memindai.",
+      "error": "Penemuan tidak tersedia: {{message}}. Windows Firewall harus mengizinkan UDP 5353 masuk.",
+      "scopeHint": "Hanya menemukan node Wi-Fi di VLAN ini. Melintasi subnet memerlukan reflektor mDNS."
+    }
   },
   "contactGroupsModal": {
     "failedLoadMembers": "Gagal memuat anggota: {{message}}",
@@ -6018,7 +6026,10 @@
     "longitude": "Bujur",
     "sendTest": "Kirim suar uji",
     "recentTitle": "Beacon terbaru",
-    "recentEmpty": "Belum ada yang terkirim."
+    "recentEmpty": "Belum ada yang terkirim.",
+    "rosterSearch": "Cari radio yang dilacak",
+    "rosterSearchPlaceholder": "Cari berdasarkan tanda panggil, tim, ID node, atau jenis",
+    "rosterNoMatch": "Tidak ada radio terlacak yang cocok dengan “{{query}}”."
   },
   "inventoryPanel": {
     "title": "Inventaris Radio",

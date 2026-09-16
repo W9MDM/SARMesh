@@ -1535,7 +1535,15 @@
     "pickerDeviceAriaWithRssi": "{{name}} {{address}}、{{rssi}} dBm",
     "bluetoothMac": "Bluetooth MAC",
     "bluetoothId": "Bluetooth ID",
-    "reticulumAutoResendOnAnnounce": "ピアがアナウンスしたときに失敗したメッセージを再試行する"
+    "reticulumAutoResendOnAnnounce": "ピアがアナウンスしたときに失敗したメッセージを再試行する",
+    "discovery": {
+      "title": "このネットワークで見つかったノード",
+      "rescan": "再スキャン",
+      "searching": "無線機を検索しています…",
+      "idle": "スキャンしていません。",
+      "error": "検出を利用できません: {{message}}。Windows ファイアウォールで受信 UDP 5353 を許可してください。",
+      "scopeHint": "この VLAN 上の Wi-Fi ノードのみを検索します。サブネットをまたぐには mDNS リフレクターが必要です。"
+    }
   },
   "contactGroupsModal": {
     "failedLoadMembers": "メンバーのロードに失敗しました: {{message}}",
@@ -6018,7 +6026,10 @@
     "longitude": "経度",
     "sendTest": "テストビーコンを送信",
     "recentTitle": "最近のビーコン",
-    "recentEmpty": "まだ何も送信されていません。"
+    "recentEmpty": "まだ何も送信されていません。",
+    "rosterSearch": "追跡中の無線機を検索",
+    "rosterSearchPlaceholder": "コールサイン、チーム、ノード ID、種別で検索",
+    "rosterNoMatch": "「{{query}}」に一致する追跡中の無線機はありません。"
   },
   "inventoryPanel": {
     "title": "ラジオインベントリ",

@@ -1535,7 +1535,15 @@
     "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
     "bluetoothMac": "MAC BLUETOOTH",
     "bluetoothId": "ID Bluetooth",
-    "reticulumAutoResendOnAnnounce": "Repetir mensagens com falha quando um colega anunciar"
+    "reticulumAutoResendOnAnnounce": "Repetir mensagens com falha quando um colega anunciar",
+    "discovery": {
+      "title": "Nós encontrados nesta rede",
+      "rescan": "Buscar novamente",
+      "searching": "Procurando rádios…",
+      "idle": "Nenhuma busca em andamento.",
+      "error": "Busca indisponível: {{message}}. O Firewall do Windows deve permitir UDP 5353 de entrada.",
+      "scopeHint": "Localiza nós Wi-Fi apenas nesta VLAN. Cruzar sub-redes exige um refletor mDNS."
+    }
   },
   "contactGroupsModal": {
     "failedLoadMembers": "Falha ao carregar membros: {{message}}",
@@ -6018,7 +6026,10 @@
     "longitude": "Longitude",
     "sendTest": "Enviar baliza de teste",
     "recentTitle": "Beacons recentes",
-    "recentEmpty": "Nada foi enviado ainda."
+    "recentEmpty": "Nada foi enviado ainda.",
+    "rosterSearch": "Pesquisar rádios rastreados",
+    "rosterSearchPlaceholder": "Pesquisar por indicativo, equipe, ID do nó ou tipo",
+    "rosterNoMatch": "Nenhum rádio rastreado corresponde a “{{query}}”."
   },
   "inventoryPanel": {
     "title": "Inventário de Rádio",

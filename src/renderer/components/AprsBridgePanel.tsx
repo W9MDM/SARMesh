@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { AprsSettings, AprsTrackedClient } from '@/shared/aprs-types';
+import { sortByNodeLabel } from '@/shared/nodeListSort';
 import { formatMeshtasticNodeId } from '@/shared/nodeNameUtils';
 import { getTrackerType, TRACKER_TYPES, type TrackerTypeId } from '@/shared/tracker-types';
 
@@ -44,8 +45,8 @@ export function AprsBridgePanel({ nodes = [] }: AprsBridgePanelProps): React.JSX
   const ids = useId();
   const [draft, setDraft] = useState<AprsSettings | null>(null);
   const [pendingNode, setPendingNode] = useState('');
-  const [testLat, setTestLat] = useState('39.7392');
-  const [testLon, setTestLon] = useState('-104.9903');
+  const [testLat, setTestLat] = useState('41.5934');
+  const [testLon, setTestLon] = useState('-87.3464');
 
   // The form edits a local draft so a half-typed port never reaches the bridge.
   const form = draft ?? settings;
@@ -58,7 +59,39 @@ export function AprsBridgePanel({ nodes = [] }: AprsBridgePanelProps): React.JSX
   };
 
   const rosterIds = useMemo(() => new Set(roster.map((entry) => entry.nodeId)), [roster]);
-  const available = nodes.filter((node) => !rosterIds.has(node.nodeId));
+  const available = useMemo(
+    () =>
+      sortByNodeLabel(
+        nodes.filter((node) => !rosterIds.has(node.nodeId)),
+        (node) => node.label,
+        (node) => node.nodeId,
+      ),
+    [nodes, rosterIds],
+  );
+
+  // A full callout roster runs to dozens of radios; a leader looking for one
+  // team should not have to scroll a table to find it.
+  const [rosterFilter, setRosterFilter] = useState('');
+  const visibleRoster = useMemo(() => {
+    const sorted = sortByNodeLabel(
+      roster,
+      (client) => client.callsign,
+      (client) => client.nodeId,
+    );
+    const needle = rosterFilter.trim().toLowerCase();
+    if (!needle) return sorted;
+    return sorted.filter((client) =>
+      [
+        client.callsign,
+        client.team,
+        formatMeshtasticNodeId(client.nodeId),
+        String(client.nodeId),
+        t(`aprsPanel.trackerType.${getTrackerType(client.trackerType).labelKey}`),
+      ]
+        .filter(Boolean)
+        .some((field) => String(field).toLowerCase().includes(needle)),
+    );
+  }, [roster, rosterFilter, t]);
 
   const addTracker = async (): Promise<void> => {
     const nodeId = Number.parseInt(pendingNode, 10);
@@ -182,8 +215,30 @@ export function AprsBridgePanel({ nodes = [] }: AprsBridgePanelProps): React.JSX
           </button>
         </div>
 
+        {roster.length > 0 && (
+          <div className="mb-2">
+            <label className="sr-only" htmlFor={`${ids}-roster-search`}>
+              {t('aprsPanel.rosterSearch')}
+            </label>
+            <input
+              id={`${ids}-roster-search`}
+              type="search"
+              className={FIELD}
+              placeholder={t('aprsPanel.rosterSearchPlaceholder')}
+              value={rosterFilter}
+              onChange={(e) => {
+                setRosterFilter(e.target.value);
+              }}
+            />
+          </div>
+        )}
+
         {roster.length === 0 ? (
           <p className="text-muted py-4 text-center text-sm">{t('aprsPanel.rosterEmpty')}</p>
+        ) : visibleRoster.length === 0 ? (
+          <p className="text-muted py-4 text-center text-sm">
+            {t('aprsPanel.rosterNoMatch', { query: rosterFilter.trim() })}
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -198,7 +253,7 @@ export function AprsBridgePanel({ nodes = [] }: AprsBridgePanelProps): React.JSX
                 </tr>
               </thead>
               <tbody>
-                {roster.map((client) => (
+                {visibleRoster.map((client) => (
                   <tr key={client.nodeId} className="border-t border-slate-800">
                     <td className="py-1 pr-2">
                       <span className="flex items-center gap-2">
