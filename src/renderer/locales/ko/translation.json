@@ -5106,7 +5106,8 @@
     "remote": "원격",
     "games": "게임",
     "aprs": "APRS",
-    "inventory": "소지품"
+    "inventory": "소지품",
+    "firmware": "펌웨어"
   },
   "takServerPanel": {
     "title": "TAK 서버",
@@ -6093,5 +6094,34 @@
     "import": "가져오기",
     "exported": "{{count}} 라디오를 내보냈습니다.",
     "imported": "가져옴: {{added}} 추가됨, {{updated}} 업데이트됨."
+  },
+  "firmwarePanel": {
+    "title": "장치 펌웨어",
+    "intro": "공식 Meshtastic 펌웨어를 내려받아 USB로 무전기에 기록합니다. 먼저 무전기를 케이블로 연결하세요.",
+    "currentVersion": "연결된 무전기: {{version}}",
+    "board": "보드",
+    "chooseBoard": "보드를 선택하세요…",
+    "detectedBoard": "무전기에서 감지됨: {{pioEnv}}",
+    "version": "펌웨어 버전",
+    "alphaSuffix": "(알파)",
+    "modeTitle": "설치 방식",
+    "modeUpdate": "업데이트",
+    "modeUpdateHint": "애플리케이션만 기록합니다. 채널, 키, 노드 데이터베이스는 유지됩니다.",
+    "modeClean": "클린 설치",
+    "modeCleanHint": "무전기를 먼저 지웁니다. 채널, 키, 노드 데이터베이스가 사라집니다 — 클린 설치 전에 설정을 내보내세요.",
+    "planTitle": "기록될 내용",
+    "selectToPlan": "보드와 버전을 선택하면 기록 계획이 표시됩니다.",
+    "offsetSource": {
+      "manifest": "릴리스 매니페스트의 오프셋입니다.",
+      "partition-scheme": "보드 파티션 구성의 오프셋입니다(이 릴리스에는 매니페스트가 없습니다).",
+      "update": "제자리 업데이트를 위한 애플리케이션 오프셋입니다."
+    },
+    "uf2Notice": "{{board}}은(는) 시리얼이 아니라 .uf2 파일을 부트로더 드라이브에 복사하여 기록합니다. 리셋을 두 번 눌러 드라이브를 연결한 뒤 펌웨어를 복사하세요.",
+    "flash": "무전기에 기록",
+    "flashing": "기록 중…",
+    "percent": "{{percent}} %",
+    "done": "기록이 완료되었습니다 — 무전기가 다시 시작됩니다.",
+    "powerWarning": "기록 중에는 무전기를 분리하거나 SARMesh를 닫지 마세요. 기록이 중단되면 다시 기록할 때까지 무전기가 부팅되지 않을 수 있습니다.",
+    "noSerialApi": "이 창에서는 시리얼에 접근할 수 없습니다. SARMesh를 다시 시작한 뒤 시도하세요."
   }
 }

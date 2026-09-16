@@ -157,6 +157,7 @@ import {
   AprsBridgePanel,
   ChannelUtilizationChart,
   DiagnosticsPanel,
+  FirmwarePanel,
   GamesPanel,
   InventoryPanel,
   MapPanel,
@@ -194,6 +195,7 @@ import {
   computeTabMappings,
   DIAGNOSTICS_PANEL_INDEX,
   findFilteredTabIndexForPanel,
+  FIRMWARE_PANEL_INDEX,
   GAMES_PANEL_INDEX,
   GRAPH_PANEL_INDEX,
   INVENTORY_PANEL_INDEX,
@@ -4439,6 +4441,25 @@ function AppContent() {
                                 nodeId: n.node_id,
                                 label: n.long_name || n.short_name || String(n.node_id),
                               }))}
+                            />
+                          </Suspense>
+                        </ErrorBoundary>
+                      ) : null}
+                    </div>
+                    <div
+                      id={`panel-${FIRMWARE_PANEL_INDEX}`}
+                      role="tabpanel"
+                      aria-labelledby={`tab-${Math.max(0, findFilteredTabIndexForPanel(selectByProtocol(tabsByProtocol, protocol), FIRMWARE_PANEL_INDEX))}`}
+                      hidden={activePanelIndex !== FIRMWARE_PANEL_INDEX}
+                      className="w-full min-w-0"
+                    >
+                      {activePanelIndex === FIRMWARE_PANEL_INDEX ? (
+                        <ErrorBoundary>
+                          <Suspense fallback={<PanelSkeleton />}>
+                            <FirmwarePanel
+                              currentFirmwareVersion={
+                                selectByProtocol(deviceStateByProtocol, protocol).firmwareVersion
+                              }
                             />
                           </Suspense>
                         </ErrorBoundary>

@@ -24,6 +24,7 @@ export const TAB_SLOT_IDS = [
   'Topology',
   'APRS',
   'Inventory',
+  'Firmware',
 ] as const;
 
 export type TabSlotId = (typeof TAB_SLOT_IDS)[number];

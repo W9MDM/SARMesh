@@ -5106,7 +5106,8 @@
     "remote": "Remoto",
     "games": "Giochi",
     "aprs": "APRS",
-    "inventory": "Inventario"
+    "inventory": "Inventario",
+    "firmware": "Firmware"
   },
   "takServerPanel": {
     "title": "TAK Server",
@@ -6093,5 +6094,34 @@
     "import": "Importa",
     "exported": "Radio {{count}} esportata/e.",
     "imported": "Importato: {{added}} aggiunto, {{updated}} aggiornato."
+  },
+  "firmwarePanel": {
+    "title": "Firmware del dispositivo",
+    "intro": "Scarica il firmware Meshtastic ufficiale e lo scrive su una radio via USB. Collegare prima la radio via cavo.",
+    "currentVersion": "Radio collegata: {{version}}",
+    "board": "Scheda",
+    "chooseBoard": "Seleziona una scheda…",
+    "detectedBoard": "Rilevato dalla radio: {{pioEnv}}",
+    "version": "Versione del firmware",
+    "alphaSuffix": "(alpha)",
+    "modeTitle": "Tipo di installazione",
+    "modeUpdate": "Aggiornamento",
+    "modeUpdateHint": "Scrive solo l'applicazione. Canali, chiavi e database dei nodi vengono mantenuti.",
+    "modeClean": "Installazione pulita",
+    "modeCleanHint": "Cancella prima la radio. Canali, chiavi e database dei nodi vengono persi: esportare la configurazione prima di un'installazione pulita.",
+    "planTitle": "Cosa verrà scritto",
+    "selectToPlan": "Scegli una scheda e una versione per vedere il piano di scrittura.",
+    "offsetSource": {
+      "manifest": "Offset dal manifest della release.",
+      "partition-scheme": "Offset dallo schema di partizione della scheda (questa release non include un manifest).",
+      "update": "Offset dell'applicazione per un aggiornamento sul posto."
+    },
+    "uf2Notice": "{{board}} si programma copiando un file .uf2 sull'unità del bootloader, non via seriale. Premere due volte reset per montare l'unità, quindi copiarvi il firmware.",
+    "flash": "Scrivi sulla radio",
+    "flashing": "Scrittura in corso…",
+    "percent": "{{percent}} %",
+    "done": "Scrittura completata: la radio si sta riavviando.",
+    "powerWarning": "Non scollegare la radio né chiudere SARMesh durante la scrittura. Una scrittura interrotta può rendere la radio non avviabile finché non viene riprogrammata.",
+    "noSerialApi": "L'accesso alla porta seriale non è disponibile in questa finestra. Riavviare SARMesh e riprovare."
   }
 }

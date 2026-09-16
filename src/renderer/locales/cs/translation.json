@@ -5147,7 +5147,8 @@
     "remote": "Vzdálený přístup",
     "games": "Herní aktivity",
     "aprs": "APRS",
-    "inventory": "Skladová zásoba"
+    "inventory": "Skladová zásoba",
+    "firmware": "Firmware"
   },
   "takServerPanel": {
     "title": "Server TAK",
@@ -6141,5 +6142,34 @@
     "import": "Import",
     "exported": "Exportováno {{count}} rádio(y).",
     "imported": "Importováno: {{added}} přidáno, {{updated}} aktualizováno."
+  },
+  "firmwarePanel": {
+    "title": "Firmware zařízení",
+    "intro": "Stáhne oficiální firmware Meshtastic a zapíše jej do radiostanice přes USB. Nejprve připojte radiostanici kabelem.",
+    "currentVersion": "Připojená radiostanice: {{version}}",
+    "board": "Deska",
+    "chooseBoard": "Vyberte desku…",
+    "detectedBoard": "Zjištěno z radiostanice: {{pioEnv}}",
+    "version": "Verze firmwaru",
+    "alphaSuffix": "(alfa)",
+    "modeTitle": "Typ instalace",
+    "modeUpdate": "Aktualizace",
+    "modeUpdateHint": "Zapíše pouze aplikaci. Kanály, klíče a databáze uzlů zůstanou zachovány.",
+    "modeClean": "Čistá instalace",
+    "modeCleanHint": "Nejprve radiostanici vymaže. Kanály, klíče i databáze uzlů budou ztraceny — před čistou instalací konfiguraci exportujte.",
+    "planTitle": "Co se zapíše",
+    "selectToPlan": "Vyberte desku a verzi, zobrazí se plán zápisu.",
+    "offsetSource": {
+      "manifest": "Offsety z manifestu vydání.",
+      "partition-scheme": "Offsety ze schématu oddílů desky (toto vydání neobsahuje manifest).",
+      "update": "Offset aplikace pro aktualizaci na místě."
+    },
+    "uf2Notice": "{{board}} se programuje zkopírováním souboru .uf2 na disk bootloaderu, nikoli přes sériový port. Dvojím stiskem resetu připojte disk a zkopírujte na něj firmware.",
+    "flash": "Nahrát firmware",
+    "flashing": "Nahrávání…",
+    "percent": "{{percent}} %",
+    "done": "Nahrávání dokončeno — radiostanice se restartuje.",
+    "powerWarning": "Během nahrávání neodpojujte radiostanici ani nezavírejte SARMesh. Přerušený zápis může radiostanici znefunkčnit, dokud nebude firmware nahrán znovu.",
+    "noSerialApi": "Sériový přístup není v tomto okně dostupný. Restartujte SARMesh a zkuste to znovu."
   }
 }

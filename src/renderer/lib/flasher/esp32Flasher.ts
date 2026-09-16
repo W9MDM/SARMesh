@@ -1,5 +1,6 @@
 import type { FileEntry } from '@zip.js/zip.js';
 import { BlobReader, BlobWriter, ZipReader } from '@zip.js/zip.js';
+import type { FlashSizeValues } from 'esptool-js';
 import { ESPLoader, Transport } from 'esptool-js';
 
 import { closeSerialPortIfOpen } from '@/renderer/lib/connection';
@@ -95,6 +96,97 @@ async function connectEsp32Bootloader(
   throw lastError ?? new Error('ESP32_SYNC_FAILED');
 }
 
+export interface Esp32WriteOptions {
+  flashSize: FlashSizeValues | 'keep';
+  flashMode: 'dio' | 'keep';
+  flashFreq: '80m' | 'keep';
+  /** Clean installs erase; in-place updates must not, or the node DB is lost. */
+  eraseAll: boolean;
+}
+
+/**
+ * Write already-resolved images to an ESP32 and reboot it.
+ *
+ * Shared by the RNode zip path and the Meshtastic flasher, so both get the same
+ * sync retries, stall detection and short-transfer guard.
+ */
+export async function writeEsp32Images(
+  serialPort: SerialPort,
+  filesToFlash: { address: number; data: Uint8Array }[],
+  options: Esp32WriteOptions,
+  progressCallback?: FlashProgressCallback,
+): Promise<void> {
+  const totalFirmwareBytes = filesToFlash.reduce((sum, file) => sum + file.data.byteLength, 0);
+  let maxBytesWritten = 0;
+
+  const { esploader, transport } = await connectEsp32Bootloader(serialPort, progressCallback);
+
+  const chipName =
+    (esploader as { chip?: { CHIP_NAME?: string } }).chip?.CHIP_NAME ??
+    (esploader as { chipName?: string }).chipName ??
+    '';
+  if (!chipName) {
+    throw new Error('ESP32_SYNC_FAILED');
+  }
+
+  let lastProgressAt = Date.now();
+  let hasSeenProgress = false;
+  let stallInterval: ReturnType<typeof setInterval> | undefined;
+
+  try {
+    await Promise.race([
+      esploader.writeFlash({
+        fileArray: filesToFlash,
+        flashSize: options.flashSize,
+        flashMode: options.flashMode,
+        flashFreq: options.flashFreq,
+        eraseAll: options.eraseAll,
+        compress: true,
+        calculateMD5Hash: (image: Uint8Array) => md5HexBytes(image),
+        reportProgress: (_fileIndex: number, written: number, total: number) => {
+          hasSeenProgress = true;
+          lastProgressAt = Date.now();
+          maxBytesWritten = Math.max(maxBytesWritten, written);
+          progressCallback?.(Math.floor((written / total) * 100));
+        },
+      }),
+      new Promise<never>((_, reject) => {
+        stallInterval = setInterval(() => {
+          if (!hasSeenProgress) {
+            return;
+          }
+          if (Date.now() - lastProgressAt >= ESP32_FLASH_STALL_TIMEOUT_MS) {
+            console.warn('[esp32Flasher] writeFlash stalled — closing serial port');
+            void closeSerialPortIfOpen(serialPort);
+            reject(new Error('ESP32_FLASH_STALLED'));
+          }
+        }, 2000);
+      }),
+    ]);
+  } finally {
+    if (stallInterval) {
+      clearInterval(stallInterval);
+    }
+  }
+
+  if (totalFirmwareBytes >= MIN_FLASH_BYTES_WRITTEN && maxBytesWritten < MIN_FLASH_BYTES_WRITTEN) {
+    throw new Error('FLASH_TRANSFER_TOO_SMALL');
+  }
+
+  // Meshchat parity: DTR pulse reboot after writeFlash, then close port cleanly.
+  await transport.setDTR(false);
+  await sleepMillis(100);
+  await transport.setDTR(true);
+  await sleepMillis(1500);
+
+  try {
+    await transport.disconnect();
+  } catch {
+    // catch-no-log-ok port may already be closed
+  }
+  await closeSerialPortIfOpen(serialPort);
+}
+
 export async function flashEsp32Firmware(
   serialPort: SerialPort,
   firmwareZip: Blob,
@@ -121,78 +213,17 @@ export async function flashEsp32Firmware(
       filesToFlash.push({ address: parseFlashAddress(address), data });
     }
 
-    const totalFirmwareBytes = filesToFlash.reduce((sum, file) => sum + file.data.byteLength, 0);
-    let maxBytesWritten = 0;
-
-    const { esploader, transport } = await connectEsp32Bootloader(serialPort, progressCallback);
-
-    const chipName =
-      (esploader as { chip?: { CHIP_NAME?: string } }).chip?.CHIP_NAME ??
-      (esploader as { chipName?: string }).chipName ??
-      '';
-    if (!chipName) {
-      throw new Error('ESP32_SYNC_FAILED');
-    }
-
-    let lastProgressAt = Date.now();
-    let hasSeenProgress = false;
-    let stallInterval: ReturnType<typeof setInterval> | undefined;
-
-    try {
-      await Promise.race([
-        esploader.writeFlash({
-          fileArray: filesToFlash,
-          flashSize: flashConfig.flash_size,
-          flashMode: 'dio',
-          flashFreq: '80m',
-          eraseAll: false,
-          compress: true,
-          calculateMD5Hash: (image: Uint8Array) => md5HexBytes(image),
-          reportProgress: (_fileIndex: number, written: number, total: number) => {
-            hasSeenProgress = true;
-            lastProgressAt = Date.now();
-            maxBytesWritten = Math.max(maxBytesWritten, written);
-            progressCallback?.(Math.floor((written / total) * 100));
-          },
-        }),
-        new Promise<never>((_, reject) => {
-          stallInterval = setInterval(() => {
-            if (!hasSeenProgress) {
-              return;
-            }
-            if (Date.now() - lastProgressAt >= ESP32_FLASH_STALL_TIMEOUT_MS) {
-              console.warn('[esp32Flasher] writeFlash stalled — closing serial port');
-              void closeSerialPortIfOpen(serialPort);
-              reject(new Error('ESP32_FLASH_STALLED'));
-            }
-          }, 2000);
-        }),
-      ]);
-    } finally {
-      if (stallInterval) {
-        clearInterval(stallInterval);
-      }
-    }
-
-    if (
-      totalFirmwareBytes >= MIN_FLASH_BYTES_WRITTEN &&
-      maxBytesWritten < MIN_FLASH_BYTES_WRITTEN
-    ) {
-      throw new Error('FLASH_TRANSFER_TOO_SMALL');
-    }
-
-    // Meshchat parity: DTR pulse reboot after writeFlash, then close port cleanly.
-    await transport.setDTR(false);
-    await sleepMillis(100);
-    await transport.setDTR(true);
-    await sleepMillis(1500);
-
-    try {
-      await transport.disconnect();
-    } catch {
-      // catch-no-log-ok port may already be closed
-    }
-    await closeSerialPortIfOpen(serialPort);
+    await writeEsp32Images(
+      serialPort,
+      filesToFlash,
+      {
+        flashSize: flashConfig.flash_size,
+        flashMode: 'dio',
+        flashFreq: '80m',
+        eraseAll: false,
+      },
+      progressCallback,
+    );
   } finally {
     try {
       await zipReader.close();

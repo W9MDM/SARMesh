@@ -4,6 +4,7 @@ import {
   ChartPie,
   ClipboardList,
   Code,
+  Cpu,
   Crosshair,
   FileChartColumn,
   Gamepad2,
@@ -72,6 +73,8 @@ export function TabIcon({ name }: { name: string }) {
       return <House {...p} />;
     case 'Inventory':
       return <ClipboardList {...p} />;
+    case 'Firmware':
+      return <Cpu {...p} />;
     case 'APRS':
       return <SatelliteDish {...p} />;
     case 'TAK':

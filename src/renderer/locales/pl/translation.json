@@ -5186,7 +5186,8 @@
     "remote": "Zdalny",
     "games": "Gry",
     "aprs": "APRS",
-    "inventory": "Inwentaryzacja"
+    "inventory": "Inwentaryzacja",
+    "firmware": "Firmware"
   },
   "takServerPanel": {
     "title": "Serwer TAK",
@@ -6187,5 +6188,34 @@
     "import": "Import",
     "exported": "Wyeksportowano radio(a) {{count}}.",
     "imported": "Zaimportowano: {{added}} dodano, {{updated}} zaktualizowano."
+  },
+  "firmwarePanel": {
+    "title": "Oprogramowanie urządzenia",
+    "intro": "Pobiera oficjalne oprogramowanie Meshtastic i zapisuje je do radiotelefonu przez USB. Najpierw podłącz radiotelefon kablem.",
+    "currentVersion": "Podłączony radiotelefon: {{version}}",
+    "board": "Płytka",
+    "chooseBoard": "Wybierz płytkę…",
+    "detectedBoard": "Wykryto z radiotelefonu: {{pioEnv}}",
+    "version": "Wersja oprogramowania",
+    "alphaSuffix": "(alfa)",
+    "modeTitle": "Rodzaj instalacji",
+    "modeUpdate": "Aktualizacja",
+    "modeUpdateHint": "Zapisuje tylko aplikację. Kanały, klucze i baza węzłów zostają zachowane.",
+    "modeClean": "Czysta instalacja",
+    "modeCleanHint": "Najpierw kasuje radiotelefon. Kanały, klucze i baza węzłów zostaną utracone — przed czystą instalacją wyeksportuj konfigurację.",
+    "planTitle": "Co zostanie zapisane",
+    "selectToPlan": "Wybierz płytkę i wersję, aby zobaczyć plan zapisu.",
+    "offsetSource": {
+      "manifest": "Przesunięcia z manifestu wydania.",
+      "partition-scheme": "Przesunięcia ze schematu partycji płytki (to wydanie nie zawiera manifestu).",
+      "update": "Przesunięcie aplikacji dla aktualizacji w miejscu."
+    },
+    "uf2Notice": "{{board}} programuje się przez skopiowanie pliku .uf2 na dysk bootloadera, a nie przez port szeregowy. Naciśnij dwukrotnie reset, aby zamontować dysk, a następnie skopiuj na niego oprogramowanie.",
+    "flash": "Wgraj oprogramowanie",
+    "flashing": "Wgrywanie…",
+    "percent": "{{percent}} %",
+    "done": "Wgrywanie zakończone — radiotelefon uruchamia się ponownie.",
+    "powerWarning": "Nie odłączaj radiotelefonu ani nie zamykaj SARMesh podczas wgrywania. Przerwany zapis może uniemożliwić uruchomienie radiotelefonu do czasu ponownego wgrania oprogramowania.",
+    "noSerialApi": "Dostęp do portu szeregowego jest niedostępny w tym oknie. Uruchom ponownie SARMesh i spróbuj jeszcze raz."
   }
 }

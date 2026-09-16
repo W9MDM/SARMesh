@@ -5106,7 +5106,8 @@
     "remote": "Remoto",
     "games": "Jogos",
     "aprs": "APRs",
-    "inventory": "Inventário"
+    "inventory": "Inventário",
+    "firmware": "Firmware"
   },
   "takServerPanel": {
     "title": "Servidor TAK",
@@ -6093,5 +6094,34 @@
     "import": "Importação",
     "exported": "Rádio(s) {{count}} exportado (s).",
     "imported": "Importado: {{added}} adicionado, {{updated}} atualizado."
+  },
+  "firmwarePanel": {
+    "title": "Firmware do dispositivo",
+    "intro": "Baixa o firmware oficial do Meshtastic e o grava em um rádio por USB. Conecte o rádio por cabo primeiro.",
+    "currentVersion": "Rádio conectado: {{version}}",
+    "board": "Placa",
+    "chooseBoard": "Selecione uma placa…",
+    "detectedBoard": "Detectado no rádio: {{pioEnv}}",
+    "version": "Versão do firmware",
+    "alphaSuffix": "(alfa)",
+    "modeTitle": "Tipo de instalação",
+    "modeUpdate": "Atualizar",
+    "modeUpdateHint": "Grava apenas o aplicativo. Canais, chaves e o banco de dados de nós são preservados.",
+    "modeClean": "Instalação limpa",
+    "modeCleanHint": "Apaga o rádio primeiro. Canais, chaves e o banco de dados de nós são perdidos — exporte a configuração antes de uma instalação limpa.",
+    "planTitle": "O que será gravado",
+    "selectToPlan": "Escolha uma placa e uma versão para ver o plano de gravação.",
+    "offsetSource": {
+      "manifest": "Deslocamentos do manifesto da versão.",
+      "partition-scheme": "Deslocamentos do esquema de partições da placa (esta versão não inclui manifesto).",
+      "update": "Deslocamento do aplicativo para uma atualização no local."
+    },
+    "uf2Notice": "{{board}} é gravado copiando um arquivo .uf2 para a unidade do bootloader, não pela porta serial. Pressione reset duas vezes para montar a unidade e copie o firmware para ela.",
+    "flash": "Gravar rádio",
+    "flashing": "Gravando…",
+    "percent": "{{percent}} %",
+    "done": "Gravação concluída — o rádio está reiniciando.",
+    "powerWarning": "Não desconecte o rádio nem feche o SARMesh durante a gravação. Uma gravação interrompida pode deixar o rádio sem inicializar até ser gravado novamente.",
+    "noSerialApi": "O acesso à porta serial não está disponível nesta janela. Reinicie o SARMesh e tente novamente."
   }
 }

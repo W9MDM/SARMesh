@@ -80,6 +80,8 @@ export interface ProtocolCapabilities {
   hasRemoteAdmin: boolean;
   /** Whether the TAK server panel is available (Meshtastic only) */
   hasTakPanel: boolean;
+  /** Whether the device firmware flasher is available (Meshtastic only) */
+  hasFirmwareFlasher: boolean;
   /** Whether Remote Hardware (GPIO) control is available */
   hasRemoteHardware: boolean;
   /** Whether Serial Bridge is available */
@@ -212,6 +214,7 @@ export const MESHTASTIC_CAPABILITIES: ProtocolCapabilities = {
   hasSecurityPanel: true,
   hasRemoteAdmin: true,
   hasTakPanel: true,
+  hasFirmwareFlasher: true,
   hasRemoteHardware: true,
   hasSerial: true,
   hasRangeTest: true,
@@ -295,6 +298,7 @@ export const MESHCORE_CAPABILITIES: ProtocolCapabilities = {
   hasSecurityPanel: true,
   hasRemoteAdmin: false,
   hasTakPanel: false,
+  hasFirmwareFlasher: false,
   hasRemoteHardware: false,
   hasSerial: false,
   hasRangeTest: false,
@@ -377,6 +381,7 @@ export const RETICULUM_CAPABILITIES: ProtocolCapabilities = {
   hasSecurityPanel: false,
   hasRemoteAdmin: false,
   hasTakPanel: false,
+  hasFirmwareFlasher: false,
   hasRemoteHardware: false,
   hasSerial: false,
   hasRangeTest: false,

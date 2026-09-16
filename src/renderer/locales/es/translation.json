@@ -5106,7 +5106,8 @@
     "remote": "Remoto",
     "games": "Juegos",
     "aprs": "APRS",
-    "inventory": "Inventario"
+    "inventory": "Inventario",
+    "firmware": "Firmware"
   },
   "takServerPanel": {
     "title": "Servidor TAK",
@@ -6093,5 +6094,34 @@
     "import": "Importar",
     "exported": "{{count}} radio(s) exportada (s).",
     "imported": "Importado: {{added}} añadido, {{updated}} actualizado."
+  },
+  "firmwarePanel": {
+    "title": "Firmware del dispositivo",
+    "intro": "Descarga el firmware oficial de Meshtastic y lo graba en una radio por USB. Conecte primero la radio por cable.",
+    "currentVersion": "Radio conectada: {{version}}",
+    "board": "Placa",
+    "chooseBoard": "Seleccione una placa…",
+    "detectedBoard": "Detectado desde la radio: {{pioEnv}}",
+    "version": "Versión del firmware",
+    "alphaSuffix": "(alfa)",
+    "modeTitle": "Tipo de instalación",
+    "modeUpdate": "Actualizar",
+    "modeUpdateHint": "Graba solo la aplicación. Se conservan los canales, las claves y la base de datos de nodos.",
+    "modeClean": "Instalación limpia",
+    "modeCleanHint": "Borra primero la radio. Se pierden los canales, las claves y la base de datos de nodos: exporte la configuración antes de una instalación limpia.",
+    "planTitle": "Qué se va a grabar",
+    "selectToPlan": "Elija una placa y una versión para ver el plan de grabación.",
+    "offsetSource": {
+      "manifest": "Desplazamientos del manifiesto de la versión.",
+      "partition-scheme": "Desplazamientos del esquema de particiones de la placa (esta versión no incluye manifiesto).",
+      "update": "Desplazamiento de la aplicación para una actualización en el sitio."
+    },
+    "uf2Notice": "{{board}} se graba copiando un archivo .uf2 en su unidad de arranque, no por puerto serie. Pulse dos veces el botón de reinicio para montar la unidad y copie el firmware en ella.",
+    "flash": "Grabar radio",
+    "flashing": "Grabando…",
+    "percent": "{{percent}} %",
+    "done": "Grabación completada: la radio se está reiniciando.",
+    "powerWarning": "No desconecte la radio ni cierre SARMesh durante la grabación. Una escritura interrumpida puede dejar la radio sin arrancar hasta que se vuelva a grabar.",
+    "noSerialApi": "El acceso al puerto serie no está disponible en esta ventana. Reinicie SARMesh e inténtelo de nuevo."
   }
 }

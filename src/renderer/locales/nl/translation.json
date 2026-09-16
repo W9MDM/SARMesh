@@ -5106,7 +5106,8 @@
     "remote": "Op afstand",
     "games": "Games",
     "aprs": "APRS",
-    "inventory": "Inventariseren"
+    "inventory": "Inventariseren",
+    "firmware": "Firmware"
   },
   "takServerPanel": {
     "title": "TAK-server",
@@ -6093,5 +6094,34 @@
     "import": "Importeren",
     "exported": "{{count}} radio('s) geëxporteerd.",
     "imported": "Geïmporteerd: {{added}} toegevoegd, {{updated}} bijgewerkt."
+  },
+  "firmwarePanel": {
+    "title": "Apparaatfirmware",
+    "intro": "Downloadt officiële Meshtastic-firmware en schrijft die via USB naar een radio. Sluit de radio eerst met een kabel aan.",
+    "currentVersion": "Verbonden radio: {{version}}",
+    "board": "Board",
+    "chooseBoard": "Selecteer een board…",
+    "detectedBoard": "Gedetecteerd vanaf de radio: {{pioEnv}}",
+    "version": "Firmwareversie",
+    "alphaSuffix": "(alfa)",
+    "modeTitle": "Installatietype",
+    "modeUpdate": "Bijwerken",
+    "modeUpdateHint": "Schrijft alleen de applicatie. Kanalen, sleutels en de knooppuntdatabase blijven behouden.",
+    "modeClean": "Schone installatie",
+    "modeCleanHint": "Wist de radio eerst. Kanalen, sleutels en de knooppuntdatabase gaan verloren — exporteer de configuratie vóór een schone installatie.",
+    "planTitle": "Wat er geschreven wordt",
+    "selectToPlan": "Kies een board en versie om het schrijfplan te zien.",
+    "offsetSource": {
+      "manifest": "Offsets uit het release-manifest.",
+      "partition-scheme": "Offsets uit het partitieschema van het board (deze release bevat geen manifest).",
+      "update": "Applicatie-offset voor een update ter plaatse."
+    },
+    "uf2Notice": "{{board}} wordt geflasht door een .uf2-bestand naar de bootloaderschijf te kopiëren, niet via serieel. Druk twee keer op reset om de schijf te koppelen en kopieer de firmware erheen.",
+    "flash": "Radio flashen",
+    "flashing": "Bezig met flashen…",
+    "percent": "{{percent}} %",
+    "done": "Flashen voltooid — de radio start opnieuw op.",
+    "powerWarning": "Koppel de radio niet los en sluit SARMesh niet tijdens het flashen. Een onderbroken schrijfactie kan de radio onstartbaar maken tot hij opnieuw geflasht wordt.",
+    "noSerialApi": "Seriële toegang is niet beschikbaar in dit venster. Start SARMesh opnieuw en probeer het nogmaals."
   }
 }

@@ -5765,7 +5765,8 @@
     "topology": "Network topology",
     "admin": "Administration",
     "aprs": "APRS",
-    "inventory": "Inventory"
+    "inventory": "Inventory",
+    "firmware": "Firmware"
   },
   "takServerPanel": {
     "title": "TAK Server",
@@ -6093,5 +6094,34 @@
     "import": "Import",
     "exported": "Exported {{count}} radio(s).",
     "imported": "Imported: {{added}} added, {{updated}} updated."
+  },
+  "firmwarePanel": {
+    "title": "Device firmware",
+    "intro": "Downloads official Meshtastic firmware and writes it to a radio over USB. Connect the radio by cable first.",
+    "currentVersion": "Connected radio: {{version}}",
+    "board": "Board",
+    "chooseBoard": "Select a board…",
+    "detectedBoard": "Detected from the radio: {{pioEnv}}",
+    "version": "Firmware version",
+    "alphaSuffix": "(alpha)",
+    "modeTitle": "Install type",
+    "modeUpdate": "Update",
+    "modeUpdateHint": "Writes the application only. Channels, keys and the node database are kept.",
+    "modeClean": "Clean install",
+    "modeCleanHint": "Erases the radio first. Channels, keys and the node database are lost — export the config before a clean install.",
+    "planTitle": "What will be written",
+    "selectToPlan": "Choose a board and version to see the flash plan.",
+    "offsetSource": {
+      "manifest": "Offsets from the release manifest.",
+      "partition-scheme": "Offsets from the board partition scheme (this release ships no manifest).",
+      "update": "Application offset for an in-place update."
+    },
+    "uf2Notice": "{{board}} is flashed by copying a .uf2 file to its bootloader drive, not over serial. Double-tap reset to mount the drive, then copy the firmware onto it.",
+    "flash": "Flash radio",
+    "flashing": "Flashing…",
+    "percent": "{{percent}}%",
+    "done": "Flash complete — the radio is restarting.",
+    "powerWarning": "Do not unplug the radio or close SARMesh while flashing. An interrupted write can leave the radio unbootable until it is reflashed.",
+    "noSerialApi": "Serial access is unavailable in this window. Restart SARMesh and try again."
   }
 }

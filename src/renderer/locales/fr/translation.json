@@ -5106,7 +5106,8 @@
     "remote": "À distance",
     "games": "Jeux",
     "aprs": "APRS",
-    "inventory": "Inventaire"
+    "inventory": "Inventaire",
+    "firmware": "Micrologiciel"
   },
   "takServerPanel": {
     "title": "Serveur TAK",
@@ -6093,5 +6094,34 @@
     "import": "Importer",
     "exported": "Radio(s) {{count}} exportée (s).",
     "imported": "Importé : {{added}} ajouté, {{updated}} mis à jour."
+  },
+  "firmwarePanel": {
+    "title": "Micrologiciel de l'appareil",
+    "intro": "Télécharge le micrologiciel Meshtastic officiel et l'écrit sur une radio via USB. Connectez d'abord la radio par câble.",
+    "currentVersion": "Radio connectée : {{version}}",
+    "board": "Carte",
+    "chooseBoard": "Sélectionnez une carte…",
+    "detectedBoard": "Détecté depuis la radio : {{pioEnv}}",
+    "version": "Version du micrologiciel",
+    "alphaSuffix": "(alpha)",
+    "modeTitle": "Type d'installation",
+    "modeUpdate": "Mise à jour",
+    "modeUpdateHint": "Écrit uniquement l'application. Les canaux, les clés et la base de données des nœuds sont conservés.",
+    "modeClean": "Installation propre",
+    "modeCleanHint": "Efface d'abord la radio. Les canaux, les clés et la base de données des nœuds sont perdus — exportez la configuration avant une installation propre.",
+    "planTitle": "Ce qui sera écrit",
+    "selectToPlan": "Choisissez une carte et une version pour voir le plan d'écriture.",
+    "offsetSource": {
+      "manifest": "Décalages issus du manifeste de la version.",
+      "partition-scheme": "Décalages issus du schéma de partition de la carte (cette version ne fournit pas de manifeste).",
+      "update": "Décalage de l'application pour une mise à jour sur place."
+    },
+    "uf2Notice": "{{board}} se programme en copiant un fichier .uf2 sur son lecteur de bootloader, et non par liaison série. Appuyez deux fois sur reset pour monter le lecteur, puis copiez-y le micrologiciel.",
+    "flash": "Flasher la radio",
+    "flashing": "Flashage…",
+    "percent": "{{percent}} %",
+    "done": "Flashage terminé — la radio redémarre.",
+    "powerWarning": "Ne débranchez pas la radio et ne fermez pas SARMesh pendant le flashage. Une écriture interrompue peut rendre la radio non amorçable jusqu'à un nouveau flashage.",
+    "noSerialApi": "L'accès au port série n'est pas disponible dans cette fenêtre. Redémarrez SARMesh et réessayez."
   }
 }

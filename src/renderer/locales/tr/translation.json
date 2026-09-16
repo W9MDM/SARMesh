@@ -5106,7 +5106,8 @@
     "remote": "Uzak",
     "games": "Oyun",
     "aprs": "APRS",
-    "inventory": "Envanter"
+    "inventory": "Envanter",
+    "firmware": "Ürün yazılımı"
   },
   "takServerPanel": {
     "title": "TAK Sunucusu",
@@ -6093,5 +6094,34 @@
     "import": "İthal",
     "exported": "{{count}} radyo dışa aktarıldı.",
     "imported": "İçe aktarıldı: {{added}} eklendi, {{updated}} güncellendi."
+  },
+  "firmwarePanel": {
+    "title": "Cihaz ürün yazılımı",
+    "intro": "Resmî Meshtastic ürün yazılımını indirir ve USB üzerinden telsize yazar. Önce telsizi kabloyla bağlayın.",
+    "currentVersion": "Bağlı telsiz: {{version}}",
+    "board": "Kart",
+    "chooseBoard": "Bir kart seçin…",
+    "detectedBoard": "Telsizden algılandı: {{pioEnv}}",
+    "version": "Ürün yazılımı sürümü",
+    "alphaSuffix": "(alfa)",
+    "modeTitle": "Kurulum türü",
+    "modeUpdate": "Güncelleme",
+    "modeUpdateHint": "Yalnızca uygulamayı yazar. Kanallar, anahtarlar ve düğüm veritabanı korunur.",
+    "modeClean": "Temiz kurulum",
+    "modeCleanHint": "Önce telsizi siler. Kanallar, anahtarlar ve düğüm veritabanı kaybolur — temiz kurulumdan önce yapılandırmayı dışa aktarın.",
+    "planTitle": "Ne yazılacak",
+    "selectToPlan": "Yazma planını görmek için bir kart ve sürüm seçin.",
+    "offsetSource": {
+      "manifest": "Sürüm bildiriminden alınan ofsetler.",
+      "partition-scheme": "Kartın bölüm şemasından alınan ofsetler (bu sürümde bildirim yok).",
+      "update": "Yerinde güncelleme için uygulama ofseti."
+    },
+    "uf2Notice": "{{board}}, seri bağlantı yerine .uf2 dosyasının önyükleyici sürücüsüne kopyalanmasıyla yazılır. Sürücüyü bağlamak için sıfırlama düğmesine iki kez basın, ardından ürün yazılımını kopyalayın.",
+    "flash": "Telsize yaz",
+    "flashing": "Yazılıyor…",
+    "percent": "%{{percent}}",
+    "done": "Yazma tamamlandı — telsiz yeniden başlıyor.",
+    "powerWarning": "Yazma sırasında telsizin bağlantısını kesmeyin ve SARMesh'i kapatmayın. Yarıda kesilen bir yazma, telsiz yeniden yazılana kadar açılmamasına yol açabilir.",
+    "noSerialApi": "Bu pencerede seri porta erişilemiyor. SARMesh'i yeniden başlatıp tekrar deneyin."
   }
 }

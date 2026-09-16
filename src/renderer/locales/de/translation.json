@@ -5106,7 +5106,8 @@
     "remote": "Remote",
     "games": "Spiele",
     "aprs": "APRS",
-    "inventory": "Inventar"
+    "inventory": "Inventar",
+    "firmware": "Firmware"
   },
   "takServerPanel": {
     "title": "TAK-Server",
@@ -6093,5 +6094,34 @@
     "import": "Import",
     "exported": "{{count}} Radio(s) exportiert.",
     "imported": "Importiert: {{added}} hinzugefügt, {{updated}} aktualisiert."
+  },
+  "firmwarePanel": {
+    "title": "Geräte-Firmware",
+    "intro": "Lädt offizielle Meshtastic-Firmware herunter und schreibt sie per USB auf ein Funkgerät. Schließen Sie das Funkgerät zuerst per Kabel an.",
+    "currentVersion": "Verbundenes Funkgerät: {{version}}",
+    "board": "Board",
+    "chooseBoard": "Board auswählen…",
+    "detectedBoard": "Vom Funkgerät erkannt: {{pioEnv}}",
+    "version": "Firmware-Version",
+    "alphaSuffix": "(Alpha)",
+    "modeTitle": "Installationsart",
+    "modeUpdate": "Aktualisieren",
+    "modeUpdateHint": "Schreibt nur die Anwendung. Kanäle, Schlüssel und die Knotendatenbank bleiben erhalten.",
+    "modeClean": "Neuinstallation",
+    "modeCleanHint": "Löscht das Funkgerät zuerst. Kanäle, Schlüssel und die Knotendatenbank gehen verloren — exportieren Sie die Konfiguration vor einer Neuinstallation.",
+    "planTitle": "Was geschrieben wird",
+    "selectToPlan": "Board und Version wählen, um den Schreibplan zu sehen.",
+    "offsetSource": {
+      "manifest": "Offsets aus dem Release-Manifest.",
+      "partition-scheme": "Offsets aus dem Partitionsschema des Boards (dieses Release enthält kein Manifest).",
+      "update": "Anwendungs-Offset für eine Aktualisierung an Ort und Stelle."
+    },
+    "uf2Notice": "{{board}} wird durch Kopieren einer .uf2-Datei auf sein Bootloader-Laufwerk geflasht, nicht über die serielle Schnittstelle. Reset zweimal drücken, um das Laufwerk einzubinden, dann die Firmware darauf kopieren.",
+    "flash": "Funkgerät flashen",
+    "flashing": "Wird geflasht…",
+    "percent": "{{percent}} %",
+    "done": "Flashen abgeschlossen — das Funkgerät startet neu.",
+    "powerWarning": "Ziehen Sie das Funkgerät während des Flashens nicht ab und schließen Sie SARMesh nicht. Ein unterbrochener Schreibvorgang kann das Funkgerät unbootbar machen, bis es erneut geflasht wird.",
+    "noSerialApi": "Serieller Zugriff ist in diesem Fenster nicht verfügbar. Starten Sie SARMesh neu und versuchen Sie es erneut."
   }
 }

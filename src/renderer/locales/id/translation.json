@@ -5106,7 +5106,8 @@
     "remote": "Jarak jauh",
     "games": "Game",
     "aprs": "APRS",
-    "inventory": "Inventory"
+    "inventory": "Inventory",
+    "firmware": "Firmware"
   },
   "takServerPanel": {
     "title": "Server TAK",
@@ -6093,5 +6094,34 @@
     "import": "Impor",
     "exported": "Mengekspor radio {{count}}.",
     "imported": "Diimpor: {{added}} ditambahkan, {{updated}} diperbarui."
+  },
+  "firmwarePanel": {
+    "title": "Firmware perangkat",
+    "intro": "Mengunduh firmware Meshtastic resmi dan menulisnya ke radio melalui USB. Hubungkan radio dengan kabel terlebih dahulu.",
+    "currentVersion": "Radio terhubung: {{version}}",
+    "board": "Papan",
+    "chooseBoard": "Pilih papan…",
+    "detectedBoard": "Terdeteksi dari radio: {{pioEnv}}",
+    "version": "Versi firmware",
+    "alphaSuffix": "(alfa)",
+    "modeTitle": "Jenis instalasi",
+    "modeUpdate": "Perbarui",
+    "modeUpdateHint": "Hanya menulis aplikasi. Saluran, kunci, dan basis data node tetap dipertahankan.",
+    "modeClean": "Instalasi bersih",
+    "modeCleanHint": "Menghapus radio terlebih dahulu. Saluran, kunci, dan basis data node akan hilang — ekspor konfigurasi sebelum instalasi bersih.",
+    "planTitle": "Yang akan ditulis",
+    "selectToPlan": "Pilih papan dan versi untuk melihat rencana penulisan.",
+    "offsetSource": {
+      "manifest": "Offset dari manifes rilis.",
+      "partition-scheme": "Offset dari skema partisi papan (rilis ini tidak menyertakan manifes).",
+      "update": "Offset aplikasi untuk pembaruan di tempat."
+    },
+    "uf2Notice": "{{board}} diprogram dengan menyalin berkas .uf2 ke drive bootloader-nya, bukan melalui serial. Tekan tombol reset dua kali untuk memunculkan drive, lalu salin firmware ke dalamnya.",
+    "flash": "Tulis firmware",
+    "flashing": "Menulis…",
+    "percent": "{{percent}} %",
+    "done": "Penulisan selesai — radio sedang dimulai ulang.",
+    "powerWarning": "Jangan mencabut radio atau menutup SARMesh saat penulisan berlangsung. Penulisan yang terputus dapat membuat radio gagal booting sampai diprogram ulang.",
+    "noSerialApi": "Akses serial tidak tersedia di jendela ini. Mulai ulang SARMesh dan coba lagi."
   }
 }

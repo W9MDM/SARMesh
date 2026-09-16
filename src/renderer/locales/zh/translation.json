@@ -5106,7 +5106,8 @@
     "remote": "远程",
     "games": "出賽",
     "aprs": "APRS",
-    "inventory": "库存"
+    "inventory": "库存",
+    "firmware": "固件"
   },
   "takServerPanel": {
     "title": "TAK服务器",
@@ -6093,5 +6094,34 @@
     "import": "进口",
     "exported": "已导出{{count}}收音机。",
     "imported": "已导入： {{added}}已添加， {{updated}}已更新。"
+  },
+  "firmwarePanel": {
+    "title": "设备固件",
+    "intro": "下载官方 Meshtastic 固件并通过 USB 写入电台。请先用数据线连接电台。",
+    "currentVersion": "已连接的电台：{{version}}",
+    "board": "开发板",
+    "chooseBoard": "选择开发板…",
+    "detectedBoard": "从电台检测到：{{pioEnv}}",
+    "version": "固件版本",
+    "alphaSuffix": "（alpha）",
+    "modeTitle": "安装方式",
+    "modeUpdate": "更新",
+    "modeUpdateHint": "仅写入应用程序。频道、密钥和节点数据库将保留。",
+    "modeClean": "全新安装",
+    "modeCleanHint": "先擦除电台。频道、密钥和节点数据库都会丢失——请在全新安装前导出配置。",
+    "planTitle": "将写入的内容",
+    "selectToPlan": "选择开发板和版本以查看写入方案。",
+    "offsetSource": {
+      "manifest": "偏移量来自发布清单。",
+      "partition-scheme": "偏移量来自开发板的分区方案（此版本未提供清单）。",
+      "update": "就地更新所用的应用程序偏移量。"
+    },
+    "uf2Notice": "{{board}} 通过将 .uf2 文件复制到其引导加载程序驱动器来刷写，而不是通过串口。双击复位键挂载该驱动器，然后把固件复制进去。",
+    "flash": "刷写电台",
+    "flashing": "正在刷写…",
+    "percent": "{{percent}}%",
+    "done": "刷写完成——电台正在重启。",
+    "powerWarning": "刷写期间请勿拔下电台或关闭 SARMesh。写入中断可能导致电台无法启动，直到重新刷写为止。",
+    "noSerialApi": "此窗口无法访问串口。请重启 SARMesh 后重试。"
   }
 }
