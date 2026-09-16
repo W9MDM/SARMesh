@@ -28,6 +28,7 @@ import type {
   PendingConfigChange,
   ReconcileResult,
 } from './inventory-types';
+import type { DiscoveryState } from './mdns-types';
 import type { MeshProtocol } from './meshProtocol';
 import type {
   PathCapability,
@@ -1194,6 +1195,15 @@ export interface ElectronAPI {
       ) => Promise<void>;
       remove: (id: number) => Promise<void>;
     };
+  };
+
+  // ─── Node discovery (mDNS) ───────────────────────────────────────────────────
+  mdns: {
+    start: () => Promise<DiscoveryState>;
+    stop: () => Promise<DiscoveryState>;
+    refresh: () => Promise<DiscoveryState>;
+    getState: () => Promise<DiscoveryState>;
+    onState: (cb: (state: DiscoveryState) => void) => () => void;
   };
 
   // ─── Radio inventory ─────────────────────────────────────────────────────────

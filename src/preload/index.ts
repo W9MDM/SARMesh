@@ -45,6 +45,7 @@ import type {
   PendingConfigChange,
   ReconcileResult,
 } from '../shared/inventory-types';
+import type { DiscoveryState } from '../shared/mdns-types';
 import type {
   ReticulumSidecarEvent,
   ReticulumSidecarStartOptions,
@@ -1096,6 +1097,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('meshtastic:tcp-disconnected', handler);
         return () => ipcRenderer.off('meshtastic:tcp-disconnected', handler);
       },
+    },
+  },
+
+  // ─── Node discovery (mDNS) ───────────────────────────────────────
+  mdns: {
+    start: (): Promise<DiscoveryState> => ipcRenderer.invoke('mdns:start'),
+    stop: (): Promise<DiscoveryState> => ipcRenderer.invoke('mdns:stop'),
+    refresh: (): Promise<DiscoveryState> => ipcRenderer.invoke('mdns:refresh'),
+    getState: (): Promise<DiscoveryState> => ipcRenderer.invoke('mdns:getState'),
+    onState: (cb: (state: DiscoveryState) => void): (() => void) => {
+      const handler = (_: unknown, state: DiscoveryState) => {
+        cb(state);
+      };
+      ipcRenderer.on('mdns:state', handler);
+      return () => ipcRenderer.off('mdns:state', handler);
     },
   },
 

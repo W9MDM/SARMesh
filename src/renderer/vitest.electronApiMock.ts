@@ -4,6 +4,7 @@ import type { ElectronAPI, OutboxEntry, OutboxEntryInput } from '@/shared/electr
 
 import { DEFAULT_APRS_SETTINGS, IDLE_APRS_STATUS } from '../shared/aprs-types';
 import { DEFAULT_INVENTORY_SETTINGS } from '../shared/inventory-types';
+import { IDLE_DISCOVERY_STATE } from '../shared/mdns-types';
 
 const outboxMockRows: OutboxEntry[] = [];
 let outboxMockIdSeq = 1;
@@ -366,6 +367,13 @@ export function createElectronAPIMock(): ElectronAPI {
       export: vi.fn().mockResolvedValue(null),
       onLine: vi.fn().mockReturnValue(() => {}),
       logDeviceConnection: vi.fn().mockResolvedValue(undefined),
+    },
+    mdns: {
+      start: vi.fn().mockResolvedValue(IDLE_DISCOVERY_STATE),
+      stop: vi.fn().mockResolvedValue(IDLE_DISCOVERY_STATE),
+      refresh: vi.fn().mockResolvedValue(IDLE_DISCOVERY_STATE),
+      getState: vi.fn().mockResolvedValue(IDLE_DISCOVERY_STATE),
+      onState: vi.fn().mockReturnValue(() => {}),
     },
     inventory: {
       list: vi.fn().mockResolvedValue([]),

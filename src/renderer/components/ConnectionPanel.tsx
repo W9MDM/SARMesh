@@ -4,6 +4,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } fro
 import { createPortal } from 'react-dom';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { useNodeDiscovery } from '@/renderer/hooks/useNodeDiscovery';
 import { errLikeToLogString } from '@/renderer/lib/errLikeToLogString';
 import { formatDisplayTime } from '@/renderer/lib/formatDisplayTime';
 import { ConnectionIcon, MqttGlobeIcon } from '@/renderer/lib/icons/connectionIcons';
@@ -20,6 +21,7 @@ import { cancelProtocolRfAutoConnect } from '@/renderer/lib/protocolRfAutoConnec
 import { useRadioProvider } from '@/renderer/lib/radio/providerFactory';
 import type { RfConnectAutomaticFn, RfConnectFn } from '@/renderer/lib/rfConnectionTypes';
 import { isPairingRelatedError } from '@/shared/blePairingError';
+import type { InventoryNode } from '@/shared/inventory-types';
 import {
   clampMqttMaxRetries,
   MQTT_DEFAULT_RECONNECT_ATTEMPTS,
@@ -142,6 +144,7 @@ import { BleWeakSignalBanner } from './BleWeakSignalBanner';
 import { ConfirmModal } from './ConfirmModal';
 import ConnectionBatteryGauge from './ConnectionBatteryGauge';
 import ConnectionLinkMeter from './ConnectionLinkMeter';
+import DiscoveredNodePicker from './DiscoveredNodePicker';
 import FirmwareStatusIndicator from './FirmwareStatusIndicator';
 import { HelpTooltip } from './HelpTooltip';
 import { MqttNetworkPresetSelect } from './MqttNetworkPresetSelect';
@@ -459,6 +462,30 @@ export default function ConnectionPanel({
     return '5000';
   });
   const tcpPort = parseTcpPortFromString(tcpPortStr, 5000);
+
+  // Meshtastic firmware advertises `_meshtastic._tcp` over mDNS whenever it is
+  // on Wi-Fi, so the local link can be browsed instead of asking the operator
+  // for a DHCP address. Only browse while a Wi-Fi form is actually on screen.
+  const discoveryEnabled =
+    protocol === 'meshtastic' && (connectionType === 'http' || connectionType === 'tcp');
+  const discovery = useNodeDiscovery(discoveryEnabled);
+  const [discoveryRoster, setDiscoveryRoster] = useState<InventoryNode[]>([]);
+  useEffect(() => {
+    if (!discoveryEnabled) return;
+    let cancelled = false;
+    void window.electronAPI.inventory
+      .list()
+      .then((entries) => {
+        if (!cancelled) setDiscoveryRoster(entries);
+      })
+      .catch((err: unknown) => {
+        // The register only decorates rows; discovery still works without it.
+        console.warn('[mdns] inventory lookup failed:', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [discoveryEnabled]);
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [connectionStage, setConnectionStage] = useState('');
@@ -3482,6 +3509,15 @@ export default function ConnectionPanel({
               {navigator.userAgent.toLowerCase().includes('windows') && (
                 <p className="text-xs text-yellow-400">{t('connectionPanel.windowsMdnsNote')}</p>
               )}
+              <DiscoveredNodePicker
+                nodes={discovery.nodes}
+                browsing={discovery.browsing}
+                error={discovery.error}
+                inventory={discoveryRoster}
+                includePort={false}
+                onSelect={setHttpAddress}
+                onRefresh={discovery.refresh}
+              />
             </div>
           )}
           {connectionType === 'tcp' && protocol === 'meshtastic' && (
@@ -3501,6 +3537,14 @@ export default function ConnectionPanel({
                 autoComplete="off"
               />
               <p className="text-muted text-xs">{t('connectionPanel.tcpAddressHint')}</p>
+              <DiscoveredNodePicker
+                nodes={discovery.nodes}
+                browsing={discovery.browsing}
+                error={discovery.error}
+                inventory={discoveryRoster}
+                onSelect={setTcpAddress}
+                onRefresh={discovery.refresh}
+              />
             </div>
           )}
           {connectionType === 'http' && protocol === 'meshcore' && (

@@ -119,6 +119,7 @@ import { InventoryManager } from './inventory-manager';
 import { registerAprsIpcHandlers } from './ipc/aprs-handlers';
 import { registerGpsIpcHandlers } from './ipc/gps-handlers';
 import { registerInventoryIpcHandlers } from './ipc/inventory-handlers';
+import { registerMdnsIpcHandlers } from './ipc/mdns-handlers';
 import { registerReticulumDbIpcHandlers } from './ipc/reticulum-db-handlers';
 import { registerReticulumIpcHandlers, wireReticulumSidecarBridge } from './ipc/reticulum-handlers';
 import { registerReticulumIdentityIpcHandlers } from './ipc/reticulum-identity-handlers';
@@ -152,6 +153,7 @@ import {
   type LongSessionNudgeController,
   parseLongSessionRestartPayload,
 } from './longSessionNudge';
+import { MdnsDiscovery } from './mdns-discovery';
 import { MeshcoreMqttAdapter } from './meshcore-mqtt-adapter';
 import { decodePathPayload, isPathPacket } from './meshcore-path-decoder';
 import { ensureMicrophoneAccess, isAllowedMicrophonePrivacySettingsUrl } from './microphoneAccess';
@@ -216,9 +218,18 @@ if (process.platform === 'win32') {
 }
 
 /** Trusted Help menu / About credits URLs (static, not user-controlled). */
-const HELP_URL_WEBSITE = 'https://coloradomesh.org/';
+const HELP_URL_WEBSITE = 'https://nwimesh.net/';
 const HELP_URL_GITHUB = 'https://github.com/W9MDM/SARMesh';
-const HELP_URL_DISCORD = 'https://discord.com/invite/McChKR5NpS';
+const HELP_URL_DISCORD = 'https://discord.gg/4wQ5SWPBfQ';
+
+/**
+ * Display name for menus and the About window. Deliberately NOT `app.name`,
+ * which is the package name (`sarmesh`) — and overriding it with app.setName()
+ * would move `userData`, taking the operator's database with it.
+ */
+const APP_DISPLAY_NAME = 'SARMesh';
+/** Who ships this fork. Upstream attribution stays in the credits body. */
+const APP_VENDOR = 'NWI Mesh Net';
 
 // ─── Window state persistence ───────────────────────────────────────
 interface WindowState {
@@ -301,18 +312,36 @@ let aprsBridgeManager: AprsBridgeManager | null = null;
 
 let inventoryManager: InventoryManager | null = null;
 
+let mdnsDiscovery: MdnsDiscovery | null = null;
+
+/** Browses the local link for Meshtastic radios advertising _meshtastic._tcp. */
+function getMdnsDiscovery(): MdnsDiscovery {
+  if (!mdnsDiscovery) {
+    const discovery = new MdnsDiscovery();
+    discovery.on('state', (state) => {
+      // stop() emits during will-quit, when the window may already be gone.
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('mdns:state', state);
+      else console.debug('[main] mdns:state dropped (no live window)');
+    });
+    mdnsDiscovery = discovery;
+  }
+  return mdnsDiscovery;
+}
+
 /** The radio asset register. Loaded from disk on first use. */
 function getInventoryManager(): InventoryManager {
   if (!inventoryManager) {
     const manager = new InventoryManager();
     manager.load();
     manager.on('changed', (nodes) => {
-      if (mainWindow) mainWindow.webContents.send('inventory:changed', nodes);
-      else console.debug('[main] inventory:changed dropped (mainWindow not ready)');
+      if (mainWindow && !mainWindow.isDestroyed())
+        mainWindow.webContents.send('inventory:changed', nodes);
+      else console.debug('[main] inventory:changed dropped (no live window)');
     });
     manager.on('reconciled', (result) => {
-      if (mainWindow) mainWindow.webContents.send('inventory:reconciled', result);
-      else console.debug('[main] inventory:reconciled dropped (mainWindow not ready)');
+      if (mainWindow && !mainWindow.isDestroyed())
+        mainWindow.webContents.send('inventory:reconciled', result);
+      else console.debug('[main] inventory:reconciled dropped (no live window)');
     });
     inventoryManager = manager;
   }
@@ -330,12 +359,14 @@ function getAprsBridgeManager(): AprsBridgeManager {
     manager.loadSettings();
     manager.loadRoster();
     manager.on('status', (status) => {
-      if (mainWindow) mainWindow.webContents.send('aprs:status', status);
-      else console.debug('[main] aprs:status dropped (mainWindow not ready)');
+      if (mainWindow && !mainWindow.isDestroyed())
+        mainWindow.webContents.send('aprs:status', status);
+      else console.debug('[main] aprs:status dropped (no live window)');
     });
     manager.on('emitted', (record) => {
-      if (mainWindow) mainWindow.webContents.send('aprs:emitted', record);
-      else console.debug('[main] aprs:emitted dropped (mainWindow not ready)');
+      if (mainWindow && !mainWindow.isDestroyed())
+        mainWindow.webContents.send('aprs:emitted', record);
+      else console.debug('[main] aprs:emitted dropped (no live window)');
     });
     aprsBridgeManager = manager;
   }
@@ -546,6 +577,7 @@ async function shutdownAppResources(): Promise<void> {
   try {
     takServerManager?.stop();
     void aprsBridgeManager?.stop();
+    mdnsDiscovery?.stop();
   } catch (err) {
     console.debug(
       '[main] TAK server stop during shutdown (ignored):',
@@ -1322,7 +1354,7 @@ function setupTray(window: BrowserWindow) {
       },
       { type: 'separator' },
       {
-        label: `About ${app.name}`,
+        label: `About ${APP_DISPLAY_NAME}`,
         click: () => {
           showAboutDialog();
         },
@@ -1369,7 +1401,7 @@ function applyAboutPanelOptions(): void {
     'Reticulum stack inspiration: Ratspeak (https://github.com/ratspeak/Ratspeak)',
     '',
     'License: GPL-3.0-or-later (application code). AGPL-3.0-or-later applies to the bundled Reticulum sidecar binary.',
-    'Author: Colorado Mesh',
+    `Author: ${APP_VENDOR}`,
     '',
     `Website:  ${HELP_URL_WEBSITE}`,
     `GitHub:   ${HELP_URL_GITHUB}`,
@@ -1382,19 +1414,19 @@ function applyAboutPanelOptions(): void {
   try {
     if (process.platform === 'linux') {
       app.setAboutPanelOptions({
-        applicationName: app.name,
+        applicationName: APP_DISPLAY_NAME,
         applicationVersion: version,
-        copyright: 'Copyright © Colorado Mesh',
+        copyright: `Copyright © ${APP_VENDOR}`,
         credits,
-        authors: ['Colorado Mesh'],
+        authors: [APP_VENDOR],
         website: HELP_URL_WEBSITE,
         ...(iconPath ? { iconPath } : {}),
       });
     } else {
       app.setAboutPanelOptions({
-        applicationName: app.name,
+        applicationName: APP_DISPLAY_NAME,
         applicationVersion: version,
-        copyright: 'Copyright © Colorado Mesh',
+        copyright: `Copyright © ${APP_VENDOR}`,
         credits,
         ...(iconPath ? { iconPath } : {}),
       });
@@ -1428,7 +1460,7 @@ function buildHelpMenuExternalLinkItems(): (
   return [
     { type: 'separator' as const },
     {
-      label: 'Colorado Mesh Website',
+      label: 'NWI Mesh Net Website',
       click: () => {
         openHelpExternalLink(HELP_URL_WEBSITE);
       },
@@ -1462,7 +1494,7 @@ function showWindowsAboutFallbackWindow(): void {
     }
 
     const parent = BrowserWindow.getFocusedWindow() ?? mainWindow ?? undefined;
-    const html = buildWindowsAboutDocumentHtml(app.name, app.getVersion());
+    const html = buildWindowsAboutDocumentHtml(APP_DISPLAY_NAME, app.getVersion());
     const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
 
     console.debug(
@@ -1479,7 +1511,7 @@ function showWindowsAboutFallbackWindow(): void {
       fullscreenable: false,
       parent: parent ?? undefined,
       modal: Boolean(parent),
-      title: `About ${app.name}`,
+      title: `About ${APP_DISPLAY_NAME}`,
       autoHideMenuBar: true,
       show: false,
       webPreferences: {
@@ -1535,8 +1567,8 @@ function showWindowsAboutFallbackWindow(): void {
     );
     try {
       dialog.showErrorBox(
-        `About ${app.name}`,
-        `${app.name}\nVersion ${app.getVersion()}\n\nCould not open the About window.`,
+        `About ${APP_DISPLAY_NAME}`,
+        `${APP_DISPLAY_NAME}\nVersion ${app.getVersion()}\n\nCould not open the About window.`,
       );
     } catch {
       // catch-no-log-ok dialog unavailable; error already logged above
@@ -1545,7 +1577,7 @@ function showWindowsAboutFallbackWindow(): void {
 }
 
 function showAboutDialog(): void {
-  const appName = app.name;
+  const appName = APP_DISPLAY_NAME;
   const version = app.getVersion();
 
   try {
@@ -1586,10 +1618,10 @@ function setupAppMenu() {
   if (process.platform === 'darwin') {
     appMenu = Menu.buildFromTemplate([
       {
-        label: app.name,
+        label: APP_DISPLAY_NAME,
         submenu: [
           {
-            label: `About ${app.name}`,
+            label: `About ${APP_DISPLAY_NAME}`,
             click: () => {
               showAboutDialog();
             },
@@ -1650,7 +1682,7 @@ function setupAppMenu() {
         label: 'Help',
         submenu: [
           {
-            label: `About ${app.name}`,
+            label: `About ${APP_DISPLAY_NAME}`,
             click: () => {
               showAboutDialog();
             },
@@ -6620,6 +6652,8 @@ registerAprsIpcHandlers({ getAprsBridgeManager });
 
 registerInventoryIpcHandlers({ getInventoryManager });
 
+registerMdnsIpcHandlers({ getMdnsDiscovery });
+
 registerReticulumIpcHandlers({
   idleStatus: IDLE_RETICULUM_STATUS,
   ensureManager: ensureReticulumSidecarManager,
@@ -6913,6 +6947,7 @@ app.on('will-quit', (event) => {
     try {
       takServerManager?.stop();
       void aprsBridgeManager?.stop();
+      mdnsDiscovery?.stop();
     } catch (err) {
       console.debug(
         '[main] TAK server stop during will-quit (ignored):',

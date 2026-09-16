@@ -2,6 +2,7 @@ import type { OutboxEntry, OutboxEntryInput } from '@/shared/electron-api.types'
 
 import { DEFAULT_APRS_SETTINGS, IDLE_APRS_STATUS } from '../../shared/aprs-types';
 import { DEFAULT_INVENTORY_SETTINGS } from '../../shared/inventory-types';
+import { IDLE_DISCOVERY_STATE } from '../../shared/mdns-types';
 
 /* eslint-disable @typescript-eslint/require-await -- no-op async IPC stubs for browser dev */
 const noop = (): void => {};
@@ -314,6 +315,13 @@ export function createDevElectronApiStub(): typeof window.electronAPI {
       export: async () => null,
       onLine: noopUnsub,
       logDeviceConnection: noopAsync,
+    },
+    mdns: {
+      start: async () => IDLE_DISCOVERY_STATE,
+      stop: async () => IDLE_DISCOVERY_STATE,
+      refresh: async () => IDLE_DISCOVERY_STATE,
+      getState: async () => IDLE_DISCOVERY_STATE,
+      onState: () => () => {},
     },
     inventory: {
       list: async () => [],
