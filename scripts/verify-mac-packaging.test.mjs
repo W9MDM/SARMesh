@@ -166,15 +166,21 @@ describe('verify-mac-packaging helpers', () => {
     expect(isCompleteAppBundle('/nonexistent/SARMesh.app')).toBe(false);
   });
 
-  it('assertApplicationsSymlink accepts Applications → /Applications', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'verify-mac-apps-link-'));
-    try {
-      symlinkSync('/Applications', join(dir, 'Applications'));
-      expect(() => assertApplicationsSymlink(dir)).not.toThrow();
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
+  // Windows cannot hold a POSIX-absolute symlink: `/Applications` reads back
+  // as `C:\Applications`, so the target this asserts is unrepresentable.
+  // The script under test only ever runs on macOS anyway.
+  it.skipIf(process.platform === 'win32')(
+    'assertApplicationsSymlink accepts Applications → /Applications',
+    () => {
+      const dir = mkdtempSync(join(tmpdir(), 'verify-mac-apps-link-'));
+      try {
+        symlinkSync('/Applications', join(dir, 'Applications'));
+        expect(() => assertApplicationsSymlink(dir)).not.toThrow();
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
 
   it('assertApplicationsSymlink rejects missing or wrong-target links', () => {
     const dir = mkdtempSync(join(tmpdir(), 'verify-mac-apps-link-bad-'));

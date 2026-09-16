@@ -263,26 +263,32 @@ exit 0
     expect(result.stdout).toContain(`HAS_WARNING=${expected}`);
   });
 
-  it('skips the pinned-majors check when node is unavailable', () => {
-    // PATH with the shell utilities update.sh needs, but deliberately no `node`.
-    const binDir = mkdtempSync(path.join(os.tmpdir(), 'mesh-update-nonode-'));
-    tempDirs.push(binDir);
-    for (const tool of ['bash', 'printf', 'echo']) {
-      const resolved = spawnSync('/bin/sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' })
-        .stdout?.trim()
-        .split('\n')[0];
-      if (resolved && resolved.startsWith('/')) {
-        symlinkSync(resolved, path.join(binDir, tool));
+  // Builds a synthetic PATH by symlinking system binaries. On Windows the
+  // resolved paths are MSYS ones (/usr/bin/bash) that symlinkSync cannot
+  // target, and a Windows PATH is not what the bash subprocess expects.
+  it.skipIf(process.platform === 'win32')(
+    'skips the pinned-majors check when node is unavailable',
+    () => {
+      // PATH with the shell utilities update.sh needs, but deliberately no `node`.
+      const binDir = mkdtempSync(path.join(os.tmpdir(), 'mesh-update-nonode-'));
+      tempDirs.push(binDir);
+      for (const tool of ['bash', 'printf', 'echo']) {
+        const resolved = spawnSync('/bin/sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' })
+          .stdout?.trim()
+          .split('\n')[0];
+        if (resolved && resolved.startsWith('/')) {
+          symlinkSync(resolved, path.join(binDir, tool));
+        }
       }
-    }
-    const result = runUpdate([], {
-      UPDATE_SH_TEST_HOOK: 'pinned-majors-only',
-      PATH: binDir,
-    });
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toContain('node missing — skip.');
-    expect(result.stdout).toContain('HAS_WARNING=0');
-  });
+      const result = runUpdate([], {
+        UPDATE_SH_TEST_HOOK: 'pinned-majors-only',
+        PATH: binDir,
+      });
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).toContain('node missing — skip.');
+      expect(result.stdout).toContain('HAS_WARNING=0');
+    },
+  );
 
   it('syncs Flatpak Electron archives after pnpm prune', () => {
     expect(updateScript).toContain('sync_flatpak_electron()');

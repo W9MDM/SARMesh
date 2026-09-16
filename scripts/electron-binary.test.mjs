@@ -12,10 +12,14 @@ describe('electron-binary helpers', () => {
   it('resolveLocalElectronBin returns platform-specific default when missing', () => {
     const root = '/tmp/sarmesh-test';
     expect(resolveLocalElectronBin('darwin', () => false, root)).toContain(
-      'Electron.app/Contents/MacOS/Electron',
+      path.join('Electron.app', 'Contents', 'MacOS', 'Electron'),
     );
-    expect(resolveLocalElectronBin('linux', () => false, root)).toContain('dist/electron');
-    expect(resolveLocalElectronBin('win32', () => false, root)).toContain('dist/electron.exe');
+    expect(resolveLocalElectronBin('linux', () => false, root)).toContain(
+      path.join('dist', 'electron'),
+    );
+    expect(resolveLocalElectronBin('win32', () => false, root)).toContain(
+      path.join('dist', 'electron.exe'),
+    );
   });
 
   it('isElectronBinaryInstalled is false when dist binary is absent', () => {

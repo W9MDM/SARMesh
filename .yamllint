@@ -10,3 +10,6 @@ ignore: |
   node_modules/
   .rsstack/
   .github/rulesets/
+  release/
+  dist/
+  dist-electron/

@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 describe('start-electron wrapper helpers', () => {
@@ -60,7 +62,18 @@ describe('start-electron wrapper helpers', () => {
       ) => string;
     };
     const resolved = mod.resolveLocalElectronBin('darwin', () => false);
-    expect(resolved).toContain('node_modules/electron/dist/Electron.app/Contents/MacOS/Electron');
+    // The resolver builds paths with path.join, so the expectation must too.
+    expect(resolved).toContain(
+      path.join(
+        'node_modules',
+        'electron',
+        'dist',
+        'Electron.app',
+        'Contents',
+        'MacOS',
+        'Electron',
+      ),
+    );
   });
 
   it('resolves Linux electron binary path', async () => {
@@ -72,6 +85,6 @@ describe('start-electron wrapper helpers', () => {
       ) => string;
     };
     const resolved = mod.resolveLocalElectronBin('linux', () => false);
-    expect(resolved).toContain('node_modules/electron/dist/electron');
+    expect(resolved).toContain(path.join('node_modules', 'electron', 'dist', 'electron'));
   });
 });

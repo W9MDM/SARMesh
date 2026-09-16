@@ -211,6 +211,9 @@ describe('release.sh argv subprocess', () => {
     const r = spawnSync('pnpm', ['run', 'release', '--', 'minor', '--skip-dep-update'], {
       cwd: ROOT,
       encoding: 'utf8',
+      // Windows: pnpm is a .cmd shim that spawn cannot resolve without a shell.
+      // Args are static literals here, so there is nothing to escape.
+      shell: process.platform === 'win32',
       env: {
         ...process.env,
         SARMESH_RELEASE_PARSE_ONLY: '1',

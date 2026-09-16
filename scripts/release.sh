@@ -3,6 +3,18 @@
 # Ensure the script stops on any error
 set -e
 
+# Git Bash on Windows ships `python`, not `python3`; CI images ship both.
+python_bin() {
+  if command -v python3 > /dev/null 2>&1; then
+    echo python3
+  elif command -v python > /dev/null 2>&1; then
+    echo python
+  else
+    echo "error: no python3/python on PATH" >&2
+    exit 1
+  fi
+}
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -38,7 +50,7 @@ assert_lockfile_deduped() {
 assert_release_clis() {
   local missing
   missing=$(
-    python3 - << 'PY'
+    "$(python_bin)" - << 'PY'
 import os
 missing = []
 for cmd in ("prettier", "vitest", "eslint"):

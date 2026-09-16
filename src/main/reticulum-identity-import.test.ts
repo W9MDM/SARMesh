@@ -215,7 +215,13 @@ describe('saveReticulumIdentityExportDialog', () => {
     ).resolves.toEqual({ path: '/tmp/out.identity', error: null });
     expect(showSaveDialogMock).toHaveBeenCalledWith({ defaultPath: 'x.identity' });
     // Temp name is based on the chosen save path basename, not defaultPath.
-    expect(openSyncMock.mock.calls[0][0]).toMatch(/\/tmp\/\.out\.identity\.\d+\.\d+\.tmp$/);
+    // Assert directory and name separately: a literal "/tmp/..." regex only
+    // matches where path.join uses forward slashes.
+    const tempPath = String(openSyncMock.mock.calls[0][0]);
+    expect(path.normalize(path.dirname(tempPath))).toBe(
+      path.normalize(path.dirname('/tmp/out.identity')),
+    );
+    expect(path.basename(tempPath)).toMatch(/^\.out\.identity\.\d+\.\d+\.tmp$/);
     expect(openSyncMock.mock.calls[0][2]).toBe(0o600);
     expect(writeSyncMock).toHaveBeenCalledWith(7, bytes);
     expect(fsyncSyncMock).toHaveBeenCalledWith(7);

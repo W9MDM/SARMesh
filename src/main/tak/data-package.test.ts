@@ -1,8 +1,18 @@
+import type NodePath from 'node:path';
+
 /* eslint-disable no-secrets/no-secrets */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// vi.mock factories are hoisted above imports, so the fixture path is built
+// in a hoisted block rather than from the module-level `path` import.
+const { HOISTED_USER_DATA } = vi.hoisted(() => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const nodePath = require('node:path') as typeof NodePath;
+  return { HOISTED_USER_DATA: nodePath.join('/tmp', 'test-tak') };
+});
+
 vi.mock('electron', () => ({
-  app: { getPath: vi.fn(() => '/tmp/test-tak') },
+  app: { getPath: vi.fn(() => HOISTED_USER_DATA) },
   shell: { showItemInFolder: vi.fn() },
 }));
 
@@ -58,11 +68,18 @@ vi.mock('jszip', () => ({
   }),
 }));
 
+import path from 'node:path';
+
 import { shell } from 'electron';
 import fs from 'fs';
 
 import type { CertBundle } from './certificate-manager';
 import { generateDataPackage } from './data-package';
+
+/** Matches the mocked `app.getPath('userData')` below. */
+const USER_DATA = path.join('/tmp', 'test-tak');
+const PACKAGE_PATH = path.join(USER_DATA, 'tak-package.zip');
+const PACKAGE_TMP_PATH = `${PACKAGE_PATH}.tmp`;
 
 const STUB_CERTS: CertBundle = {
   caCert: '-----BEGIN CERTIFICATE-----\nca\n-----END CERTIFICATE-----',
@@ -96,20 +113,14 @@ describe('generateDataPackage', () => {
 
   it('writes the zip to {userData}/tak-package.zip and returns the path', async () => {
     const result = await generateDataPackage(STUB_CERTS, STUB_SETTINGS);
-    expect(result).toBe('/tmp/test-tak/tak-package.zip');
-    expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalledWith(
-      '/tmp/test-tak/tak-package.zip.tmp',
-      expect.any(Buffer),
-    );
-    expect(vi.mocked(fs.renameSync)).toHaveBeenCalledWith(
-      '/tmp/test-tak/tak-package.zip.tmp',
-      '/tmp/test-tak/tak-package.zip',
-    );
+    expect(result).toBe(PACKAGE_PATH);
+    expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalledWith(PACKAGE_TMP_PATH, expect.any(Buffer));
+    expect(vi.mocked(fs.renameSync)).toHaveBeenCalledWith(PACKAGE_TMP_PATH, PACKAGE_PATH);
   });
 
   it('calls shell.showItemInFolder with the output path', async () => {
     await generateDataPackage(STUB_CERTS, STUB_SETTINGS);
-    expect(vi.mocked(shell.showItemInFolder)).toHaveBeenCalledWith('/tmp/test-tak/tak-package.zip');
+    expect(vi.mocked(shell.showItemInFolder)).toHaveBeenCalledWith(PACKAGE_PATH);
   });
 
   it('still returns the package path when showing the folder fails', async () => {
@@ -118,9 +129,7 @@ describe('generateDataPackage', () => {
     });
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    await expect(generateDataPackage(STUB_CERTS, STUB_SETTINGS)).resolves.toBe(
-      '/tmp/test-tak/tak-package.zip',
-    );
+    await expect(generateDataPackage(STUB_CERTS, STUB_SETTINGS)).resolves.toBe(PACKAGE_PATH);
     expect(warnSpy).toHaveBeenCalledWith(
       '[TAK] show data package in folder failed:',
       'native shell failed',

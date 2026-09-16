@@ -4,6 +4,18 @@
 # and false-failed slow TCP hub Nomad pages. Apply **after** the Nomad LinkClient overlay.
 set -euo pipefail
 
+# Git Bash on Windows ships `python`, not `python3`; CI images ship both.
+python_bin() {
+  if command -v python3 > /dev/null 2>&1; then
+    echo python3
+  elif command -v python > /dev/null 2>&1; then
+    echo python
+  else
+    echo "error: no python3/python on PATH" >&2
+    exit 1
+  fi
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PATCH_FILE="${REPO_ROOT}/reticulum-sidecar/patches/rsReticulum-link-client-proof-budget.patch"
@@ -64,13 +76,15 @@ fi
 if [[ -f "${LINK_CLIENT_RS}" ]] \
   && grep -qE 'let proof_budget[[:space:]]*=' "${LINK_CLIENT_RS}" \
   && grep -qE 'wait_for_proof\([^;]*proof_budget' "${LINK_CLIENT_RS}"; then
-  python3 - "${LINK_CLIENT_RS}" << 'PY'
+  "$(python_bin)" - "${LINK_CLIENT_RS}" << 'PY'
 import pathlib
 import re
 import sys
 
 path = pathlib.Path(sys.argv[1])
-text = path.read_text()
+# Rust sources are UTF-8; Python on Windows would otherwise decode them as
+# cp1252, turning the '×' in these comments into mojibake so no pattern matches.
+text = path.read_text(encoding='utf-8')
 patterns = [
     re.compile(
         r"[ \t]*// Cap proof wait at link establishment timeout \(6s × hops\)\. Otherwise a\n"
@@ -114,7 +128,8 @@ if replaced != 1:
     ) and "wait_for_proof" in text and "proof_budget" in text:
         sys.exit(0)
     sys.exit(f"migrate: expected one capped proof_budget block, found {replaced}")
-path.write_text(updated)
+# newline='' keeps LF: text mode would rewrite every line ending to CRLF.
+path.write_text(updated, encoding='utf-8', newline='')
 PY
   echo "migrated link-client proof-budget overlay to remaining-deadline on rsReticulum @ $(short_head)"
   exit 0

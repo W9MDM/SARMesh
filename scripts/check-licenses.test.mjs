@@ -1,3 +1,4 @@
+import path from 'node:path';
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
@@ -158,7 +159,7 @@ describe('enrichPnpmLicensesJson', () => {
   it('repairs Unknown entries from hoisted package.json manifests', () => {
     const files = new Map([
       [
-        '/repo/node_modules/@scope/pkg/package.json',
+        path.join('/repo', 'node_modules', '@scope', 'pkg', 'package.json'),
         JSON.stringify({ name: '@scope/pkg', license: 'MIT' }),
       ],
     ]);
@@ -192,11 +193,11 @@ describe('enrichPnpmLicensesJson', () => {
   it('resolves SEE LICENSE IN LICENSE via the LICENSE file', () => {
     const files = new Map([
       [
-        '/repo/node_modules/react-leaflet-cluster/package.json',
+        path.join('/repo', 'node_modules', 'react-leaflet-cluster', 'package.json'),
         JSON.stringify({ name: 'react-leaflet-cluster', license: 'SEE LICENSE IN LICENSE' }),
       ],
       [
-        '/repo/node_modules/react-leaflet-cluster/LICENSE',
+        path.join('/repo', 'node_modules', 'react-leaflet-cluster', 'LICENSE'),
         'MIT License\n\nCopyright (c) 2021\n\nPermission is hereby granted, free of charge',
       ],
     ]);
@@ -227,11 +228,11 @@ describe('enrichPnpmLicensesJson', () => {
   it('resolves SEE LICENSE IN COPYING via the declared COPYING file', () => {
     const files = new Map([
       [
-        '/repo/node_modules/copying-pkg/package.json',
+        path.join('/repo', 'node_modules', 'copying-pkg', 'package.json'),
         JSON.stringify({ name: 'copying-pkg', license: 'SEE LICENSE IN COPYING' }),
       ],
       [
-        '/repo/node_modules/copying-pkg/COPYING',
+        path.join('/repo', 'node_modules', 'copying-pkg', 'COPYING'),
         'MIT License\n\nCopyright (c) 2024\n\nPermission is hereby granted, free of charge',
       ],
     ]);
@@ -265,11 +266,11 @@ describe('enrichPnpmLicensesJson', () => {
   it('maps @jsr/meshtastic__* Unknown licenses via @meshtastic LICENSE files', () => {
     const files = new Map([
       [
-        '/repo/node_modules/@meshtastic/core/package.json',
+        path.join('/repo', 'node_modules', '@meshtastic', 'core', 'package.json'),
         JSON.stringify({ name: '@meshtastic/core' }),
       ],
       [
-        '/repo/node_modules/@meshtastic/core/LICENSE',
+        path.join('/repo', 'node_modules', '@meshtastic', 'core', 'LICENSE'),
         'GNU GENERAL PUBLIC LICENSE\nVersion 3, 29 June 2007\n',
       ],
     ]);
