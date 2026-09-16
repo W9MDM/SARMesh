@@ -206,7 +206,7 @@
     "debugSnapshotFailed": "Hata ayıklama anlık görüntüsü kopyalanamadı",
     "meshcoreOpenWireExperimentalTitle": "MeshCore Open wire (deneysel)",
     "meshcoreOpenWireCompatLabel": "MeshCore Open uyumluluğunu etkinleştir",
-    "meshcoreOpenWireCompatHint": "Etkinleştirildiğinde sarmesh, anahtarlı metin yanıtları (@[Name#key]), kompakt r: tepkileri ve g: Giphy GIF'leri gönderir. Bu, resmi companion wire biçimiyle uyuşmayabilir; alıcıların MeshCore Open uyumlu istemcilere ihtiyacı vardır.",
+    "meshcoreOpenWireCompatHint": "Etkinleştirildiğinde SARMesh, anahtarlı metin yanıtları (@[Name#key]), kompakt r: tepkileri ve g: Giphy GIF'leri gönderir. Bu, resmi companion wire biçimiyle uyuşmayabilir; alıcıların MeshCore Open uyumlu istemcilere ihtiyacı vardır.",
     "meshcorePathHashExperimentalTitle": "MeshCore yol karma boyutu (deneysel)",
     "meshcorePathHashModeLabel": "Varsayılan yol karma boyutu",
     "meshcorePathHashMode1Byte": "1 bayt (eski, 64 atlamaya kadar)",
@@ -733,7 +733,7 @@
       "tooLargeForWire": "Sesli not gönderilemeyecek kadar büyük. Daha kısa bir klip kaydedin.",
       "tooLargeForPropagation": "Sesli mesaj, yayılma düğümü sınırından daha büyük. Yalnızca alıcı çevrimiçi olduğunda teslim edilecektir. Çevrimdışı teslimat için saklamak üzere kısaltın.",
       "directOnlyBadge": "Yalnızca doğrudan — çevrimdışı depolama için çok büyük",
-      "recordTooltip": "LXMF sesli notu — bu doğrudan mesaj için kısa bir Opus klibi kaydeder. sarmesh, Ratspeak ve Sideband (FIELD_AUDIO) tarafından desteklenir. LXST Call ile aynı değildir.",
+      "recordTooltip": "LXMF sesli notu — bu doğrudan mesaj için kısa bir Opus klibi kaydeder. SARMesh, Ratspeak ve Sideband (FIELD_AUDIO) tarafından desteklenir. LXST Call ile aynı değildir.",
       "sendTooltip": "Kaydedilen LXMF sesli notunu gönderin",
       "startFailed": "Sesli not kaydı başlatılamadı. Tekrar deneyin.",
       "sendAriaWithElapsed": "Sesli not gönder ({{seconds}} saniye kaydedildi)",
@@ -958,7 +958,7 @@
         "accessDeniedLinuxHint": "Linux'ta kullanıcınızı arama grubuna ekleyin: sudo usermod -aG dialout $USER (sonra oturumu kapatıp tekrar açın)",
         "disconnectedHint": "USB kablosunun bağlı olduğundan ve cihazın açık olduğundan emin olun.",
         "timeoutHint": "Bağlantı noktası kısa süreliğine belirirse USB kablosunu yeniden bağlamayı deneyin.",
-        "portStillOpenHint": "USB seri bağlantı noktası temiz bir şekilde serbest bırakılmadı. sarmesh'ten tamamen çıkın ve yeniden açın veya USB kablosunu çıkarıp yeniden takın ve ardından tekrar bağlayın."
+        "portStillOpenHint": "USB seri bağlantı noktası temiz bir şekilde serbest bırakılmadı. SARMesh'ten tamamen çıkın ve yeniden açın veya USB kablosunu çıkarıp yeniden takın ve ardından tekrar bağlayın."
       },
       "http": {
         "timeoutMdnsWindows": "Windows'ta meshtastic.local, Bonjour'u (iTunes ile birlikte yüklenir) gerektirir. Bunun yerine cihazın IP adresini kullanın.",
@@ -986,7 +986,7 @@
         "connectionAttemptFailedLinuxHint": "Linux'ta eşleştirmeleri sistem Bluetooth ayarları veya 'bluetoothctl' aracı aracılığıyla yönetebilirsiniz.",
         "meshcoreHandshakeHint": "MeshCore cihazınızın Bluetooth Companion modunda olduğundan ve bir PIN kullanarak bilgisayarınızla eşleştirildiğinden emin olun. Bağlantı sorunları devam ederse mevcut tüm eşleştirmeleri kaldırın ve yeniden eşleştirin.",
         "meshcoreHandshakeWindowsExtra": "Windows'ta Bluetooth'u kapatıp açın ve bağlantı kesilmeleri devam ederse Aygıt Yöneticisi'nde adaptör sürücüsünü güncelleyin.",
-        "macWakeRecoveryHint": "Uykudan sonra sarmesh'ten çıkın (Cmd+Q), Sistem Ayarlarında Bluetooth'u kapatıp açın, birkaç saniye bekleyin ve ardından tekrar bağlanın. İki radyoyla MeshCore'u Meshtastic'ten önce bağlayın.",
+        "macWakeRecoveryHint": "Uykudan sonra SARMesh'ten çıkın (Cmd+Q), Sistem Ayarlarında Bluetooth'u kapatıp açın, birkaç saniye bekleyin ve ardından tekrar bağlanın. İki radyoyla MeshCore'u Meshtastic'ten önce bağlayın.",
         "dualProtocolContentionHint": "Diğer protokol hala Bluetooth üzerinden bağlanıyor olabilir. Birkaç saniye bekleyin ve tekrar deneyin veya bağlantı durumunu kontrol etmek için diğer protokol sekmesine geçin.",
         "scanBusy": "Başka bir Bluetooth taraması sürüyor. Birazdan tekrar deneyin.",
         "sameDeviceConflict": "Bu Bluetooth cihazı zaten {{owner}}'a bağlı.",
@@ -1016,9 +1016,9 @@
     "reticulumStackHint": "Yerel Reticulum/LXMF sidecarını başlatır (TCP ve Auto arayüzleri).",
     "reticulumStartStack": "Yığını başlat",
     "reticulumNetworkEmpty": "Henüz arayüz bildirilmedi.",
-    "reticulumSidecarMissing": "Reticulum sidecar derlenmedi. sarmesh deposunda `pnpm run reticulum:sidecar:build` çalıştırın (Rust gerekir).",
+    "reticulumSidecarMissing": "Reticulum sidecar derlenmedi. SARMesh deposunda `pnpm run reticulum:sidecar:build` çalıştırın (Rust gerekir).",
     "reticulumSidecarCargoMissing": "Rust toolchain (cargo) bulunamadı. https://rustup.rs adresinden yükleyin ve ardından `pnpm run reticulum:sidecar:build` çalıştırın.",
-    "reticulumSidecarPatchMissing": "Reticulum sidecar derlemesi rsReticulum packet-tap overlay gerektirir. sarmesh deposunda `pnpm run reticulum:sidecar:build` çalıştırın (yamaları otomatik uygular).",
+    "reticulumSidecarPatchMissing": "Reticulum sidecar derlemesi rsReticulum packet-tap overlay gerektirir. SARMesh deposunda `pnpm run reticulum:sidecar:build` çalıştırın (yamaları otomatik uygular).",
     "reticulumSidecarStartFailed": "Reticulum yığını başlatılamadı: {{message}}",
     "reticulumStopStack": "Yığını durdur",
     "reticulumAutostart": "Bağlantı açılırken yığını otomatik olarak başlat",
@@ -1256,7 +1256,7 @@
       "advancedAria": "Gelişmiş arayüz anahtar - değer seçenekleri",
       "advancedKeyReserved": "\"{{key}}\" anahtarı bilinen bir alandır ve yok sayılmıştır — yukarıdaki formu kullanın.",
       "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
-      "decommissionedHubEnableBlocked": "Bu hub kullanım dışı bırakıldı ve açık kalamaz — sarmesh her yığın başlangıcında kapatır. Canlı uç noktalar için «Varsayılan omurga bağlantıları ekle» veya omurga dizinini kullanın.",
+      "decommissionedHubEnableBlocked": "Bu hub kullanım dışı bırakıldı ve açık kalamaz — SARMesh her yığın başlangıcında kapatır. Canlı uç noktalar için «Varsayılan omurga bağlantıları ekle» veya omurga dizinini kullanın.",
       "decommissionedBadge": "Kullanımdan kaldırılmış",
       "defaultHubsPickerTitle": "Varsayılan omurga bağlantıları ekle",
       "defaultHubsPickerConfirm": "{{count}} hub ekleyin",
@@ -1301,7 +1301,7 @@
       "rmapFullModeHint": "RMAP yayınlı tam mod, ignore_config_warnings aracılığıyla Tam tutar. LXMF teslimat duyuruları, bu radyoyu yığın duyuru aralığından çıkaracaktır (varsayılan 1 saat).",
       "effectiveModeBadge": "Yürürlük Tarihi: {{mode}}",
       "effectiveModeAria": "Etkin çalışma zamanı modu {{mode}}. Yapılandırılmış mod, Reticulum'un çalıştığından farklıdır.",
-      "effectiveModeTooltip": "Reticulum, bu keşfedilebilir arayüzü Erişim Noktasına (veya izin verilen başka bir moda) yeniden yazdı, çünkü keşfedilebilir, ignore_config_warnings ayarlanmadığı sürece Ağ Geçidi, Dahili veya Erişim Noktası gerektirir. Tam (veya yapılandırılmış modunuzun) etkili olması için devre dışı bırakılan sarmesh damgalarından sonra yığını yeniden başlatın.",
+      "effectiveModeTooltip": "Reticulum, bu keşfedilebilir arayüzü Erişim Noktasına (veya izin verilen başka bir moda) yeniden yazdı, çünkü keşfedilebilir, ignore_config_warnings ayarlanmadığı sürece Ağ Geçidi, Dahili veya Erişim Noktası gerektirir. Tam (veya yapılandırılmış modunuzun) etkili olması için devre dışı bırakılan SARMesh damgalarından sonra yığını yeniden başlatın.",
       "flowControlBleHint": "Bluetooth'ta, radyo genellikle CMD_READY göndermez. SARMesh hala TX'i hızlandırır (READY için kısa bir süre bekler, sonra devam eder), böylece akış kontrolü kuyruğu dondurmadan aşırı yükü azaltır.",
       "advancedFields": "Gelişmiş ayarlar",
       "field": {
@@ -1368,12 +1368,12 @@
       "connectingRow": "{{name}}: Bluetooth üzerinden bağlanılıyor",
       "offlineHintWifi": "RNode'un LAN'ınızda olduğunu, açık olduğunu ve yapılandırılmış IP'de erişilebilir olduğunu kontrol edin (varsayılan TCP bağlantı noktası 7633, 4242 değil). DHCP yeni bir adres atadıysa aşağıdaki ana bilgisayarı güncelleyin veya Reticulum Admin'de Wi-Fi'yi yeniden → sağlayın.",
       "tcpUnreachable": "{{name}}: TCP göbeğine ulaşılamıyor ({{host}}:{{port}})",
-      "tcpUnreachableHint": "Uzak Reticulum örneği çevrimdışı olabilir veya bağlantıları engelleyebilir. Bu arayüzü devre dışı bırakın veya ana bilgisayarı ve bağlantı noktasını doğrulayın. Sık sarmesh veya yığın yeniden başlatmaları, Reticulum 1.4.0+ hub'larının IP'nizi 12 saat boyunca engellemesine neden olabilir — yeniden başlatmak yerine bekleyin.",
+      "tcpUnreachableHint": "Uzak Reticulum örneği çevrimdışı olabilir veya bağlantıları engelleyebilir. Bu arayüzü devre dışı bırakın veya ana bilgisayarı ve bağlantı noktasını doğrulayın. Sık SARMesh veya yığın yeniden başlatmaları, Reticulum 1.4.0+ hub'larının IP'nizi 12 saat boyunca engellemesine neden olabilir — yeniden başlatmak yerine bekleyin.",
       "connectingHintBle": "BLE RNode bağlantıları, yığın başladıktan sonra (İşletim Sistemi geçiş anahtarı penceresi) 60 saniye kadar sürebilir. İstenirse mevcut RNode PIN'ini girin - asla 123456 değil. Bu normaldir, bir hata değildir. Başarılı bir bağlantı sağlanıncaya kadar cihaz Sistem Ayarlarında görünmeyebilir.",
       "offlineHintBle": "Bu hatayı temizlemek için bu arayüzü kaldırmanız ve geri eklemeniz gerekebilir (Cihaz seç) böylece kaydedilen Bluetooth kimliği yenilenir, ardından yığını yeniden başlatın. İşletim sisteminiz 6 haneli bir Bluetooth PIN isteyebilir (macOS, Windows veya Linux). RNode her eşleşmede yeni bir kod üretir — asla 123456 kullanmayın (bu Meshtastic varsayılanıdır, RNode değil). Bu uygulama bağlanmadan önce RNode'un Sistem Ayarları → Bluetooth'ta görünmesi gerekmez; yığın eşleştiğinde işletim sistemi iletişim kutusu görünür. Ekransız radyolar: USB bağlayın → Reticulum Admin → Bluetooth → Eşleştirmeyi başlat → Yönetici panelinde gösterilen PIN'i (radyo ekranında değil) işletim sistemi iletişim kutusuna girin. Ekranlı radyolar: Heltec cihazlarda düğmeyi ~7 sn basılı tutun (süre değişir; birçok kartta ~10 sn Wi‑Fi AP açar), ekrandaki PIN'i okuyun ve işletim sistemi iletişim kutusuna girin. Yeniden denemeden önce işletim sistemi Bluetooth ayarlarından başarısız bağları temizleyin.",
       "offlineHintBleBondStale": "macOS hâlâ bu RNode'u Eşleştirilmiş olarak gösteriyor, ancak Bluetooth anahtarları artık eşleşmiyor (eş eşleştirme bilgilerini kaldırdı). Sistem Ayarları → Bluetooth'ta cihazı unutun, RNode'u eşleştirme moduna alın (Yönetici → Bluetooth → Eşleştirmeyi başlat, veya düğmeyi ~7 sn basılı tutun), ardından bu arayüzü kaldırıp yeniden ekleyin (Cihaz seç), yığını yeniden başlatın ve istendiğinde yeni 6 haneli PIN'i girin.",
       "tcpFastFlap": "{{name}}: Hub, sık sık yığın yeniden başlatıldıktan sonra muhtemelen IP'nizi engelledi ({{host}}:{{port}})",
-      "tcpFastFlapHint": "Reticulum 1.4.0+ genel hub'lar, 12 saat içinde beş kısa TCP oturumundan sonra bir IP'yi engeller. Hızlı sarmesh veya yığın yeniden başlatmaları sayılır. Bu hub'ı devre dışı bırakın ve 12 saate kadar bekleyin — yeniden başlatmak bloğu uzatır."
+      "tcpFastFlapHint": "Reticulum 1.4.0+ genel hub'lar, 12 saat içinde beş kısa TCP oturumundan sonra bir IP'yi engeller. Hızlı SARMesh veya yığın yeniden başlatmaları sayılır. Bu hub'ı devre dışı bırakın ve 12 saate kadar bekleyin — yeniden başlatmak bloğu uzatır."
     },
     "autoConnectingTo": "{{deviceName}}'a otomatik bağlanılıyor…",
     "autoReconnectInProgress": "Otomatik yeniden bağlanma işlemi devam ediyor…",
@@ -1845,7 +1845,7 @@
         "rmap_transport_disabled": "Bulunabilir arayüzler yapılandırılmış ancak taşıma modu kapalı.",
         "rmap_i2p_not_connectable": "\"{{name}}\" I2P arayüzü keşfedilebilir ancak bağlanılabilir evet değildir.",
         "shared_instance_client": "Share instance attached as a client of another app — local TCP hubs in this config are not started.",
-        "rmap_mode_autocorrect": "\"{{name}}\" arayüzü, AP/Ağ Geçidi olmayan bir modda bulunabilir — Reticulum, ignore_config_warnings ayarlanmadığı sürece bunu Erişim Noktası olarak çalıştıracaktır. Arayüzü düzenleyin veya yığını yeniden başlatın, böylece mesh istemcisi devre dışı bırakma işlemini damgalayabilir (sarmesh)."
+        "rmap_mode_autocorrect": "\"{{name}}\" arayüzü, AP/Ağ Geçidi olmayan bir modda bulunabilir — Reticulum, ignore_config_warnings ayarlanmadığı sürece bunu Erişim Noktası olarak çalıştıracaktır. Arayüzü düzenleyin veya yığını yeniden başlatın, böylece mesh istemcisi devre dışı bırakma işlemini damgalayabilir (SARMesh)."
       },
       "runtime": {
         "rnsNotReady": "RNS yığını hazır değil",
@@ -1878,7 +1878,7 @@
         "announceBusPressureTipBoundaryHubs": "Etkin sınır / omurga göbekleri: {{hubs}}.",
         "announceBusPressureTipTxSaturated": "TX kuyruğu şu tarihte düşer: {{names}} — bu arayüz doymuş olabilir.",
         "tooManyDefaultBackbones": "{{count}} varsayılan omurganız etkin. Ekstraları devre dışı bırakmayı ve fazlalık için yaklaşık 2 tane tutmayı düşünün.",
-        "decommissionedHubEnabled": "Kullanım dışı hub «{{name}}» hâlâ açık — sarmesh her yığın başlangıcında kapatır. Canlı uç noktalar için «Varsayılan omurga bağlantıları ekle» veya omurga dizinini kullanın.",
+        "decommissionedHubEnabled": "Kullanım dışı hub «{{name}}» hâlâ açık — SARMesh her yığın başlangıcında kapatır. Canlı uç noktalar için «Varsayılan omurga bağlantıları ekle» veya omurga dizinini kullanın.",
         "txQueueDropsBle": "Arabirim \"{{name}}\" düştü {{count}} giden paketler (TX kuyruğu dolu) — BLE RNode bağlantısı takıldı; USB'yi tercih edin veya yeniden eşleştirin",
         "txQueueDropsBleBondStale": "Arayüz \"{{name}}\" düştü {{count}} giden paketler (TX kuyruğu dolu) — BLE bond bayat; İşletim sistemi Bluetooth'unu unutun ve yeniden eşleştirin",
         "txQueueDropsNeutral": "Arabirim \"{{name}}\" düştü {{count}} giden paketler (TX kuyruğu dolu) — arabirimin bağlantısını kontrol edin",
@@ -2145,11 +2145,11 @@
       },
       "database-chmod": {
         "label": "Veritabanı chmod (ölümcül olmayan)",
-        "recommendation": "Veritabanı dosyası izin ayarlaması başarısız oldu (Windows'ta genellikle zararsız). Başka bir yerde gerçek veritabanı hataları görürseniz, sarmesh userData dizini için antivirüs ve klasör izinlerini kontrol edin."
+        "recommendation": "Veritabanı dosyası izin ayarlaması başarısız oldu (Windows'ta genellikle zararsız). Başka bir yerde gerçek veritabanı hataları görürseniz, SARMesh userData dizini için antivirüs ve klasör izinlerini kontrol edin."
       },
       "database-writable": {
         "label": "Veritabanı Yazılabilir Değil",
-        "recommendation": "Uygulama, veritabanı klasörünü yazamıyor. sarmesh userData dizinindeki izinleri düzeltin (bkz. sorun giderme: Veritabanı dizini yazılabilir değil)."
+        "recommendation": "Uygulama, veritabanı klasörünü yazamıyor. SARMesh userData dizinindeki izinleri düzeltin (bkz. sorun giderme: Veritabanı dizini yazılabilir değil)."
       },
       "tak-server": {
         "label": "TAK Sunucu Sorunları",
@@ -2652,7 +2652,7 @@
       "remoteHardwareEnabledDesc": "Uzak düğümlerin bu cihazdaki GPIO pinlerini okumasına ve yazmasına izin verir.",
       "remoteHardwareAllowUndefinedPins": "Tanımsız Pin Erişimine İzin Ver",
       "remoteHardwareAllowUndefinedPinsDesc": "Kullanılabilir pin yapılandırmasında listelenmeyen pinlerin okunmasına/yazılmasına izin verir.",
-      "mqttProxyGatewayHint": "Proxy etkinleştirildiğinde, sarmesh köprüleri MqttClientProxyMessage aracılığıyla trafiğe aracılık eder. MQTT→RF rölesi için Radyo sekmesinde kanal başına indirme bağlantısını etkinleştirin.",
+      "mqttProxyGatewayHint": "Proxy etkinleştirildiğinde, SARMesh köprüleri MqttClientProxyMessage aracılığıyla trafiğe aracılık eder. MQTT→RF rölesi için Radyo sekmesinde kanal başına indirme bağlantısını etkinleştirin.",
       "mapReportPublishInterval": "Harita rapor aralığı (saniye)",
       "mapReportPublishIntervalDesc": "0, bellenim varsayılanını kullanır. Harita raporlaması etkinleştirildiğinde cihazın harita raporlarını yayınlama sıklığı.",
       "mapReportPositionPrecision": "Harita raporu konum hassasiyeti",
@@ -3336,7 +3336,7 @@
       "missingIdentity": "Bu düğümün henüz hatırlanan bir kimliği yok. Bir Nomad duyurusunu bekleyin, sonra tekrar deneyin.",
       "transportUnavailable": "Reticulum taşıması kullanılamıyor. Yığını yeniden başlatın ve tekrar deneyin.",
       "sidecarNotRunning": "Reticulum sidecar çalışmıyor. Bağlantı bölümünden yığını başlatın, sonra tekrar deneyin.",
-      "responseTooLarge": "The node returned more data than sarmesh will accept for this request.",
+      "responseTooLarge": "The node returned more data than SARMesh will accept for this request.",
       "nomadBusy": "Başka bir Nomad sayfa veya dosya isteği hâlâ devam ediyor. Biraz sonra tekrar deneyin.",
       "nomadNotServing": "Bu sizin Nomad düğümünüz, ancak Sayfalarım barındırma çalışmıyor. Sayfalarım'ı açın, bir klasör seçin ve yerel olarak önizlemeye sunmaya başlayın.",
       "networkNotReady": "Bir hub veya radyo arayüzünün çevrimiçi olması bekleniyor. Bağlantı bir arayüz gösterdiğinde tekrar deneyin.",
@@ -4712,7 +4712,7 @@
     "localHostStats": "{{count}} sıraya alındı ​​· {{bytes}} bayt",
     "localHostName": "Ana bilgisayar yayılma düğümü",
     "syncPeerCostExceedsMax": "Bu yayılım düğümünün eşleme maliyeti, maksimum eşleme maliyetinizin üzerinde; Ağ → Gelişmiş PN barındırma bölümünde maksimumu yükseltin veya başka bir düğüm seçin.",
-    "offerUnsupported": "Bu hedef LXMF /offer senkronizasyonunu desteklemiyor — sarmesh bunu bir yayılım düğümü olarak kullanamaz.",
+    "offerUnsupported": "Bu hedef LXMF /offer senkronizasyonunu desteklemiyor — SARMesh bunu bir yayılım düğümü olarak kullanamaz.",
     "offerProbeTimeout": "Desteği kontrol ederken/offer ederken zaman aşımına uğradı; düğüme ulaşılamıyor olabilir. Bir yol mevcut olduğunda tekrar deneyin.",
     "offerProbeFailed": "Bu yayılma düğümü için destek doğrulanamadı/sunulamadı; birazdan tekrar deneyin.",
     "enableLocalHostConfirmTitle": "Yerel yayılma düğümü barındırma etkinleştirilsin mi?",
@@ -4959,7 +4959,7 @@
     "legendNotSavedTooltip": "Boş daire — bu oda için saklanan parola yok",
     "legendSavedTooltip": "Gökyüzü yarım daire — parola saklanır; bir oturumu açmak için oturum açın",
     "legendLoggedInTooltip": "Yeşil nokta — aktif istemci oturumu (sunucu çevrimdışıysa odayı terk edin)",
-    "historyLocalHint": "Girişte sarmesh, bu cihazda henüz yerel filigran yokken oda sunucusu halka belleğinde kalan son gönderileri ister. Bağlıyken abone kalmak için Otomatik senkronizasyonu etkinleştirin.",
+    "historyLocalHint": "Girişte SARMesh, bu cihazda henüz yerel filigran yokken oda sunucusu halka belleğinde kalan son gönderileri ister. Bağlıyken abone kalmak için Otomatik senkronizasyonu etkinleştirin.",
     "loginAllSavedDisabledNoSavedPasswords": "Tüm oturum açma bilgilerini kullanmak için önce bir oda parolasını kaydedin",
     "membersHeadingWithCount": "Üyeler ({{count}})",
     "collapseRoomList": "Oda listesini daralt",
@@ -5623,7 +5623,7 @@
       "enabled": "Dosya alma etkinleştirildi.",
       "enableFailed": "Dosya alımı etkinleştirilemedi: {{error}}",
       "saveDirRequired": "Alımı etkinleştirmek için bir kaydetme klasörü seçin.",
-      "shareDestWarning": "Etkinleştirirseniz sarmesh, dosya gönderimini otomatik olarak doldurabilmeleri için rncp alma hedefinizi bu eşe gönderecektir.",
+      "shareDestWarning": "Etkinleştirirseniz SARMesh, dosya gönderimini otomatik olarak doldurabilmeleri için rncp alma hedefinizi bu eşe gönderecektir.",
       "lxmfBody": "Lütfen rncp dosya alımını etkinleştirin ve rncp alma hedefi karmanızla yanıtlayın.",
       "lxmfShareBody": "Dosya alma etkinleştirildi. Benim rncp alma hedefi karması:",
       "identityUnknown": "Gelen Sor açık ancak bu eşin kimlik karması henüz bilinmediğinden Her zaman izin ver'e eklenmedi. Yine de her dosyadan önce size sorulacaktır; Bir yol veya duyuru geldiğinde Her zaman izin ver'i tekrar deneyin."
@@ -5727,7 +5727,7 @@
     "capabilityHeardShort": "LXST",
     "capabilityUnknownShort": "?",
     "help": {
-      "interop": "LXST sesi, LXST telefonunu çalıştıran bir eşe ihtiyaç duyar (Sideband, Ratspeak veya sarmesh). Sesli not klibi değil. Python LXST referans; rsLXST deneyseldir."
+      "interop": "LXST sesi, LXST telefonunu çalıştıran bir eşe ihtiyaç duyar (Sideband, Ratspeak veya SARMesh). Sesli not klibi değil. Python LXST referans; rsLXST deneyseldir."
     },
     "toast": {
       "busy": "Hat meşgul.",
@@ -5876,7 +5876,7 @@
   },
   "longSession": {
     "title": "Yeniden başlatma önerilir",
-    "body": "sarmesh dört gündür Bluetooth radyo bağlı olarak çalışıyor. Uzun Noble BLE oturumlarında çökme riskini azaltmak için uygulamayı yeniden başlat.",
+    "body": "SARMesh dört gündür Bluetooth radyo bağlı olarak çalışıyor. Uzun Noble BLE oturumlarında çökme riskini azaltmak için uygulamayı yeniden başlat.",
     "restart": "Yeniden Başlat",
     "dismiss": "Yok say"
   },

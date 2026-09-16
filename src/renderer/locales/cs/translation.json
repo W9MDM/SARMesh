@@ -206,7 +206,7 @@
     "debugSnapshotFailed": "Nelze zkopírovat snímek ladění",
     "meshcoreOpenWireExperimentalTitle": "MeshCore Open wire (experimentální)",
     "meshcoreOpenWireCompatLabel": "Povolit kompatibilitu MeshCore Open",
-    "meshcoreOpenWireCompatHint": "Je-li povoleno, sarmesh odešle textové odpovědi s klíčem (@[Name#key]), kompaktní reakce r: a Giphy GIFy g:. To nemusí odpovídat oficiálnímu formátu wire companiona; příjemci potřebují klienty kompatibilní s MeshCore Open.",
+    "meshcoreOpenWireCompatHint": "Je-li povoleno, SARMesh odešle textové odpovědi s klíčem (@[Name#key]), kompaktní reakce r: a Giphy GIFy g:. To nemusí odpovídat oficiálnímu formátu wire companiona; příjemci potřebují klienty kompatibilní s MeshCore Open.",
     "meshcorePathHashExperimentalTitle": "Velikost hash cesty MeshCore (experimentální)",
     "meshcorePathHashModeLabel": "Výchozí velikost cesty hash",
     "meshcorePathHashMode1Byte": "1 bajt (dědictví, až 64 skoků)",
@@ -664,7 +664,7 @@
       "requestEnable": "Požádat o povolení",
       "requestEnableAria": "Požádejte tohoto kolegu, aby povolil příjem souboru",
       "destinationLabel": "Cíl příjmu rncp partnera",
-      "destinationHelp": "Ne jejich hash Chat/LXMF. Použít povolení požadavku – sarmesh to po přijetí automaticky sdílejí. Nebo vložte z jejich Remote → My rncp cílového příjmu.",
+      "destinationHelp": "Ne jejich hash Chat/LXMF. Použít povolení požadavku – SARMesh to po přijetí automaticky sdílejí. Nebo vložte z jejich Remote → My rncp cílového příjmu.",
       "activeTransfersBadgeAria_one": "{{count}} aktivní přenos souborů s tímto kolegou",
       "activeTransfersBadgeAria_other": "{{count}} aktivní přenosy souborů s tímto kolegou",
       "transfersTitle": "Převody",
@@ -749,7 +749,7 @@
       "tooLargeForWire": "Hlasová poznámka je příliš velká na odeslání. Nahrajte kratší klip.",
       "tooLargeForPropagation": "Hlasová zpráva je větší než limit propagačního uzlu. Doručuje se pouze tehdy, když je příjemce online. Zkraťte jej a uložte pro offline doručení.",
       "directOnlyBadge": "Pouze přímé — příliš velké pro offline úložiště",
-      "recordTooltip": "Hlasová poznámka LXMF — nahrává krátký klip Opus pro tuto přímou zprávu. Podporováno sarmesh, Ratspeak a Sideband (FIELD_AUDIO). Není to stejné jako LXST Call.",
+      "recordTooltip": "Hlasová poznámka LXMF — nahrává krátký klip Opus pro tuto přímou zprávu. Podporováno SARMesh, Ratspeak a Sideband (FIELD_AUDIO). Není to stejné jako LXST Call.",
       "sendTooltip": "Odeslat nahranou hlasovou poznámku LXMF",
       "startFailed": "Nelze spustit nahrávání hlasové poznámky. Zkuste to znovu.",
       "sendAriaWithElapsed": "Odeslat hlasovou poznámku ({{seconds}} zaznamenaných sekund)",
@@ -977,7 +977,7 @@
         "accessDeniedLinuxHint": "V systému Linux přidejte svého uživatele do skupiny dialout: sudo usermod -aG dialout $USER (pak se odhlaste a znovu přihlaste)",
         "disconnectedHint": "Ujistěte se, že je připojen kabel USB a zařízení je zapnuté.",
         "timeoutHint": "Pokud se port krátce objeví, zkuste znovu připojit kabel USB.",
-        "portStillOpenHint": "The USB serial port did not release cleanly. Quit sarmesh completely and reopen it, or unplug and replug the USB cable, then connect again."
+        "portStillOpenHint": "The USB serial port did not release cleanly. Quit SARMesh completely and reopen it, or unplug and replug the USB cable, then connect again."
       },
       "http": {
         "timeoutMdnsWindows": "Ve Windows vyžaduje meshtastic.local Bonjour (nainstalovaný s iTunes). Místo toho použijte IP adresu zařízení.",
@@ -1005,7 +1005,7 @@
         "connectionAttemptFailedLinuxHint": "V systému Linux můžete spravovat párování pomocí systémového nastavení Bluetooth nebo nástroje „bluetoothctl“.",
         "meshcoreHandshakeHint": "Ujistěte se, že je vaše zařízení MeshCore v režimu Bluetooth Companion a je spárováno s počítačem pomocí kódu PIN. Pokud problémy s připojením přetrvávají, odstraňte veškeré stávající párování a znovu spárujte.",
         "meshcoreHandshakeWindowsExtra": "V systému Windows vypněte/zapněte Bluetooth a aktualizujte ovladač adaptéru ve Správci zařízení, pokud odpojení přetrvávají.",
-        "macWakeRecoveryHint": "After sleep, quit sarmesh (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
+        "macWakeRecoveryHint": "After sleep, quit SARMesh (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
         "dualProtocolContentionHint": "Druhý protokol se může stále připojovat přes Bluetooth. Počkejte několik sekund a zkuste to znovu, nebo přepněte na kartu druhého protokolu a zkontrolujte jeho stav připojení.",
         "scanBusy": "Probíhá další skenování Bluetooth. Zkuste to znovu za chvíli.",
         "sameDeviceConflict": "Toto zařízení Bluetooth je již připojeno k {{owner}}.",
@@ -1035,9 +1035,9 @@
     "reticulumStackHint": "Spustí lokální sidecar Reticulum/LXMF (rozhraní TCP a Auto).",
     "reticulumStartStack": "Spustit zásobník",
     "reticulumNetworkEmpty": "Zatím nebyla nahlášena žádná rozhraní.",
-    "reticulumSidecarMissing": "Sidecar Reticulum není sestaven. V repozitáři sarmesh spusťte `pnpm run reticulum:sidecar:build` (vyžaduje Rust).",
+    "reticulumSidecarMissing": "Sidecar Reticulum není sestaven. V repozitáři SARMesh spusťte `pnpm run reticulum:sidecar:build` (vyžaduje Rust).",
     "reticulumSidecarCargoMissing": "Nástrojová sada Rust (cargo) nebyla nalezena. Nainstalujte z https://rustup.rs a spusťte `pnpm run reticulum:sidecar:build`.",
-    "reticulumSidecarPatchMissing": "Sestavení sidecaru Reticulum vyžaduje overlay rsReticulum packet-tap. V repozitáři sarmesh spusťte `pnpm run reticulum:sidecar:build` (záplaty se aplikují automaticky).",
+    "reticulumSidecarPatchMissing": "Sestavení sidecaru Reticulum vyžaduje overlay rsReticulum packet-tap. V repozitáři SARMesh spusťte `pnpm run reticulum:sidecar:build` (záplaty se aplikují automaticky).",
     "reticulumSidecarStartFailed": "Nelze spustit zásobník Reticulum: {{message}}",
     "reticulumStopStack": "Zastavit zásobník",
     "reticulumAutostart": "Automatické spuštění zásobníku při otevření připojení",
@@ -1275,7 +1275,7 @@
       "advancedAria": "Pokročilé možnosti klíč-hodnota rozhraní",
       "advancedKeyReserved": "Klíč „{{key}}“ je známé pole a byl ignorován — použijte výše uvedený formulář.",
       "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
-      "decommissionedHubEnableBlocked": "Tento hub je vyřazen a nemůže zůstat zapnutý — sarmesh ho při každém startu zásobníku vypne. Použijte «Přidat výchozí páteř» nebo adresář páteří pro živé koncové body.",
+      "decommissionedHubEnableBlocked": "Tento hub je vyřazen a nemůže zůstat zapnutý — SARMesh ho při každém startu zásobníku vypne. Použijte «Přidat výchozí páteř» nebo adresář páteří pro živé koncové body.",
       "decommissionedBadge": "vyřazeno z provozu",
       "defaultHubsPickerTitle": "Přidat výchozí páteř",
       "defaultHubsPickerConfirm": "Přidat {{count}} rozbočovače",
@@ -1320,7 +1320,7 @@
       "rmapFullModeHint": "Plný režim s publikováním RMAP udržuje Plný prostřednictvím ignore_config_warnings. Oznámení o doručení LXMF opustí toto rádio v intervalu oznámení zásobníku (výchozí 1 hodina).",
       "effectiveModeBadge": "Účinnost: {{mode}}",
       "effectiveModeAria": "Efektivní režim běhu {{mode}}. Konfigurovaný režim se liší od toho, co běží Reticulum.",
-      "effectiveModeTooltip": "Reticulum přepsalo toto zjistitelné rozhraní na přístupový bod (nebo jiný povolený režim), protože zjistitelný vyžaduje bránu, interní nebo přístupový bod, pokud není nastaveno ignore_config_warnings. Restartujte zásobník po razítkách mesh-klienta, které se odhlásí, takže se projeví Full (nebo váš nakonfigurovaný režim) (sarmesh).",
+      "effectiveModeTooltip": "Reticulum přepsalo toto zjistitelné rozhraní na přístupový bod (nebo jiný povolený režim), protože zjistitelný vyžaduje bránu, interní nebo přístupový bod, pokud není nastaveno ignore_config_warnings. Restartujte zásobník po razítkách mesh-klienta, které se odhlásí, takže se projeví Full (nebo váš nakonfigurovaný režim) (SARMesh).",
       "flowControlBleHint": "Na Bluetooth rádio často nikdy neodesílá cmd_READY. SARMesh stále přechází TX (krátce čeká na PŘIPRAVENOST, pak pokračuje), takže kontrola průtoku snižuje přetížení bez zmrazení fronty.",
       "advancedFields": "Pokročilá nastavení",
       "field": {
@@ -1387,12 +1387,12 @@
       "connectingRow": "{{name}}: připojení přes Bluetooth",
       "offlineHintWifi": "Zkontrolujte, zda je RNode v síti LAN, zapnutý a dosažitelný na nakonfigurované IP (výchozí port TCP 7633, nikoli 4242). Aktualizuj hostitele níže, pokud mu služba DHCP přidělila novou adresu nebo znovu poskytl Wi-Fi v → administraci Reticulum.",
       "tcpUnreachable": "{{name}}: Nedosažitelné centrum TCP ({{host}}:{{port}})",
-      "tcpUnreachableHint": "Vzdálená instance Reticulum může být offline nebo blokovat připojení. Zakažte toto rozhraní nebo ověřte hostitele a port. Časté restarty sarmesh nebo zásobníku mohou způsobit, že uzly Reticulum 1.4.0+ zablokují vaši IP na 12 hodin — raději čekejte, než znovu restartovat.",
+      "tcpUnreachableHint": "Vzdálená instance Reticulum může být offline nebo blokovat připojení. Zakažte toto rozhraní nebo ověřte hostitele a port. Časté restarty SARMesh nebo zásobníku mohou způsobit, že uzly Reticulum 1.4.0+ zablokují vaši IP na 12 hodin — raději čekejte, než znovu restartovat.",
       "connectingHintBle": "Spojení BLE RNode mohou trvat až 60 sekund po spuštění zásobníku (okno passkey operačního systému). Pokud se zobrazí výzva, zadejte aktuální PIN kód RNode — nikdy 123456. To je normální, nejedná se o chybu. Přístroj se může objevit v nastavení systému až po úspěšném spojení.",
       "offlineHintBle": "Chcete-li tuto chybu odstranit, možná budete muset toto rozhraní odebrat a přidat jej zpět (Vybrat zařízení), aby se obnovilo uložené ID Bluetooth a poté restartujte zásobník. Operační systém může vyžadovat 6místný kód PIN Bluetooth (macOS, Windows nebo Linux). RNode generuje nový kód při každém párování — nikdy nepoužívejte 123456 (to je výchozí Meshtastic, ne RNode). Před připojením této aplikace se RNode nemusí objevit v systémovém nastavení → Bluetooth; dialogové okno OS se zobrazí, když se zásobník spáruje. Bezhlavá rádia: připojte USB → Reticulum Admin → Bluetooth → Spustit párování → zadejte PIN zobrazený na panelu Admin (ne na displeji rádia) do dialogu OS. Rádia s displejem: podržte tlačítko ~7 s na zařízeních Heltec (časování se liší; ~10 s na mnoha deskách místo toho umožňuje Wi-Fi AP), přečtěte si PIN na obrazovce a poté jej zadejte do dialogu OS. Před opakováním pokusu vymažte neúspěšné vazby v nastavení Bluetooth operačního systému.",
       "offlineHintBleBondStale": "macOS stále zobrazuje tento RNode jako spárovaný, ale klíče Bluetooth se již neshodují (peer odstranil informace o párování). Zapomeňte zařízení v Nastavení systému → Bluetooth, přepněte RNode do režimu párování (Admin → Bluetooth → Spustit párování nebo držte tlačítko ~7 s), poté odeberte a znovu přidejte toto rozhraní (Vybrat zařízení), restartujte zásobník a zadejte nový 6místný PIN, když budete vyzváni.",
       "tcpFastFlap": "{{name}}: hub pravděpodobně zablokoval tvoji IP adresu po častém restartování zásobníku ({{host}}:{{port}})",
-      "tcpFastFlapHint": "Veřejné rozbočovače Reticulum 1.4.0+ blokují IP po pěti krátkých relacích TCP během 12 hodin. Rychlé restarty sarmesh nebo zásobníku se počítají. Zakažte tento rozbočovač a počkejte až 12 hodin — opětovné spuštění prodlouží blok."
+      "tcpFastFlapHint": "Veřejné rozbočovače Reticulum 1.4.0+ blokují IP po pěti krátkých relacích TCP během 12 hodin. Rychlé restarty SARMesh nebo zásobníku se počítají. Zakažte tento rozbočovač a počkejte až 12 hodin — opětovné spuštění prodlouží blok."
     },
     "autoConnectingTo": "Automatické připojení k {{deviceName}}…",
     "autoReconnectInProgress": "Probíhá automatické opětovné připojení…",
@@ -1866,7 +1866,7 @@
         "rmap_transport_disabled": "Detekovatelná rozhraní jsou nakonfigurována, ale režim přenosu je vypnutý.",
         "rmap_i2p_not_connectable": "Rozhraní I2P „{{name}}“ je zjistitelné, ale připojitelné není ano.",
         "shared_instance_client": "Share instance attached as a client of another app — local TCP hubs in this config are not started.",
-        "rmap_mode_autocorrect": "Rozhraní „{{name}}“ je zjistitelné s režimem non-AP/Gateway — Reticulum jej spustí jako přístupový bod, pokud není nastaveno ignore_config_warnings. Upravte rozhraní nebo restartujte zásobník, aby sarmesh mohl orazítkovat odhlášení."
+        "rmap_mode_autocorrect": "Rozhraní „{{name}}“ je zjistitelné s režimem non-AP/Gateway — Reticulum jej spustí jako přístupový bod, pokud není nastaveno ignore_config_warnings. Upravte rozhraní nebo restartujte zásobník, aby SARMesh mohl orazítkovat odhlášení."
       },
       "runtime": {
         "rnsNotReady": "Zásobník RNS není připraven",
@@ -1899,7 +1899,7 @@
         "announceBusPressureTipBoundaryHubs": "Povolené hraniční / páteřní rozbočovače: {{hubs}}.",
         "announceBusPressureTipTxSaturated": "Fronta TX klesá na: {{names}} — toto rozhraní může být nasycené.",
         "tooManyDefaultBackbones": "Máte zapnutou výchozí páteř {{count}}. Zvažte vypnutí doplňků a ponechání asi 2 pro nadbytečnost.",
-        "decommissionedHubEnabled": "Vyřazený hub „{{name}}“ je stále zapnutý — sarmesh ho při každém startu zásobníku vypne. Použijte «Přidat výchozí páteř» nebo adresář páteří pro živé koncové body.",
+        "decommissionedHubEnabled": "Vyřazený hub „{{name}}“ je stále zapnutý — SARMesh ho při každém startu zásobníku vypne. Použijte «Přidat výchozí páteř» nebo adresář páteří pro živé koncové body.",
         "txQueueDropsBle": "Rozhraní „{{name}}“ upustilo {{count}} odchozí pakety (fronta TX je plná) — ble RNode link uvízl; raději USB nebo znovu spárovat",
         "txQueueDropsBleBondStale": "Rozhraní „{{name}}“ upustilo {{count}} odchozí pakety (fronta TX je plná) — zastaralá vazba ble; Zapomeňte v OS Bluetooth a znovu spárujte",
         "txQueueDropsNeutral": "Rozhraní „{{name}}“ upustilo {{count}} odchozí pakety (fronta TX je plná) — zkontrolujte odkaz rozhraní",
@@ -2171,11 +2171,11 @@
         "label": "Selhání databáze"
       },
       "database-chmod": {
-        "recommendation": "Vyladění oprávnění k souboru databáze se nezdařilo (v systému Windows často neškodné). Pokud někde jinde vidíte skutečné chyby DB, zkontrolujte antivirus a oprávnění složky pro adresář sarmesh userData.",
+        "recommendation": "Vyladění oprávnění k souboru databáze se nezdařilo (v systému Windows často neškodné). Pokud někde jinde vidíte skutečné chyby DB, zkontrolujte antivirus a oprávnění složky pro adresář SARMesh userData.",
         "label": "Databázový chmod (nefatální)"
       },
       "database-writable": {
-        "recommendation": "Aplikace nemůže zapisovat do složky databáze. Opravte oprávnění v adresáři sarmesh userData (viz odstraňování problémů: Do adresáře databáze nelze zapisovat).",
+        "recommendation": "Aplikace nemůže zapisovat do složky databáze. Opravte oprávnění v adresáři SARMesh userData (viz odstraňování problémů: Do adresáře databáze nelze zapisovat).",
         "label": "Databáze nelze zapisovat"
       },
       "tak-server": {
@@ -2680,7 +2680,7 @@
       "remoteHardwareEnabledDesc": "Umožňuje vzdáleným uzlům číst a zapisovat GPIO piny na tomto zařízení.",
       "remoteHardwareAllowUndefinedPins": "Povolit přístup k nedefinovaným pinům",
       "remoteHardwareAllowUndefinedPinsDesc": "Povoluje čtení/zápis pinů neuvedených v konfiguraci dostupných pinů.",
-      "mqttProxyGatewayHint": "With proxy enabled, sarmesh bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
+      "mqttProxyGatewayHint": "With proxy enabled, SARMesh bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
       "mapReportPublishInterval": "Interval hlášení mapy (sekundy)",
       "mapReportPublishIntervalDesc": "0 používá výchozí firmware. Jak často zařízení publikuje přehledy map, když je povoleno vytváření přehledů map.",
       "mapReportPositionPrecision": "Přesnost zprávy o poloze mapy",
@@ -3375,7 +3375,7 @@
       "missingIdentity": "Tento uzel zatím nemá zapamatovanou identitu. Počkejte na oznámení Nomad a zkuste to znovu.",
       "transportUnavailable": "Transport Reticulum není k dispozici. Restartujte zásobník a zkuste to znovu.",
       "sidecarNotRunning": "Reticulum sidecar neběží. Spusťte zásobník z Připojení a zkuste to znovu.",
-      "responseTooLarge": "The node returned more data than sarmesh will accept for this request.",
+      "responseTooLarge": "The node returned more data than SARMesh will accept for this request.",
       "nomadBusy": "Jiný požadavek na stránku nebo soubor Nomad stále probíhá. Zkuste to znovu za chvíli.",
       "nomadNotServing": "Toto je váš uzel Nomad, ale hosting My Pages neběží. Otevřete Moje stránky, vyberte složku a začněte poskytovat místní náhled.",
       "networkNotReady": "Čekání na připojení hubu nebo rádiového rozhraní. Zkuste to znovu, jakmile připojení zobrazí rozhraní.",
@@ -4753,7 +4753,7 @@
     "localHostStats": "{{count}} ve frontě · {{bytes}} bajtů",
     "localHostName": "Uzel šíření hostitele",
     "syncPeerCostExceedsMax": "Náklady na peering tohoto uzlu propagace jsou vyšší než vaše maximální náklady na peering – zvyšte maximum v části Síť → Pokročilé hostování PN nebo vyberte jiný uzel.",
-    "offerUnsupported": "Tento cíl nepodporuje synchronizaci LXMF /offer — sarmesh jej nemůže použít jako uzel propagace.",
+    "offerUnsupported": "Tento cíl nepodporuje synchronizaci LXMF /offer — SARMesh jej nemůže použít jako uzel propagace.",
     "offerProbeTimeout": "Při kontrole / nabídněte podporu vypršel časový limit — uzel může být nedostupný. Zkuste to znovu, až bude k dispozici cesta.",
     "offerProbeFailed": "Nepodařilo se ověřit / nabídnout podporu pro tento uzel šíření – zkuste to znovu za chvíli.",
     "enableLocalHostConfirmTitle": "Povolit místní hosting uzlu propagace?",
@@ -5000,7 +5000,7 @@
     "legendNotSavedTooltip": "Prázdný kruh — pro tuto místnost není uloženo žádné heslo",
     "legendSavedTooltip": "Modrý polokruh — heslo uloženo; přihlaste se pro otevření relace",
     "legendLoggedInTooltip": "Zelená tečka — aktivní relace klienta (opuste místnost, pokud je server offline)",
-    "historyLocalHint": "Při přihlášení sarmesh vyžádá nedávné příspěvky stále v kruhové vyrovnávací paměti serveru místnosti (pokud toto zařízení ještě nemá místní vodoznak). Povolte automatickou synchronizaci, abyste zůstali přihlášeni k odběru při připojení.",
+    "historyLocalHint": "Při přihlášení SARMesh vyžádá nedávné příspěvky stále v kruhové vyrovnávací paměti serveru místnosti (pokud toto zařízení ještě nemá místní vodoznak). Povolte automatickou synchronizaci, abyste zůstali přihlášeni k odběru při připojení.",
     "loginAllSavedDisabledNoSavedPasswords": "Pro použití všech přihlašovacích údajů si nejprve uložte heslo místnosti",
     "membersHeadingWithCount": "Členové ({{count}})",
     "collapseRoomList": "Sbalit seznam místností",
@@ -5671,7 +5671,7 @@
       "enabled": "Příjem souboru je povolen.",
       "enableFailed": "Nelze povolit příjem souboru: {{error}}",
       "saveDirRequired": "Chcete-li povolit příjem, vyberte složku pro uložení.",
-      "shareDestWarning": "Pokud povolíte, sarmesh odešle váš cíl příjmu rncp tomuto partnerovi, aby mohl automaticky vyplnit soubor.",
+      "shareDestWarning": "Pokud povolíte, SARMesh odešle váš cíl příjmu rncp tomuto partnerovi, aby mohl automaticky vyplnit soubor.",
       "lxmfBody": "Povolte příjem souboru rncp a odpovězte pomocí cílového hash pro příjem rncp.",
       "lxmfShareBody": "Příjem souborů je povolen. Můj rncp přijímá cílový hash:",
       "identityUnknown": "Příchozí dotaz je zapnutý, ale hash identity tohoto partnera zatím není znám, takže nebyl přidán do Vždy povolit. Před každým souborem budete stále dotázáni; zkuste Vždy znovu povolit po příchodu cesty nebo oznámení."
@@ -5775,7 +5775,7 @@
     "capabilityHeardShort": "LXST",
     "capabilityUnknownShort": "?",
     "help": {
-      "interop": "Hlas LXST potřebuje kolegu, který používá telefonii LXST (Sideband, Ratspeak nebo sarmesh). Není to klip s hlasovou poznámkou. Python LXST je referenční; rsLXST je experimentální."
+      "interop": "Hlas LXST potřebuje kolegu, který používá telefonii LXST (Sideband, Ratspeak nebo SARMesh). Není to klip s hlasovou poznámkou. Python LXST je referenční; rsLXST je experimentální."
     },
     "toast": {
       "busy": "Linka je obsazená.",
@@ -5924,7 +5924,7 @@
   },
   "longSession": {
     "title": "Doporučeno restartovat",
-    "body": "sarmesh běží již čtyři dny s připojeným Bluetooth rádiem. Restartujte aplikaci, abyste snížili riziko pádů při dlouhých sezeních Noble BLE.",
+    "body": "SARMesh běží již čtyři dny s připojeným Bluetooth rádiem. Restartujte aplikaci, abyste snížili riziko pádů při dlouhých sezeních Noble BLE.",
     "restart": "Spustit znovu",
     "dismiss": "Zamítnout"
   },

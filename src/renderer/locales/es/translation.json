@@ -196,7 +196,7 @@
     "reduceMotion": "Reducir movimiento",
     "reduceMotionDesc": "Desactiva los iconos animados y los efectos decorativos. Los indicadores de carga y de estado de conexión siguen animándose.",
     "roomMessages": "Mensajes de la sala",
-    "importSchemaTooNew": "Este archivo de base de datos requiere una versión más nueva de sarmesh (esquema {{dbVersion}}). Esta compilación es compatible con el esquema {{appVersion}} o anterior. Instale la última versión e inténtelo de nuevo.",
+    "importSchemaTooNew": "Este archivo de base de datos requiere una versión más nueva de SARMesh (esquema {{dbVersion}}). Esta compilación es compatible con el esquema {{appVersion}} o anterior. Instale la última versión e inténtelo de nuevo.",
     "floodAdvertTypeLabel": "Tipo de advert",
     "floodAdvertTypeFlood": "Flood (multi-salto)",
     "floodAdvertTypeZeroHop": "Salto cero (solo vecinos directos)",
@@ -206,7 +206,7 @@
     "debugSnapshotFailed": "No se ha podido copiar la instantánea de depuración",
     "meshcoreOpenWireExperimentalTitle": "Formato wire MeshCore Open (experimental)",
     "meshcoreOpenWireCompatLabel": "Habilitar compatibilidad con MeshCore Open",
-    "meshcoreOpenWireCompatHint": "Si está activado, sarmesh envía respuestas de texto con clave (@[Name#key]), reacciones compactas r: y GIFs Giphy g:. Puede no coincidir con el formato wire oficial del companion; los receptores necesitan clientes compatibles con MeshCore Open.",
+    "meshcoreOpenWireCompatHint": "Si está activado, SARMesh envía respuestas de texto con clave (@[Name#key]), reacciones compactas r: y GIFs Giphy g:. Puede no coincidir con el formato wire oficial del companion; los receptores necesitan clientes compatibles con MeshCore Open.",
     "meshcorePathHashExperimentalTitle": "Tamaño de hash de ruta de MeshCore (experimental)",
     "meshcorePathHashModeLabel": "Tamaño de hash de ruta predeterminado",
     "meshcorePathHashMode1Byte": "1 byte (heredado, hasta 64 saltos)",
@@ -653,7 +653,7 @@
       "requestEnable": "Solicitud habilitada",
       "requestEnableAria": "Pedir a este compañero que habilite la recepción de archivos",
       "destinationLabel": "Destino de recepción rncp del par",
-      "destinationHelp": "No su hash Chat/LXMF. Utilice la habilitación de solicitudes: los pares del sarmesh comparten esto automáticamente después de aceptar. O pegar desde su control remoto → Mi destino de recepción rncp.",
+      "destinationHelp": "No su hash Chat/LXMF. Utilice la habilitación de solicitudes: los pares del SARMesh comparten esto automáticamente después de aceptar. O pegar desde su control remoto → Mi destino de recepción rncp.",
       "activeTransfersBadgeAria_one": "{{count}} transferencia de archivos activa con este compañero",
       "activeTransfersBadgeAria_other": "{{count}} transferencias DE archivos activas con este compañero",
       "transfersTitle": "Traslados",
@@ -733,7 +733,7 @@
       "tooLargeForWire": "La nota de voz es demasiado grande para enviarla. Graba un clip más corto.",
       "tooLargeForPropagation": "El mensaje de voz es mayor que el límite del nodo de propagación. Solo se entregará cuando el destinatario esté conectado. Acórtalo para guardarlo para la entrega sin conexión.",
       "directOnlyBadge": "Solo directo: demasiado grande para almacenamiento sin conexión",
-      "recordTooltip": "Nota de voz LXMF: graba un breve clip de Opus para este mensaje directo. Compatible con sarmesh, Ratspeak y Sideband (FIELD_AUDIO). No es lo mismo que LXST Call.",
+      "recordTooltip": "Nota de voz LXMF: graba un breve clip de Opus para este mensaje directo. Compatible con SARMesh, Ratspeak y Sideband (FIELD_AUDIO). No es lo mismo que LXST Call.",
       "sendTooltip": "Enviar la nota de voz LXMF grabada",
       "startFailed": "No se ha podido iniciar la grabación de notas de voz. Inténtelo de nuevo.",
       "sendAriaWithElapsed": "Enviar nota de voz ({{seconds}} segundos grabados)",
@@ -958,7 +958,7 @@
         "accessDeniedLinuxHint": "En Linux, agregue su usuario al grupo de acceso telefónico: sudo usermod -aG dialout $USER (luego cierre sesión y vuelva a iniciarla)",
         "disconnectedHint": "Asegúrese de que el cable USB esté conectado y que el dispositivo esté encendido.",
         "timeoutHint": "Si el puerto apareció brevemente, intente volver a conectar el cable USB.",
-        "portStillOpenHint": "The USB serial port did not release cleanly. Quit sarmesh completely and reopen it, or unplug and replug the USB cable, then connect again."
+        "portStillOpenHint": "The USB serial port did not release cleanly. Quit SARMesh completely and reopen it, or unplug and replug the USB cable, then connect again."
       },
       "http": {
         "timeoutMdnsWindows": "En Windows, meshtastic.local requiere Bonjour (instalado con iTunes). Utilice la dirección IP del dispositivo en su lugar.",
@@ -986,7 +986,7 @@
         "connectionAttemptFailedLinuxHint": "En Linux, puede administrar los emparejamientos a través de la configuración de Bluetooth del sistema o la herramienta 'bluetoothctl'.",
         "meshcoreHandshakeHint": "Asegúrese de que su dispositivo MeshCore esté en modo Bluetooth Companion y esté emparejado con su computadora mediante un PIN. Elimine cualquier emparejamiento existente y vuelva a emparejarlo si persisten los problemas de conexión.",
         "meshcoreHandshakeWindowsExtra": "En Windows, active o desactive Bluetooth y actualice el controlador del adaptador en el Administrador de dispositivos si las desconexiones persisten.",
-        "macWakeRecoveryHint": "After sleep, quit sarmesh (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
+        "macWakeRecoveryHint": "After sleep, quit SARMesh (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
         "dualProtocolContentionHint": "Es posible que el otro protocolo aún se esté conectando a través de Bluetooth. Espere unos segundos e inténtelo de nuevo, o cambie a la otra pestaña de protocolo para comprobar su estado de conexión.",
         "scanBusy": "Se está realizando otra exploración de Bluetooth. Inténtalo de nuevo en un momento.",
         "sameDeviceConflict": "Este dispositivo Bluetooth ya está conectado a {{owner}}.",
@@ -1016,9 +1016,9 @@
     "reticulumStackHint": "Inicia el sidecar local Reticulum/LXMF (interfaces TCP y Auto).",
     "reticulumStartStack": "Iniciar pila",
     "reticulumNetworkEmpty": "Aún no se ha informado de ninguna interfaz.",
-    "reticulumSidecarMissing": "Sidecar de Reticulum no compilado. Desde el repositorio sarmesh ejecute `pnpm run reticulum:sidecar:build` (requiere Rust).",
+    "reticulumSidecarMissing": "Sidecar de Reticulum no compilado. Desde el repositorio SARMesh ejecute `pnpm run reticulum:sidecar:build` (requiere Rust).",
     "reticulumSidecarCargoMissing": "No se encontró la cadena de herramientas de Rust (cargo). Instale desde https://rustup.rs y luego ejecute `pnpm run reticulum:sidecar:build`.",
-    "reticulumSidecarPatchMissing": "La compilación del sidecar Reticulum necesita el overlay rsReticulum packet-tap. Desde el repositorio sarmesh ejecute `pnpm run reticulum:sidecar:build` (aplica parches automáticamente).",
+    "reticulumSidecarPatchMissing": "La compilación del sidecar Reticulum necesita el overlay rsReticulum packet-tap. Desde el repositorio SARMesh ejecute `pnpm run reticulum:sidecar:build` (aplica parches automáticamente).",
     "reticulumSidecarStartFailed": "No se pudo iniciar la pila Reticulum: {{message}}",
     "reticulumStopStack": "Detener pila",
     "reticulumAutostart": "Pila de arranque automático al abrir la conexión",
@@ -1256,7 +1256,7 @@
       "advancedAria": "Opciones avanzadas de interfaz clave-valor",
       "advancedKeyReserved": "La clave «{{key}}» es un campo conocido y se ignoró. Utilice el formulario anterior.",
       "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
-      "decommissionedHubEnableBlocked": "Este hub está fuera de servicio y no puede permanecer habilitado: sarmesh lo desactiva en cada arranque del stack. Use «Añadir backbones predeterminados» o el directorio de backbones para endpoints activos.",
+      "decommissionedHubEnableBlocked": "Este hub está fuera de servicio y no puede permanecer habilitado: SARMesh lo desactiva en cada arranque del stack. Use «Añadir backbones predeterminados» o el directorio de backbones para endpoints activos.",
       "decommissionedBadge": "fuera de servicio",
       "defaultHubsPickerTitle": "Añadir backbones predeterminados",
       "defaultHubsPickerConfirm": "Añadir {{count}} hubs",
@@ -1301,7 +1301,7 @@
       "rmapFullModeHint": "El modo completo con RMAP Publish se mantiene completo a través de ignore_config_Warnings. Los anuncios de entrega LXMF emitirán esta radio en el intervalo de anuncio de pila (por defecto 1 hora).",
       "effectiveModeBadge": "Vigencia: {{mode}}",
       "effectiveModeAria": "Modo de tiempo de ejecución efectivo {{mode}}. El modo configurado difiere de lo que está ejecutando Reticulum.",
-      "effectiveModeTooltip": "Reticulum reescribió esta interfaz detectable en Access Point (u otro modo permitido) porque Discoverable requiere Gateway, Internal o Access Point a menos que se establezca ignore_config_warnings. Reinicie la pila después de los sellos de cliente de malla que optan por no participar para que Full (o su modo configurado) surta efecto (sarmesh).",
+      "effectiveModeTooltip": "Reticulum reescribió esta interfaz detectable en Access Point (u otro modo permitido) porque Discoverable requiere Gateway, Internal o Access Point a menos que se establezca ignore_config_warnings. Reinicie la pila después de los sellos de cliente de malla que optan por no participar para que Full (o su modo configurado) surta efecto (SARMesh).",
       "flowControlBleHint": "En Bluetooth, la radio a menudo nunca envía CMD_READY. SARMesh sigue marcando el ritmo de TX (espera brevemente a que ESTÉ LISTO, luego continúa) para que el control de flujo reduzca la sobrecarga sin congelar la cola.",
       "advancedFields": "Ajustes avanzados",
       "field": {
@@ -1368,12 +1368,12 @@
       "connectingRow": "{{name}}: conexión a través de Bluetooth",
       "offlineHintWifi": "Compruebe que el RNode esté en su LAN, encendido y accesible en la IP configurada (puerto TCP predeterminado 7633, no 4242). Actualiza el host a continuación si DHCP asignó una nueva dirección o vuelve a proporcionar Wi-Fi en Reticulum → Admin.",
       "tcpUnreachable": "{{name}}: No se puede acceder al centro TCP ({{host}}:{{port}})",
-      "tcpUnreachableHint": "La instancia remota de Reticulum puede estar desconectada o bloqueando conexiones. Deshabilite esta interfaz o verifique el host y el puerto. Los reinicios frecuentes de sarmesh o de la pila pueden hacer que los hubs Reticulum 1.4.0+ bloqueen su IP durante 12 horas: espere en lugar de reiniciar de nuevo.",
+      "tcpUnreachableHint": "La instancia remota de Reticulum puede estar desconectada o bloqueando conexiones. Deshabilite esta interfaz o verifique el host y el puerto. Los reinicios frecuentes de SARMesh o de la pila pueden hacer que los hubs Reticulum 1.4.0+ bloqueen su IP durante 12 horas: espere en lugar de reiniciar de nuevo.",
       "connectingHintBle": "Los enlaces BLE RNode pueden tardar hasta 60 segundos después de que se inicia la pila (ventana de clave de acceso del sistema operativo). Ingrese el PIN actual de RNode si se le solicita; nunca 123456. Esto es normal, no es un error. Es posible que el dispositivo no aparezca en Configuración del sistema hasta después de una vinculación exitosa.",
       "offlineHintBle": "Para borrar este error, es posible que deba eliminar esta interfaz y volver a agregarla (Seleccionar dispositivo) para que se actualice el ID de Bluetooth guardado y, a continuación, reinicie la pila. Su sistema operativo puede solicitar un PIN Bluetooth de 6 dígitos (macOS, Windows o Linux). RNode genera un nuevo código cada emparejamiento; nunca use 123456 (ese es el valor predeterminado de Meshtastic, no RNode). No es necesario que el RNode aparezca en Configuración del sistema → Bluetooth antes de que esta aplicación se conecte; el cuadro de diálogo del sistema operativo aparece cuando la pila se empareja. Radios sin cabeza: conecte USB → Reticulum Admin → Bluetooth → Comience a emparejar → introduzca el PIN que se muestra en el panel de administración (no en la pantalla de la radio) en el cuadro de diálogo del sistema operativo. Radios con pantalla: mantenga presionado el botón ~7 s en los dispositivos Heltec (el tiempo varía; ~10 s en muchas placas habilita Wi-Fi AP en su lugar), lea el PIN en la pantalla y luego ingréselo en el cuadro de diálogo del sistema operativo. Borre los enlaces fallidos en la configuración de Bluetooth de su sistema operativo antes de volver a intentarlo.",
       "offlineHintBleBondStale": "macOS sigue mostrando este RNode como emparejado, pero las claves Bluetooth ya no coinciden (el par eliminó la información de emparejamiento). Olvide el dispositivo en Ajustes del sistema → Bluetooth, ponga el RNode en modo de emparejamiento (Admin → Bluetooth → Iniciar emparejamiento, o mantenga pulsado el botón ~7 s), luego quite y vuelva a agregar esta interfaz (Seleccionar dispositivo), reinicie la pila e introduzca el nuevo PIN de 6 dígitos cuando se le solicite.",
       "tcpFastFlap": "{{name}}: Hub probablemente bloqueó tu IP después de reiniciar la pila con frecuencia ({{host}}:{{port}})",
-      "tcpFastFlapHint": "Los hubs públicos de Reticulum 1.4.0+ bloquean una IP después de cinco sesiones TCP cortas en 12 horas. Los reinicios rápidos de sarmesh o de la pila cuentan. Deshabilite este concentrador y espere hasta 12 horas: reiniciar de nuevo extiende el bloqueo."
+      "tcpFastFlapHint": "Los hubs públicos de Reticulum 1.4.0+ bloquean una IP después de cinco sesiones TCP cortas en 12 horas. Los reinicios rápidos de SARMesh o de la pila cuentan. Deshabilite este concentrador y espere hasta 12 horas: reiniciar de nuevo extiende el bloqueo."
     },
     "autoConnectingTo": "Conectando automáticamente a {{deviceName}}…",
     "autoReconnectInProgress": "Reconexión automática en curso…",
@@ -1845,7 +1845,7 @@
         "rmap_transport_disabled": "Las interfaces detectables están configuradas, pero el modo de transporte está desactivado.",
         "rmap_i2p_not_connectable": "La interfaz I2P \"{{name}}\" es detectable pero no es conectable.",
         "shared_instance_client": "Share instance attached as a client of another app — local TCP hubs in this config are not started.",
-        "rmap_mode_autocorrect": "La interfaz \"{{name}}\" se puede descubrir con un modo no AP/Gateway: Reticulum la ejecutará como punto de acceso a menos que se establezca ignore_config_warnings. Edite la interfaz o reinicie la pila para que el cliente de malla pueda sellar la exclusión voluntaria (sarmesh)."
+        "rmap_mode_autocorrect": "La interfaz \"{{name}}\" se puede descubrir con un modo no AP/Gateway: Reticulum la ejecutará como punto de acceso a menos que se establezca ignore_config_warnings. Edite la interfaz o reinicie la pila para que el cliente de malla pueda sellar la exclusión voluntaria (SARMesh)."
       },
       "runtime": {
         "rnsNotReady": "La pila RNS no está lista",
@@ -1878,7 +1878,7 @@
         "announceBusPressureTipBoundaryHubs": "Hubs de límite / backbone habilitados: {{hubs}}.",
         "announceBusPressureTipTxSaturated": "La cola TX cae en: {{names}} — esa interfaz puede estar saturada.",
         "tooManyDefaultBackbones": "Tienes {{count}} backbones predeterminados habilitados. Considere deshabilitar los extras y mantener alrededor de 2 por redundancia.",
-        "decommissionedHubEnabled": "El hub fuera de servicio «{{name}}» sigue habilitado: sarmesh lo desactiva en cada arranque del stack. Use «Añadir backbones predeterminados» o el directorio de backbones para endpoints activos.",
+        "decommissionedHubEnabled": "El hub fuera de servicio «{{name}}» sigue habilitado: SARMesh lo desactiva en cada arranque del stack. Use «Añadir backbones predeterminados» o el directorio de backbones para endpoints activos.",
         "txQueueDropsBle": "Interfaz \"{{name}}\" eliminada {{count}} paquetes salientes (cola TX llena) — Enlace ble RNode bloqueado; prefiera USB o volver a emparejar",
         "txQueueDropsBleBondStale": "Interfaz \"{{name}}\" eliminada {{count}} paquetes salientes (cola TX llena) — enlace ble obsoleto; Olvídese de Bluetooth del sistema operativo y vuelva a emparejar",
         "txQueueDropsNeutral": "La interfaz \"{{name}}\" ha eliminado {{count}} paquetes salientes (cola TX llena): comprueba el enlace de esa interfaz",
@@ -2145,11 +2145,11 @@
       },
       "database-chmod": {
         "label": "Chmod de base de datos (no fatal)",
-        "recommendation": "Database file permission tweak failed (often benign on Windows). If you see real DB errors elsewhere, check antivirus and folder permissions for the sarmesh userData directory."
+        "recommendation": "Database file permission tweak failed (often benign on Windows). If you see real DB errors elsewhere, check antivirus and folder permissions for the SARMesh userData directory."
       },
       "database-writable": {
         "label": "Base de datos no grabable",
-        "recommendation": "The app cannot write its database folder. Fix permissions on the sarmesh userData directory (see troubleshooting: Database directory is not writable)."
+        "recommendation": "The app cannot write its database folder. Fix permissions on the SARMesh userData directory (see troubleshooting: Database directory is not writable)."
       },
       "tak-server": {
         "label": "Problemas con el servidor TAK",
@@ -2652,7 +2652,7 @@
       "remoteHardwareEnabledDesc": "Permite que nodos remotos lean y escriban pines GPIO en este dispositivo.",
       "remoteHardwareAllowUndefinedPins": "Permitir acceso a pines no definidos",
       "remoteHardwareAllowUndefinedPinsDesc": "Permite leer/escribir pines no listados en la configuración de pines disponibles.",
-      "mqttProxyGatewayHint": "With proxy enabled, sarmesh bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
+      "mqttProxyGatewayHint": "With proxy enabled, SARMesh bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
       "mapReportPublishInterval": "Intervalo del informe del mapa (segundos)",
       "mapReportPublishIntervalDesc": "0 utiliza el firmware predeterminado. Con qué frecuencia el dispositivo publica informes de mapas cuando los informes de mapas están habilitados.",
       "mapReportPositionPrecision": "Precisión de la posición del informe del mapa",
@@ -3336,7 +3336,7 @@
       "missingIdentity": "Este nodo aún no tiene ninguna identidad recordada. Espera a un anuncio Nomad e inténtalo de nuevo.",
       "transportUnavailable": "El transporte de Reticulum no está disponible. Reinicie la pila e inténtelo de nuevo.",
       "sidecarNotRunning": "El sidecar de Reticulum no está en ejecución. Inicie la pila desde Conexión y vuelva a intentarlo.",
-      "responseTooLarge": "El nodo devolvió más datos de los que sarmesh acepta para esta solicitud.",
+      "responseTooLarge": "El nodo devolvió más datos de los que SARMesh acepta para esta solicitud.",
       "nomadBusy": "Otra solicitud de página o archivo Nomad aún está en curso. Inténtalo de nuevo en un momento.",
       "nomadNotServing": "Este es su nodo Nomad, pero el alojamiento Mis páginas no se está ejecutando. Abra Mis páginas, elija una carpeta y comience a publicar para obtener una vista previa local.",
       "networkNotReady": "Esperando a que se conecte un concentrador o una interfaz de radio. Inténtelo de nuevo una vez que Connection muestre una interfaz.",
@@ -4712,7 +4712,7 @@
     "localHostStats": "{{count}} en cola · {{bytes}} bytes",
     "localHostName": "Nodo de propagación del host",
     "syncPeerCostExceedsMax": "El coste de peering de este nodo de propagación está por encima de su coste máximo de peering: aumente el máximo en Network → Advanced PN hosting o elija otro nodo.",
-    "offerUnsupported": "Este destino no es compatible con la sincronización LXMF /offer: sarmesh no puede usarlo como nodo de propagación.",
+    "offerUnsupported": "Este destino no es compatible con la sincronización LXMF /offer: SARMesh no puede usarlo como nodo de propagación.",
     "offerProbeTimeout": "Tiempo de espera agotado al verificar /offer soporte: el nodo puede ser inalcanzable. Inténtalo de nuevo cuando haya una ruta disponible.",
     "offerProbeFailed": "No se ha podido verificar /offer soporte para este nodo de propagación; inténtelo de nuevo en un momento.",
     "enableLocalHostConfirmTitle": "¿Habilitar el alojamiento del nodo de propagación local?",
@@ -4959,7 +4959,7 @@
     "legendNotSavedTooltip": "Círculo vacío — no hay contraseña almacenada para esta sala",
     "legendSavedTooltip": "Semicírculo celeste — contraseña guardada; inicia sesión para abrir una sesión",
     "legendLoggedInTooltip": "Punto verde — sesión de cliente activa (abandona la sala si el servidor está fuera de línea)",
-    "historyLocalHint": "Al iniciar sesión, sarmesh solicita publicaciones recientes que aún estén en el búfer circular del servidor de la sala (cuando este dispositivo aún no tiene marca de agua local). Habilite la sincronización automática para permanecer suscrito mientras esté conectado.",
+    "historyLocalHint": "Al iniciar sesión, SARMesh solicita publicaciones recientes que aún estén en el búfer circular del servidor de la sala (cuando este dispositivo aún no tiene marca de agua local). Habilite la sincronización automática para permanecer suscrito mientras esté conectado.",
     "loginAllSavedDisabledNoSavedPasswords": "Guarde primero una contraseña de sala para usar el inicio de sesión en todo",
     "membersHeadingWithCount": "Miembros ({{count}})",
     "collapseRoomList": "Contraer lista de salas",
@@ -5215,7 +5215,7 @@
     "restartTitle": "Reiniciar e instalar",
     "retryCheck": "Volver a intentar la comprobación de actualización",
     "updateError": "Error al actualizar",
-    "menuToastUpToDateTitle": "sarmesh",
+    "menuToastUpToDateTitle": "SARMesh",
     "menuToastUpToDateBody": "Estás en la última versión.",
     "menuToastAvailableTitle": "Actualización disponible",
     "menuToastAvailableBody": "La versión {{version}} está disponible.",
@@ -5623,7 +5623,7 @@
       "enabled": "La recepción de archivos está habilitada.",
       "enableFailed": "No se ha podido habilitar la recepción de archivos: {{error}}",
       "saveDirRequired": "Elija una carpeta de guardado para habilitar la recepción.",
-      "shareDestWarning": "Si lo habilita, sarmesh enviará su destino de recepción rncp a este par para que pueda completar automáticamente el envío del archivo.",
+      "shareDestWarning": "Si lo habilita, SARMesh enviará su destino de recepción rncp a este par para que pueda completar automáticamente el envío del archivo.",
       "lxmfBody": "Habilite la recepción de archivos rncp y responda con su hash de destino de recepción rncp.",
       "lxmfShareBody": "La recepción de archivos está habilitada. Mi rncp recibe el hash de destino:",
       "identityUnknown": "La pregunta entrante está activada, pero aún no se conoce el hash de identidad de este par, por lo que no se agregaron a Permitir siempre. Aún se le preguntará antes de cada archivo; Intente Permitir siempre nuevamente después de que llegue una ruta o un anuncio."
@@ -5727,7 +5727,7 @@
     "capabilityHeardShort": "LXST",
     "capabilityUnknownShort": "¿?",
     "help": {
-      "interop": "La voz LXST necesita una telefonía LXST entre pares (Sideband, Ratspeak o sarmesh). No es un clip de nota de voz. Python LXST es la referencia; rsLXST es experimental."
+      "interop": "La voz LXST necesita una telefonía LXST entre pares (Sideband, Ratspeak o SARMesh). No es un clip de nota de voz. Python LXST es la referencia; rsLXST es experimental."
     },
     "toast": {
       "busy": "Línea ocupada",
@@ -5876,7 +5876,7 @@
   },
   "longSession": {
     "title": "Reinicio recomendado",
-    "body": "sarmesh ha estado funcionando durante cuatro días con radio Bluetooth conectada. Reinicie la aplicación para reducir el riesgo de bloqueos en largas sesiones de Noble BLE.",
+    "body": "SARMesh ha estado funcionando durante cuatro días con radio Bluetooth conectada. Reinicie la aplicación para reducir el riesgo de bloqueos en largas sesiones de Noble BLE.",
     "restart": "Reiniciar",
     "dismiss": "Descartar"
   },

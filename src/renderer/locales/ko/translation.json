@@ -206,7 +206,7 @@
     "debugSnapshotFailed": "디버그 스냅샷을 복사할 수 없습니다",
     "meshcoreOpenWireExperimentalTitle": "MeshCore Open wire (실험용)",
     "meshcoreOpenWireCompatLabel": "MeshCore Open 호환성 활성화",
-    "meshcoreOpenWireCompatHint": "활성화하면 sarmesh가 키가 있는 텍스트 답장(@[Name#key]), 컴팩트 r: 반응, g: Giphy GIF를 보냅니다. 공식 companion wire 형식과 다를 수 있으며, 수신자는 MeshCore Open 호환 클라이언트가 필요합니다.",
+    "meshcoreOpenWireCompatHint": "활성화하면 SARMesh가 키가 있는 텍스트 답장(@[Name#key]), 컴팩트 r: 반응, g: Giphy GIF를 보냅니다. 공식 companion wire 형식과 다를 수 있으며, 수신자는 MeshCore Open 호환 클라이언트가 필요합니다.",
     "meshcorePathHashExperimentalTitle": "MeshCore 경로 해시 크기 (실험용)",
     "meshcorePathHashModeLabel": "기본 경로 해시 크기",
     "meshcorePathHashMode1Byte": "1바이트 (레거시, 최대 64홉)",
@@ -733,7 +733,7 @@
       "tooLargeForWire": "음성 메모가 너무 커서 보낼 수 없습니다. 더 짧은 클립을 녹화합니다.",
       "tooLargeForPropagation": "음성 메시지가 전파 노드 제한보다 큽니다. 수령인이 온라인 상태일 때만 배달됩니다. 오프라인 배달을 위해 보관하려면 길이를 줄이세요.",
       "directOnlyBadge": "다이렉트 전용 — 오프라인 스토리지에 너무 큼",
-      "recordTooltip": "LXMF 음성 메모 — 이 다이렉트 메시지에 대한 짧은 Opus 클립을 기록합니다. sarmesh, Ratspeak, Sideband (FIELD_AUDIO)가 지원합니다. LXST Call과 동일하지 않습니다.",
+      "recordTooltip": "LXMF 음성 메모 — 이 다이렉트 메시지에 대한 짧은 Opus 클립을 기록합니다. SARMesh, Ratspeak, Sideband (FIELD_AUDIO)가 지원합니다. LXST Call과 동일하지 않습니다.",
       "sendTooltip": "녹음된 LXMF 음성 메모 보내기",
       "startFailed": "음성 메모 녹음을 시작할 수 없습니다. 다시 시도하십시오.",
       "sendAriaWithElapsed": "음성 메모 전송 ({{seconds}} 초 녹음)",
@@ -958,7 +958,7 @@
         "accessDeniedLinuxHint": "Linux에서는 다이얼아웃 그룹에 사용자를 추가합니다. sudo usermod -aG 다이얼아웃 $USER(그런 다음 로그아웃했다가 다시 로그인)",
         "disconnectedHint": "USB 케이블이 연결되어 있고 장치의 전원이 켜져 있는지 확인하세요.",
         "timeoutHint": "포트가 잠시 나타나는 경우 USB 케이블을 다시 연결해 보세요.",
-        "portStillOpenHint": "The USB serial port did not release cleanly. Quit sarmesh completely and reopen it, or unplug and replug the USB cable, then connect again."
+        "portStillOpenHint": "The USB serial port did not release cleanly. Quit SARMesh completely and reopen it, or unplug and replug the USB cable, then connect again."
       },
       "http": {
         "timeoutMdnsWindows": "Windows의 경우 meshtastic.local에는 Bonjour(iTunes와 함께 설치)가 필요합니다. 대신 장치의 IP 주소를 사용하십시오.",
@@ -986,7 +986,7 @@
         "connectionAttemptFailedLinuxHint": "Linux에서는 시스템 Bluetooth 설정 또는 'bluetoothctl' 도구를 통해 페어링을 관리할 수 있습니다.",
         "meshcoreHandshakeHint": "MeshCore 장치가 Bluetooth Companion 모드에 있고 PIN을 사용하여 컴퓨터와 페어링되어 있는지 확인하세요. 연결 문제가 지속되면 기존 페어링을 제거하고 다시 페어링하세요.",
         "meshcoreHandshakeWindowsExtra": "Windows에서 Bluetooth를 끄거나 켜고 연결이 계속 끊어지면 장치 관리자에서 어댑터 드라이버를 업데이트하세요.",
-        "macWakeRecoveryHint": "절전 모드가 끝나면 sarmesh (Cmd + Q) 를 종료하고 시스템 설정에서 블루투스를 껐다 켜고 몇 초 기다린 다음 다시 연결하십시오. 두 개의 라디오를 사용하여 Meshtastic 전에 MeshCore를 연결합니다.",
+        "macWakeRecoveryHint": "절전 모드가 끝나면 SARMesh (Cmd + Q) 를 종료하고 시스템 설정에서 블루투스를 껐다 켜고 몇 초 기다린 다음 다시 연결하십시오. 두 개의 라디오를 사용하여 Meshtastic 전에 MeshCore를 연결합니다.",
         "dualProtocolContentionHint": "다른 프로토콜은 여전히 블루투스를 통해 연결될 수 있습니다. 몇 초 후 다시 시도하거나 다른 프로토콜 탭으로 전환하여 연결 상태를 확인하세요.",
         "scanBusy": "다른 Bluetooth 검색이 진행 중입니다. 잠시 후에 다시 시도해 보세요.",
         "sameDeviceConflict": "이 블루투스 장치는 이미 {{owner}}에 연결되어 있습니다.",
@@ -1016,9 +1016,9 @@
     "reticulumStackHint": "로컬 Reticulum/LXMF 사이드카(TCP 및 Auto 인터페이스)를 시작합니다.",
     "reticulumStartStack": "스택 시작",
     "reticulumNetworkEmpty": "아직 보고된 인터페이스가 없습니다.",
-    "reticulumSidecarMissing": "Reticulum 사이드카가 빌드되지 않았습니다. sarmesh 저장소에서 `pnpm run reticulum:sidecar:build`을(를) 실행하세요(Rust 필요).",
+    "reticulumSidecarMissing": "Reticulum 사이드카가 빌드되지 않았습니다. SARMesh 저장소에서 `pnpm run reticulum:sidecar:build`을(를) 실행하세요(Rust 필요).",
     "reticulumSidecarCargoMissing": "Rust 툴체인(cargo)을 찾을 수 없습니다. https://rustup.rs에서 설치한 다음 `pnpm run reticulum:sidecar:build`을(를) 실행하세요.",
-    "reticulumSidecarPatchMissing": "Reticulum 사이드카 빌드에는 rsReticulum packet-tap 오버레이가 필요합니다. sarmesh 저장소에서 `pnpm run reticulum:sidecar:build`를 실행하세요(패치가 자동 적용됩니다).",
+    "reticulumSidecarPatchMissing": "Reticulum 사이드카 빌드에는 rsReticulum packet-tap 오버레이가 필요합니다. SARMesh 저장소에서 `pnpm run reticulum:sidecar:build`를 실행하세요(패치가 자동 적용됩니다).",
     "reticulumSidecarStartFailed": "Reticulum 스택을 시작할 수 없습니다: {{message}}",
     "reticulumStopStack": "스택 중지",
     "reticulumAutostart": "연결을 열 때 스택 자동 시작",
@@ -1256,7 +1256,7 @@
       "advancedAria": "고급 인터페이스 키-값 옵션",
       "advancedKeyReserved": "키 \"{{key}}\" 은 (는) 알려진 필드이며 무시되었습니다. 위의 양식을 사용하십시오.",
       "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
-      "decommissionedHubEnableBlocked": "이 허브는 폐기되어 계속 사용할 수 없습니다 — sarmesh는 스택을 시작할 때마다 끕니다. 활성 엔드포인트는 «기본 백본 추가» 또는 백본 목록을 사용하세요.",
+      "decommissionedHubEnableBlocked": "이 허브는 폐기되어 계속 사용할 수 없습니다 — SARMesh는 스택을 시작할 때마다 끕니다. 활성 엔드포인트는 «기본 백본 추가» 또는 백본 목록을 사용하세요.",
       "decommissionedBadge": "해체됨",
       "defaultHubsPickerTitle": "기본 백본 추가",
       "defaultHubsPickerConfirm": "{{count}} 허브 추가",
@@ -1301,7 +1301,7 @@
       "rmapFullModeHint": "RMAP 게시의 전체 모드는 IGNORE_CONFIG_WARNINGS를 통해 전체 모드를 유지합니다. LXMF 배달 알림은 스택 알림 간격 (기본 1시간) 에서 이 라디오를 내보냅니다.",
       "effectiveModeBadge": "유효: {{mode}}",
       "effectiveModeAria": "유효 런타임 모드 {{mode}}. 설정된 모드는 Reticulum이 실행 중인 모드와 다릅니다.",
-      "effectiveModeTooltip": "Reticulum은 ignore_config_warnings가 설정되지 않는 한 검색 가능한 인터페이스를 게이트웨이, 내부 또는 액세스 포인트가 필요하기 때문에 이 검색 가능한 인터페이스를 액세스 포인트 (또는 다른 허용 모드) 에 다시 작성했습니다. sarmesh 스탬프 후 스택을 다시 시작하여 Full (또는 구성된 모드) 이 적용되도록 옵트아웃합니다.",
+      "effectiveModeTooltip": "Reticulum은 ignore_config_warnings가 설정되지 않는 한 검색 가능한 인터페이스를 게이트웨이, 내부 또는 액세스 포인트가 필요하기 때문에 이 검색 가능한 인터페이스를 액세스 포인트 (또는 다른 허용 모드) 에 다시 작성했습니다. SARMesh 스탬프 후 스택을 다시 시작하여 Full (또는 구성된 모드) 이 적용되도록 옵트아웃합니다.",
       "flowControlBleHint": "블루투스에서는 라디오가 CMD_READY를 전송하지 않는 경우가 많습니다. SARMesh는 여전히 TX를 페이싱하므로 (잠시 기다렸다가 계속) 흐름 제어는 대기열을 멈추지 않고 과부하를 줄입니다.",
       "advancedFields": "고급 설정",
       "field": {
@@ -1368,12 +1368,12 @@
       "connectingRow": "{{name}}: 블루투스를 통해 연결 중",
       "offlineHintWifi": "RNode가 LAN에 있고 전원이 켜져 있으며 구성된 IP (기본 TCP 포트 7633, 4242 아님) 에서 연결 가능한지 확인하십시오. DHCP가 새 주소를 지정한 경우 아래 호스트를 업데이트하거나 Reticulum → Admin에서 Wi-Fi를 다시 프로비저닝합니다.",
       "tcpUnreachable": "{{name}}: TCP 허브에 연결할 수 없음 ({{host}}: {{port}})",
-      "tcpUnreachableHint": "원격 Reticulum 인스턴스는 오프라인이거나 연결을 차단 중일 수 있습니다. 이 인터페이스를 비활성화하거나 호스트와 포트를 확인하십시오. sarmesh 또는 스택을 자주 재시작하면 Reticulum 1.4.0+ 허브가 IP를 12시간 동안 차단할 수 있습니다. 다시 시작하지 말고 기다리십시오.",
+      "tcpUnreachableHint": "원격 Reticulum 인스턴스는 오프라인이거나 연결을 차단 중일 수 있습니다. 이 인터페이스를 비활성화하거나 호스트와 포트를 확인하십시오. SARMesh 또는 스택을 자주 재시작하면 Reticulum 1.4.0+ 허브가 IP를 12시간 동안 차단할 수 있습니다. 다시 시작하지 말고 기다리십시오.",
       "connectingHintBle": "BLE RNode 링크는 스택이 시작된 후 최대 60초가 걸릴 수 있습니다(OS 암호 키 창). 메시지가 나타나면 현재 RNode PIN을 입력하세요. 123456은 입력하지 마세요. 이는 오류가 아닌 정상입니다. 장치는 성공적으로 결합될 때까지 시스템 설정에 나타나지 않을 수 있습니다.",
       "offlineHintBle": "이 오류를 지우려면 이 인터페이스를 제거하고 다시 추가(장치 선택)하여 저장된 Bluetooth ID를 새로 고친 다음 스택을 다시 시작해야 할 수 있습니다. OS에서 6자리 Bluetooth PIN을 요청할 수 있습니다(macOS, Windows 또는 Linux). RNode는 페어링할 때마다 새 코드를 생성합니다. 123456을 사용하지 마세요(Meshtastic 기본값이며 RNode가 아닙니다). 이 앱이 연결되기 전에 RNode가 시스템 설정 → Bluetooth에 나타날 필요는 없습니다. 스택이 페어링할 때 OS 대화 상자가 나타납니다. 디스플레이가 없는 라디오: USB 연결 → Reticulum Admin → Bluetooth → 페어링 시작 → 관리자 패널에 표시된 PIN(라디오 디스플레이가 아님)을 OS 대화 상자에 입력하세요. 디스플레이가 있는 라디오: Heltec 장치에서 버튼을 약 7초 동안 길게 누르고(타이밍은 다를 수 있으며, 많은 보드에서는 약 10초에 Wi‑Fi AP가 활성화됨), 화면의 PIN을 읽은 다음 OS 대화 상자에 입력하세요. 다시 시도하기 전에 OS Bluetooth 설정에서 실패한 연결을 지우세요.",
       "offlineHintBleBondStale": "macOS는 여전히 이 RNode를 페어링됨으로 표시하지만 블루투스 키가 더 이상 일치하지 않습니다 (피어 제거 페어링 정보). 시스템 설정 → 블루투스에서 장치를 잊어 버리고 RNode를 페어링 모드 (관리자 → 블루투스 페어링 → 시작 또는 ~ 7 초) 에 놓은 다음이 인터페이스 (장치 선택) 를 제거하고 다시 추가하고 스택을 다시 시작한 다음 메시지가 나타나면 새 6 자리 PIN을 입력하십시오.",
       "tcpFastFlap": "{{name}}: 잦은 스택 재시작 후 허브가 IP를 차단했을 수 있음 ({{host}}: {{port}})",
-      "tcpFastFlapHint": "Reticulum 1.4.0+ 퍼블릭 허브는 12시간 이내에 짧은 TCP 세션 5회 후 IP를 차단합니다. sarmesh 또는 스택의 빠른 재시작이 포함됩니다. 이 허브를 비활성화하고 최대 12시간을 기다리십시오. 다시 시작하면 차단이 연장됩니다."
+      "tcpFastFlapHint": "Reticulum 1.4.0+ 퍼블릭 허브는 12시간 이내에 짧은 TCP 세션 5회 후 IP를 차단합니다. SARMesh 또는 스택의 빠른 재시작이 포함됩니다. 이 허브를 비활성화하고 최대 12시간을 기다리십시오. 다시 시작하면 차단이 연장됩니다."
     },
     "autoConnectingTo": "{{deviceName}}에 자동 연결 중…",
     "autoReconnectInProgress": "자동 재연결 진행 중…",
@@ -1845,7 +1845,7 @@
         "rmap_transport_disabled": "검색 가능한 인터페이스가 구성되었지만 전송 모드가 꺼져 있습니다.",
         "rmap_i2p_not_connectable": "I2P 인터페이스 \"{{name}}\" 는 검색 가능하지만 연결 가능은 예가 아닙니다.",
         "shared_instance_client": "Share instance attached as a client of another app — local TCP hubs in this config are not started.",
-        "rmap_mode_autocorrect": "비 AP/게이트웨이 모드에서 인터페이스 \"{{name}}\" 을 (를) 검색할 수 있습니다. Reticulum은 ignore_config_warnings를 설정하지 않는 한 액세스 포인트로 실행합니다. sarmesh가 옵트아웃 스탬프를 찍을 수 있도록 인터페이스를 편집하거나 스택을 다시 시작하십시오."
+        "rmap_mode_autocorrect": "비 AP/게이트웨이 모드에서 인터페이스 \"{{name}}\" 을 (를) 검색할 수 있습니다. Reticulum은 ignore_config_warnings를 설정하지 않는 한 액세스 포인트로 실행합니다. SARMesh가 옵트아웃 스탬프를 찍을 수 있도록 인터페이스를 편집하거나 스택을 다시 시작하십시오."
       },
       "runtime": {
         "rnsNotReady": "RNS 스택이 준비되지 않았습니다.",
@@ -1878,7 +1878,7 @@
         "announceBusPressureTipBoundaryHubs": "활성화된 경계/백본 허브: {{hubs}}.",
         "announceBusPressureTipTxSaturated": "TX 대기열 드롭: {{names}} — 해당 인터페이스가 포화 상태일 수 있습니다.",
         "tooManyDefaultBackbones": "기본 백본이 {{count}} 개 활성화되어 있습니다. 엑스트라를 비활성화하고 이중화를 위해 약 2 개를 유지하는 것이 좋습니다.",
-        "decommissionedHubEnabled": "폐기된 허브 «{{name}}»가 아직 사용 중입니다 — sarmesh는 스택을 시작할 때마다 끕니다. 활성 엔드포인트는 «기본 백본 추가» 또는 백본 목록을 사용하세요.",
+        "decommissionedHubEnabled": "폐기된 허브 «{{name}}»가 아직 사용 중입니다 — SARMesh는 스택을 시작할 때마다 끕니다. 활성 엔드포인트는 «기본 백본 추가» 또는 백본 목록을 사용하세요.",
         "txQueueDropsBle": "인터페이스 \"{{name}}\" 삭제됨 {{count}} 아웃바운드 패킷 (TX 대기열 가득 참) — BLE RNode 링크가 중단됨, USB 또는 재페어링 선호",
         "txQueueDropsBleBondStale": "인터페이스 \"{{name}}\" 삭제됨 {{count}} 아웃바운드 패킷 (TX 대기열 가득 참) — BLE 본드 오래됨; OS 블루투스는 잊어버리고 다시 페어링",
         "txQueueDropsNeutral": "인터페이스 \"{{name}}\" 삭제됨 {{count}} 아웃바운드 패킷 (TX 대기열 가득 참) — 해당 인터페이스의 링크 확인",
@@ -2145,11 +2145,11 @@
       },
       "database-chmod": {
         "label": "데이터베이스 chmod(치명적이지 않음)",
-        "recommendation": "데이터베이스 파일 권한 조정이 실패했습니다(종종 Windows에서는 문제가 없음). 다른 곳에서 실제 DB 오류가 표시되면 sarmesh userData 디렉터리에 대한 바이러스 백신 및 폴더 권한을 확인하세요."
+        "recommendation": "데이터베이스 파일 권한 조정이 실패했습니다(종종 Windows에서는 문제가 없음). 다른 곳에서 실제 DB 오류가 표시되면 SARMesh userData 디렉터리에 대한 바이러스 백신 및 폴더 권한을 확인하세요."
       },
       "database-writable": {
         "label": "데이터베이스에 쓸 수 없음",
-        "recommendation": "앱이 데이터베이스 폴더에 쓸 수 없습니다. sarmesh userData 디렉터리에 대한 권한을 수정합니다(문제 해결 참조: 데이터베이스 디렉터리에 쓸 수 없음)."
+        "recommendation": "앱이 데이터베이스 폴더에 쓸 수 없습니다. SARMesh userData 디렉터리에 대한 권한을 수정합니다(문제 해결 참조: 데이터베이스 디렉터리에 쓸 수 없음)."
       },
       "tak-server": {
         "label": "TAK 서버 문제",
@@ -2652,7 +2652,7 @@
       "remoteHardwareEnabledDesc": "원격 노드가 이 장치의 GPIO 핀을 읽고 쓸 수 있도록 허용합니다.",
       "remoteHardwareAllowUndefinedPins": "정의되지 않은 핀 접근 허용",
       "remoteHardwareAllowUndefinedPinsDesc": "사용 가능한 핀 구성에 나열되지 않은 핀의 읽기/쓰기를 허용합니다.",
-      "mqttProxyGatewayHint": "With proxy enabled, sarmesh bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
+      "mqttProxyGatewayHint": "With proxy enabled, SARMesh bridges broker traffic via MqttClientProxyMessage. Enable per-channel downlink on the Radio tab for MQTT→RF relay.",
       "mapReportPublishInterval": "보고 간격(초)",
       "mapReportPublishIntervalDesc": "0은 펌웨어 기본값을 사용합니다. 지도 보고가 활성화된 경우 장치가 지도 보고서를 게시하는 빈도입니다.",
       "mapReportPositionPrecision": "지도 보고서 위치 정밀도",
@@ -3336,7 +3336,7 @@
       "missingIdentity": "이 노드에는 아직 기억된 ID가 없습니다. Nomad 공지를 기다렸다가 다시 시도하세요.",
       "transportUnavailable": "Reticulum 전송을 사용할 수 없습니다. 스택을 다시 시작한 다음 다시 시도하십시오.",
       "sidecarNotRunning": "Reticulum 사이드카가 실행되고 있지 않습니다. Connection에서 스택을 시작한 다음 다시 시도하십시오.",
-      "responseTooLarge": "The node returned more data than sarmesh will accept for this request.",
+      "responseTooLarge": "The node returned more data than SARMesh will accept for this request.",
       "nomadBusy": "다른 Nomad 페이지 또는 파일 요청이 아직 진행 중입니다. 잠시 후 다시 시도하세요.",
       "nomadNotServing": "이것은 Nomad 노드이지만 내 페이지 호스팅이 실행되고 있지 않습니다. 내 페이지를 열고 폴더를 선택한 후 로컬에서 미리 볼 수 있는 서비스를 시작하세요.",
       "networkNotReady": "허브 또는 무선 인터페이스가 온라인 상태가 될 때까지 기다리는 중입니다. Connection에 인터페이스가 표시되면 다시 시도하십시오.",
@@ -4712,7 +4712,7 @@
     "localHostStats": "{{count}} 대기 중 · {{bytes}} 바이트",
     "localHostName": "호스트 전파 노드",
     "syncPeerCostExceedsMax": "이 전파 노드의 피어링 비용은 최대 피어링 비용보다 높습니다. 네트워크 → 고급 PN 호스팅에서 최대값을 높이거나 다른 노드를 선택하세요.",
-    "offerUnsupported": "이 대상은 LXMF /offer 동기화를 지원하지 않습니다 — sarmesh에서 전파 노드로 사용할 수 없습니다.",
+    "offerUnsupported": "이 대상은 LXMF /offer 동기화를 지원하지 않습니다 — SARMesh에서 전파 노드로 사용할 수 없습니다.",
     "offerProbeTimeout": "/offer 지원을 확인하는 동안 시간이 초과되었습니다. 노드에 연결할 수 없을 수 있습니다. 경로를 사용할 수 있게 되면 다시 시도하세요.",
     "offerProbeFailed": "이 전파 노드에 대한 지원을 확인/제공할 수 없습니다. 잠시 후 다시 시도하십시오.",
     "enableLocalHostConfirmTitle": "로컬 전파 노드 호스팅을 활성화하시겠습니까?",
@@ -4959,7 +4959,7 @@
     "legendNotSavedTooltip": "빈 원 — 이 룸에 대한 비밀번호가 저장되지 않음",
     "legendSavedTooltip": "하늘 반원 — 비밀번호가 저장되었습니다. 로그인하여 세션을 여세요",
     "legendLoggedInTooltip": "녹색 점 — 활성 클라이언트 세션 (서버가 오프라인이면 룸을 나가세요)",
-    "historyLocalHint": "로그인 시 sarmesh는 이 기기에 아직 로컬 워터마크가 없을 때 룸 서버 링 버퍼에 남아 있는 최근 게시물을 요청합니다. 연결된 동안 구독을 유지하려면 자동 동기화를 활성화하세요.",
+    "historyLocalHint": "로그인 시 SARMesh는 이 기기에 아직 로컬 워터마크가 없을 때 룸 서버 링 버퍼에 남아 있는 최근 게시물을 요청합니다. 연결된 동안 구독을 유지하려면 자동 동기화를 활성화하세요.",
     "loginAllSavedDisabledNoSavedPasswords": "전체 로그인을 사용하려면 먼저 룸 비밀번호를 저장하세요.",
     "membersHeadingWithCount": "회원 ({{count}})",
     "collapseRoomList": "방 목록 접기",
@@ -5623,7 +5623,7 @@
       "enabled": "파일 수신이 활성화되었습니다.",
       "enableFailed": "파일 수신을 활성화할 수 없습니다: {{error}}",
       "saveDirRequired": "수신을 활성화하려면 저장 폴더를 선택하세요.",
-      "shareDestWarning": "활성화하면 sarmesh는 rncp 수신 대상을 이 피어에 보내 파일 보내기를 자동 채울 수 있습니다.",
+      "shareDestWarning": "활성화하면 SARMesh는 rncp 수신 대상을 이 피어에 보내 파일 보내기를 자동 채울 수 있습니다.",
       "lxmfBody": "rncp 파일 수신을 활성화하고 rncp 수신 대상 해시로 응답하세요.",
       "lxmfShareBody": "파일 수신이 활성화되었습니다. 내 rncp 수신 대상 해시:",
       "identityUnknown": "인바운드 요청이 켜져 있지만 이 피어의 ID 해시가 아직 알려지지 않았기 때문에 항상 허용에 추가되지 않았습니다. 각 파일 앞에는 여전히 질문이 표시됩니다. 경로나 알림이 도착한 후에는 항상 다시 허용해 보세요."
@@ -5727,7 +5727,7 @@
     "capabilityHeardShort": "LXST",
     "capabilityUnknownShort": "?",
     "help": {
-      "interop": "LXST 음성은 LXST 전화 (Sideband, Ratspeak 또는 sarmesh) 를 실행하는 피어가 필요합니다. 음성 메모 클립이 아닙니다. 파이썬 LXST가 기준입니다. rsLXST는 실험적입니다."
+      "interop": "LXST 음성은 LXST 전화 (Sideband, Ratspeak 또는 SARMesh) 를 실행하는 피어가 필요합니다. 음성 메모 클립이 아닙니다. 파이썬 LXST가 기준입니다. rsLXST는 실험적입니다."
     },
     "toast": {
       "busy": "라인 사용 중.",
@@ -5876,7 +5876,7 @@
   },
   "longSession": {
     "title": "재시작 권장",
-    "body": "sarmesh는 Bluetooth 라디오가 연결된 상태에서 4일 동안 실행되고 있습니다. 긴 Noble BLE 세션에서 충돌 위험을 줄이려면 앱을 다시 시작하세요.",
+    "body": "SARMesh는 Bluetooth 라디오가 연결된 상태에서 4일 동안 실행되고 있습니다. 긴 Noble BLE 세션에서 충돌 위험을 줄이려면 앱을 다시 시작하세요.",
     "restart": "재시작",
     "dismiss": "무시하기"
   },

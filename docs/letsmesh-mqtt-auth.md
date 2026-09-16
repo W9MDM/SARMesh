@@ -1,12 +1,12 @@
 # MeshCore MQTT authentication
 
-This document describes the **device-signing** authentication contract shared by the public MeshCore MQTT presets: **LetsMesh** (US/EU), **MeshMapper**, **Colorado Mesh**, **Waev**, **Meshat.se**, **MeshCore.CA** (Primary/Backup), and **EastMesh**. sarmesh uses the same contract as [meshcore-mqtt-broker](https://github.com/michaelhart/meshcore-mqtt-broker): MQTT username `v1_<64-hex public key>` (uppercase) and a password produced by `@michaelhart/meshcore-decoder` `createAuthToken`. The broker allowlist and each broker's WebSocket path live in [`letsMeshJwt.ts`](../src/renderer/lib/letsMeshJwt.ts) (`DEVICE_SIGNING_HOST_WS_PATHS`).
+This document describes the **device-signing** authentication contract shared by the public MeshCore MQTT presets: **LetsMesh** (US/EU), **MeshMapper**, **Colorado Mesh**, **Waev**, **Meshat.se**, **MeshCore.CA** (Primary/Backup), and **EastMesh**. SARMesh uses the same contract as [meshcore-mqtt-broker](https://github.com/michaelhart/meshcore-mqtt-broker): MQTT username `v1_<64-hex public key>` (uppercase) and a password produced by `@michaelhart/meshcore-decoder` `createAuthToken`. The broker allowlist and each broker's WebSocket path live in [`letsMeshJwt.ts`](../src/renderer/lib/letsMeshJwt.ts) (`DEVICE_SIGNING_HOST_WS_PATHS`).
 
 ## JWT audience (`aud`)
 
 The broker validates that the token’s `aud` claim matches its configured `AUTH_EXPECTED_AUDIENCE` when that value is set.
 
-For **every device-signing preset**, sarmesh sets the JWT `aud` to the **same hostname as the MQTT connect server** (not a separate apex domain), via `letsMeshJwtAudience()`. Examples:
+For **every device-signing preset**, SARMesh sets the JWT `aud` to the **same hostname as the MQTT connect server** (not a separate apex domain), via `letsMeshJwtAudience()`. Examples:
 
 - **MQTT connect host/port**: the broker hostname (e.g. `mqtt-us-v1.letsmesh.net`, `mqtt.waev.app`, `mqtt1.meshcore.ca`) and `443` (WebSocket TLS).
 - **JWT `aud`**: that exact connect hostname.
@@ -37,7 +37,7 @@ Meshtastic MQTT working on the same machine does not guarantee MeshCore LetsMesh
 
 ## Manual token
 
-After you connect a **MeshCore** radio successfully, sarmesh persists identity from the radio (via `exportPrivateKey`) in the **active MQTT cache** (`mesh-client:meshcoreIdentity`, optional encrypted private key). That is the identity used for LetsMesh JWT until you connect or restore a different device.
+After you connect a **MeshCore** radio successfully, SARMesh persists identity from the radio (via `exportPrivateKey`) in the **active MQTT cache** (`mesh-client:meshcoreIdentity`, optional encrypted private key). That is the identity used for LetsMesh JWT until you connect or restore a different device.
 
 **Per-node archives** (`mesh-client:meshcore-key-backup:<nodeId>`) store the full public + private pair for each MeshCore node you back up from **Security → Backup Keys**. Archives are independent of the active cache; **Security → Restore** or **Restore from backup…** writes the selected pair to the radio and refreshes the active cache for MQTT. See [Key backup and cryptography](key-backup-and-crypto.md).
 
@@ -47,11 +47,11 @@ If you use MQTT **before** ever connecting a MeshCore radio, or stored identity 
 
 Many MeshCore MQTT operators provide a **packet logger** or **Analyzer** service: clients contribute **observed** traffic (e.g. packet captures) for the map and web UI; similar to [meshcoretomqtt](https://github.com/Andrew-a-g/meshcoretomqtt) (topics such as `meshcore/packets` with JSON metadata).
 
-In sarmesh, optional **Packet logger** (off by default) publishes RX summaries from the radio to `{topicPrefix}/meshcore/packets` using the JSON envelope shown above. Confirm broker ACLs and observer onboarding expectations with your operator docs.
+In SARMesh, optional **Packet logger** (off by default) publishes RX summaries from the radio to `{topicPrefix}/meshcore/packets` using the JSON envelope shown above. Confirm broker ACLs and observer onboarding expectations with your operator docs.
 
 ## Proactive JWT refresh
 
-sarmesh proactively refreshes the JWT token **before** it expires to avoid connection drops. The client schedules a refresh **6 minutes before** the token's `exp` claim when connected. The refresh runs regardless of whether the mesh radio is active; MQTT-only connections also benefit.
+SARMesh proactively refreshes the JWT token **before** it expires to avoid connection drops. The client schedules a refresh **6 minutes before** the token's `exp` claim when connected. The refresh runs regardless of whether the mesh radio is active; MQTT-only connections also benefit.
 
 If the refresh fails, the client falls back to on-demand refresh (token is regenerated on next connect attempt after expiry).
 
@@ -83,7 +83,7 @@ Published to `{topicPrefix}/{pubKey}/chat` (with origin_id) or `{topicPrefix}/me
 - `senderNodeId`: optional sender node ID (number)
 - `timestamp`: optional message timestamp (Unix ms)
 
-When publishing with a `v1_<pubKey>` username, sarmesh adds `origin_id` (uppercase hex) to the envelope.
+When publishing with a `v1_<pubKey>` username, SARMesh adds `origin_id` (uppercase hex) to the envelope.
 
 ### Packet logger envelope
 

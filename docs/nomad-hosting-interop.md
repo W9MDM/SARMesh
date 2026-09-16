@@ -1,15 +1,15 @@
 # Nomad hosting live interop
 
-Manual verification that sarmesh’s static Nomad host interops with other Nomad Network clients. Automated tests cover path hashes, the Link request handler, and My Pages UI; this checklist is for a live stack.
+Manual verification that SARMesh’s static Nomad host interops with other Nomad Network clients. Automated tests cover path hashes, the Link request handler, and My Pages UI; this checklist is for a live stack.
 
 ## Prerequisites
 
 - Repo-local `.rsstack/` checkouts (`./scripts/clone-ratspeak-stack.sh`) and an `rns-stack` sidecar build
-- Reticulum stack running in sarmesh (Connection → Reticulum)
+- Reticulum stack running in SARMesh (Connection → Reticulum)
 - Shared path to peers: TCP hub, I2P/Ygg, or RF — same network as the peer client
 - Optional: a site folder such as sibling `nomad-page` with `pages/*.mu`
 
-## Host setup (sarmesh)
+## Host setup (SARMesh)
 
 1. Open **Nomad Network** → **My Pages**.
 2. Click **Choose folder** and select a site root (directory containing `pages/`) or the `pages/` directory itself.
@@ -25,7 +25,7 @@ Repeat with each peer you care about:
 
 1. **Python NomadNet** — node appears in announces; open destination; view index page; download a file under `/file/` if present.
 2. **MeshChat** (if available on the same network) — same announce → page → file path.
-3. **Second sarmesh** — Announces list → open node → page + file download.
+3. **Second SARMesh** — Announces list → open node → page + file download.
 
 ## Pass criteria
 
@@ -45,6 +45,6 @@ When NomadNet / MeshChat are not installed in the environment:
 
 - `nomad-core` tests: Link request handler serves page + file by path hash; request budget rejects over-concurrency; listing skips dotfiles/`*.allowed`; `encode_request_fields` / `decode_request_fields` round-trip MessagePack form bodies
 - Sidecar: `nomad_page_request_payload` (base64 JSON → `encode_request_fields`) plus content-source layout resolve + persistence of `nomad_serving_content_source`
-- sarmesh Vitest: My Pages folder choose, start gated on content source, read-only page/file lists, and **Open in browser** wiring
+- SARMesh Vitest: My Pages folder choose, start gated on content source, read-only page/file lists, and **Open in browser** wiring
 
 Treat the peer table above as the release gate for cross-client hosting.

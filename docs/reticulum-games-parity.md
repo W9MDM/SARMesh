@@ -1,19 +1,19 @@
 # Reticulum Games — Ratspeak parity checklist
 
-Living matrix for [issue #773](https://github.com/W9MDM/SARMesh/issues/773). Wire protocol is [lrgp-rs](https://github.com/ratspeak/lrgp-rs) (LRGP v1). Product surface reference is Ratspeak:
+Living matrix for [issue #773](https://github.com/Colorado-Mesh/mesh-client/issues/773). Wire protocol is [lrgp-rs](https://github.com/ratspeak/lrgp-rs) (LRGP v1). Product surface reference is Ratspeak:
 
 - `crates/ratspeak-tauri/src/commands/games.rs`
 - `dashboard/static/js/games_tab.js`
 
 Update this file when Games PRs land. `pnpm run update` warns only when a **published** Ratspeak GitHub Release is newer than the `reviewed-ref` pin on the `games-parity` entry in `scripts/update.sh` (bump that pin after review). Tags, `main`, and RCs without a GitHub Release are ignored.
 
-**Last review:** 2026-08-28 (Ratspeak v1.0.31 — voice message reliability; no Games API or `games_tab.js` delta vs v1.0.30. **Four in a Row UI landed in sarmesh**: `FourInARowBoard` + optimistic column drop, so the last outstanding Games parity gap is closed). Prior: 2026-08-26 (Ratspeak v1.0.30 — message reactions/replies/selection + BLE RNode reconnect/mobile pairing; no Games API delta vs v1.0.28).
+**Last review:** 2026-08-28 (Ratspeak v1.0.31 — voice message reliability; no Games API or `games_tab.js` delta vs v1.0.30. **Four in a Row UI landed in SARMesh**: `FourInARowBoard` + optimistic column drop, so the last outstanding Games parity gap is closed). Prior: 2026-08-26 (Ratspeak v1.0.30 — message reactions/replies/selection + BLE RNode reconnect/mobile pairing; no Games API delta vs v1.0.28).
 
 Status: `done` | `partial` | `wontfix` | `todo`
 
 ## Commands / API
 
-| Ratspeak command          | sarmesh                                               | Status | Notes                                            |
+| Ratspeak command          | SARMesh                                               | Status | Notes                                            |
 | ------------------------- | ----------------------------------------------------- | ------ | ------------------------------------------------ |
 | `send_game_action`        | `POST /api/v1/games/action` + `reticulum:gamesAction` | done   | Direct-preferred send                            |
 | `get_available_games`     | `GET /api/v1/games/apps`                              | done   |                                                  |
@@ -26,7 +26,7 @@ Status: `done` | `partial` | `wontfix` | `todo`
 
 ## UI
 
-| Ratspeak UI                         | sarmesh                                 | Status | Notes                                                                                                         |
+| Ratspeak UI                         | SARMesh                                 | Status | Notes                                                                                                         |
 | ----------------------------------- | --------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------- |
 | Games tab                           | Left-rail Games (`Gamepad2`)            | done   | Reticulum-only via `hasLrgpGames`                                                                             |
 | Session list filters                | GamesPanel filters                      | done   |                                                                                                               |
@@ -47,12 +47,12 @@ Status: `done` | `partial` | `wontfix` | `todo`
 
 | Scenario                         | Status |
 | -------------------------------- | ------ |
-| sarmesh ↔ sarmesh TTT            | done   |
-| sarmesh ↔ sarmesh Chess          | done   |
-| sarmesh ↔ Ratspeak TTT           | done   |
-| sarmesh ↔ Ratspeak Chess         | done   |
-| sarmesh ↔ sarmesh Four in a Row  | todo   |
-| sarmesh ↔ Ratspeak Four in a Row | todo   |
+| SARMesh ↔ SARMesh TTT            | done   |
+| SARMesh ↔ SARMesh Chess          | done   |
+| SARMesh ↔ Ratspeak TTT           | done   |
+| SARMesh ↔ Ratspeak Chess         | done   |
+| SARMesh ↔ SARMesh Four in a Row  | todo   |
+| SARMesh ↔ Ratspeak Four in a Row | todo   |
 
 Manual gold test: two clients on a TCP hub — challenge → accept → play → resign/draw.
 

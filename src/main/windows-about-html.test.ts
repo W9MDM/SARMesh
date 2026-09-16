@@ -20,9 +20,9 @@ describe('windows-about-html', () => {
     expect(html).toContain('>GitHub</a>');
     expect(html).toContain('>Discord</a>');
     expect(html).toContain('>Close</button>');
-    expect(html).toContain('href="https://coloradomesh.org/"');
+    expect(html).toContain('href="https://nwimesh.net/"');
     expect(html).toContain('href="https://github.com/W9MDM/SARMesh"');
-    expect(html).toContain('href="https://discord.com/invite/McChKR5NpS"');
+    expect(html).toContain('href="https://discord.gg/4wQ5SWPBfQ"');
     expect(html).toContain('aria-label="Close About window"');
     expect(html).not.toContain('<script');
     expect(html).toContain('Reticulum');

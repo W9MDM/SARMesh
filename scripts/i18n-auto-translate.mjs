@@ -4,7 +4,7 @@
  *
  * Supports backends:
  *   1. LibreTranslate  — set LIBRETRANSLATE_URL + optionally LIBRETRANSLATE_KEY
- *   2. MyMemory        — default; uses MYMEMORY_EMAIL or info@coloradomesh.org for 50 k words/day quota
+ *   2. MyMemory        — default; uses MYMEMORY_EMAIL or i18n@nwimesh.net for 50 k words/day quota
  *
  * Usage:
  *   node scripts/i18n-auto-translate.mjs
@@ -55,7 +55,7 @@ const WRITE_SUBPROCESS = join(__dirname, 'i18n-auto-translate-write-subprocess.m
 
 const LT_URL = process.env.LIBRETRANSLATE_URL ?? '';
 const LT_KEY = process.env.LIBRETRANSLATE_KEY ?? '';
-const MM_EMAIL = process.env.MYMEMORY_EMAIL ?? 'info@coloradomesh.org';
+const MM_EMAIL = process.env.MYMEMORY_EMAIL ?? 'i18n@nwimesh.net';
 
 // Language code mappings for each backend
 const LANG_CODES = [
@@ -186,7 +186,7 @@ async function translateMyMemory(text, targetMm) {
     if (json.quotaFinished) {
       throw new Error(
         'MyMemory daily quota finished. ' +
-          'The script defaults MYMEMORY_EMAIL to info@coloradomesh.org; set MYMEMORY_EMAIL to override. ' +
+          'The script defaults MYMEMORY_EMAIL to i18n@nwimesh.net; set MYMEMORY_EMAIL to override. ' +
           'Or set LIBRETRANSLATE_URL + LIBRETRANSLATE_KEY to use a LibreTranslate instance.',
       );
     }

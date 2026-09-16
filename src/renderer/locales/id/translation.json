@@ -206,7 +206,7 @@
     "debugSnapshotFailed": "Tidak dapat menyalin snapshot debug",
     "meshcoreOpenWireExperimentalTitle": "MeshCore Open wire (eksperimental)",
     "meshcoreOpenWireCompatLabel": "Aktifkan kompatibilitas MeshCore Open",
-    "meshcoreOpenWireCompatHint": "Saat diaktifkan, sarmesh mengirim balasan teks berkunci (@[Name#key]), reaksi ringkas r:, dan GIF Giphy g:. Ini mungkin tidak sesuai format wire companion resmi; penerima membutuhkan klien yang mendukung MeshCore Open.",
+    "meshcoreOpenWireCompatHint": "Saat diaktifkan, SARMesh mengirim balasan teks berkunci (@[Name#key]), reaksi ringkas r:, dan GIF Giphy g:. Ini mungkin tidak sesuai format wire companion resmi; penerima membutuhkan klien yang mendukung MeshCore Open.",
     "meshcorePathHashExperimentalTitle": "Ukuran hash jalur MeshCore (eksperimental)",
     "meshcorePathHashModeLabel": "Ukuran hash jalur default",
     "meshcorePathHashMode1Byte": "1 - byte (warisan, hingga 64 hop)",
@@ -654,7 +654,7 @@
       "requestEnable": "Minta pengaktifan",
       "requestEnableAria": "Minta rekan ini untuk mengaktifkan penerimaan file",
       "destinationLabel": "Rncp rekan menerima tujuan",
-      "destinationHelp": "Bukan hash Obrolan/LXMF mereka. Gunakan Pengaktifan Permintaan — rekan sarmesh membagikan ini secara otomatis setelah mereka menerimanya. Atau tempel dari Remote mereka → Tujuan penerimaan rncp saya.",
+      "destinationHelp": "Bukan hash Obrolan/LXMF mereka. Gunakan Pengaktifan Permintaan — rekan SARMesh membagikan ini secara otomatis setelah mereka menerimanya. Atau tempel dari Remote mereka → Tujuan penerimaan rncp saya.",
       "activeTransfersBadgeAria_one": "{{count}} transfer file aktif dengan rekan ini",
       "activeTransfersBadgeAria_other": "{{count}} transfer file aktif dengan rekan ini",
       "transfersTitle": "Transfer",
@@ -733,7 +733,7 @@
       "tooLargeForWire": "Memo suara terlalu besar untuk dikirim. Rekam klip yang lebih pendek.",
       "tooLargeForPropagation": "Pesan suara lebih besar dari batas simpul propagasi. Pengiriman hanya akan dilakukan saat penerima sedang online. Persingkat untuk menyimpannya untuk pengiriman offline.",
       "directOnlyBadge": "Hanya langsung — terlalu besar untuk penyimpanan offline",
-      "recordTooltip": "Memo suara LXMF — merekam klip Opus singkat untuk pesan langsung ini. Didukung oleh sarmesh, Ratspeak, dan Sideband (FIELD_AUDIO). Tidak sama dengan LXST Call.",
+      "recordTooltip": "Memo suara LXMF — merekam klip Opus singkat untuk pesan langsung ini. Didukung oleh SARMesh, Ratspeak, dan Sideband (FIELD_AUDIO). Tidak sama dengan LXST Call.",
       "sendTooltip": "Kirim memo suara LXMF yang direkam",
       "startFailed": "Tidak dapat memulai perekaman memo suara. Coba lagi.",
       "sendAriaWithElapsed": "Kirim memo suara ({{seconds}} detik direkam)",
@@ -958,7 +958,7 @@
         "accessDeniedLinuxHint": "Di Linux, tambahkan pengguna Anda ke grup dialout: sudo usermod -aG dialout $USER (lalu logout dan masuk kembali)",
         "disconnectedHint": "Pastikan kabel USB terhubung dan perangkat dihidupkan.",
         "timeoutHint": "Jika port muncul sebentar, coba sambungkan kembali kabel USB.",
-        "portStillOpenHint": "Port serial USB tidak terlepas dengan bersih. Keluar dari sarmesh sepenuhnya dan buka kembali, atau cabut dan pasang kembali kabel USB, lalu sambungkan lagi."
+        "portStillOpenHint": "Port serial USB tidak terlepas dengan bersih. Keluar dari SARMesh sepenuhnya dan buka kembali, atau cabut dan pasang kembali kabel USB, lalu sambungkan lagi."
       },
       "http": {
         "timeoutMdnsWindows": "Di Windows, meshtastic.local memerlukan Bonjour (diinstal dengan iTunes). Gunakan alamat IP perangkat sebagai gantinya.",
@@ -986,7 +986,7 @@
         "connectionAttemptFailedLinuxHint": "Di Linux, Anda dapat mengatur pemasangan melalui pengaturan Bluetooth sistem atau alat 'bluetoothctl'.",
         "meshcoreHandshakeHint": "Pastikan perangkat MeshCore Anda dalam mode Bluetooth Companion dan dipasangkan dengan komputer Anda menggunakan PIN. Hapus semua pasangan yang ada dan pasangkan kembali jika masalah koneksi terus berlanjut.",
         "meshcoreHandshakeWindowsExtra": "Di Windows, matikan/hidupkan Bluetooth dan perbarui driver adaptor di Pengelola Perangkat jika pemutusan sambungan masih terjadi.",
-        "macWakeRecoveryHint": "Setelah tidur, keluar dari sarmesh (Cmd+Q), matikan dan nyalakan Bluetooth di Pengaturan Sistem, tunggu beberapa detik, lalu Hubungkan lagi. Dengan dua radio, hubungkan MeshCore sebelum Meshtastic.",
+        "macWakeRecoveryHint": "Setelah tidur, keluar dari SARMesh (Cmd+Q), matikan dan nyalakan Bluetooth di Pengaturan Sistem, tunggu beberapa detik, lalu Hubungkan lagi. Dengan dua radio, hubungkan MeshCore sebelum Meshtastic.",
         "dualProtocolContentionHint": "Protokol lain mungkin masih terhubung melalui Bluetooth. Tunggu beberapa detik dan coba lagi, atau beralih ke tab protokol lain untuk memeriksa status koneksinya.",
         "scanBusy": "Pemindaian Bluetooth lainnya sedang berlangsung. Coba lagi sebentar lagi.",
         "sameDeviceConflict": "Perangkat Bluetooth ini sudah terhubung ke {{owner}}.",
@@ -1016,9 +1016,9 @@
     "reticulumStackHint": "Memulai sidecar Reticulum/LXMF lokal (antarmuka TCP dan Auto).",
     "reticulumStartStack": "Mulai stack",
     "reticulumNetworkEmpty": "Belum ada antarmuka yang dilaporkan.",
-    "reticulumSidecarMissing": "Sidecar Reticulum belum dibangun. Dari repo sarmesh jalankan `pnpm run reticulum:sidecar:build` (memerlukan Rust).",
+    "reticulumSidecarMissing": "Sidecar Reticulum belum dibangun. Dari repo SARMesh jalankan `pnpm run reticulum:sidecar:build` (memerlukan Rust).",
     "reticulumSidecarCargoMissing": "Toolchain Rust (cargo) tidak ditemukan. Instal dari https://rustup.rs lalu jalankan `pnpm run reticulum:sidecar:build`.",
-    "reticulumSidecarPatchMissing": "Build sidecar Reticulum membutuhkan overlay rsReticulum packet-tap. Dari root repo sarmesh jalankan `pnpm run reticulum:sidecar:build` (menerapkan patch secara otomatis).",
+    "reticulumSidecarPatchMissing": "Build sidecar Reticulum membutuhkan overlay rsReticulum packet-tap. Dari root repo SARMesh jalankan `pnpm run reticulum:sidecar:build` (menerapkan patch secara otomatis).",
     "reticulumSidecarStartFailed": "Tidak dapat memulai stack Reticulum: {{message}}",
     "reticulumStopStack": "Hentikan tumpukan",
     "reticulumAutostart": "Mulai otomatis tumpukan saat membuka Koneksi",
@@ -1256,7 +1256,7 @@
       "advancedAria": "Opsi nilai kunci antarmuka tingkat lanjut",
       "advancedKeyReserved": "Kunci \"{{key}}\" adalah bidang yang diketahui dan diabaikan — gunakan formulir di atas.",
       "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} dBm",
-      "decommissionedHubEnableBlocked": "Hub ini sudah dinonaktifkan dan tidak dapat tetap diaktifkan — sarmesh mematikannya setiap kali stack dimulai. Gunakan «Tambahkan backbone default» atau direktori backbone untuk endpoint aktif.",
+      "decommissionedHubEnableBlocked": "Hub ini sudah dinonaktifkan dan tidak dapat tetap diaktifkan — SARMesh mematikannya setiap kali stack dimulai. Gunakan «Tambahkan backbone default» atau direktori backbone untuk endpoint aktif.",
       "decommissionedBadge": "dinonaktifkan",
       "defaultHubsPickerTitle": "Tambahkan backbone default",
       "defaultHubsPickerConfirm": "Tambahkan hub {{count}}",
@@ -1301,7 +1301,7 @@
       "rmapFullModeHint": "Mode penuh dengan RMAP publikasikan tetap Penuh melalui ignore_config_warnings. Pengiriman LXMF mengumumkan akan keluar dari radio ini pada interval pengumuman stack (default 1 jam).",
       "effectiveModeBadge": "Berlaku: {{mode}}",
       "effectiveModeAria": "Mode runtime efektif {{mode}}. Mode yang dikonfigurasi berbeda dari yang dijalankan Reticulum.",
-      "effectiveModeTooltip": "Reticulum menulis ulang antarmuka yang dapat ditemukan ini ke Access Point (atau mode lain yang diizinkan) karena dapat ditemukan memerlukan Gateway, Internal, atau Access Point kecuali jika ignore_config_warnings ditetapkan. Mulai ulang tumpukan setelah stempel sarmesh yang menyisih sehingga Full (atau mode terkonfigurasi Anda) berlaku.",
+      "effectiveModeTooltip": "Reticulum menulis ulang antarmuka yang dapat ditemukan ini ke Access Point (atau mode lain yang diizinkan) karena dapat ditemukan memerlukan Gateway, Internal, atau Access Point kecuali jika ignore_config_warnings ditetapkan. Mulai ulang tumpukan setelah stempel SARMesh yang menyisih sehingga Full (atau mode terkonfigurasi Anda) berlaku.",
       "flowControlBleHint": "Di Bluetooth, radio sering tidak pernah mengirimkan CMD_READY. SARMesh masih melangkah TX (menunggu sebentar untuk READY, lalu melanjutkan) sehingga kontrol aliran mengurangi kelebihan beban tanpa membekukan antrian.",
       "advancedFields": "Pengaturan tingkat lanjut",
       "field": {
@@ -1368,12 +1368,12 @@
       "connectingRow": "{{name}}: menghubungkan melalui Bluetooth",
       "offlineHintWifi": "Periksa apakah RNode ada di Lan Anda, dinyalakan, dan dapat dijangkau pada IP yang dikonfigurasi (port TCP default 7633, bukan 4242). Perbarui host di bawah ini jika DHCP menetapkan alamat baru, atau menyediakan kembali Wi-Fi di → Admin Reticulum.",
       "tcpUnreachable": "{{name}}: Hub TCP tidak dapat dijangkau ({{host}}:{{port}})",
-      "tcpUnreachableHint": "Instansi Reticulum jarak jauh mungkin offline atau memblokir koneksi. Nonaktifkan antarmuka ini atau verifikasi host dan port. Restart sarmesh atau stack yang sering dapat membuat hub Reticulum 1.4.0+ memblokir IP Anda selama 12 jam — lebih baik menunggu daripada me-restart lagi.",
+      "tcpUnreachableHint": "Instansi Reticulum jarak jauh mungkin offline atau memblokir koneksi. Nonaktifkan antarmuka ini atau verifikasi host dan port. Restart SARMesh atau stack yang sering dapat membuat hub Reticulum 1.4.0+ memblokir IP Anda selama 12 jam — lebih baik menunggu daripada me-restart lagi.",
       "connectingHintBle": "Tautan BLE RNode dapat memakan waktu hingga 60 detik setelah tumpukan dimulai (jendela kunci sandi OS). Masukkan PIN RNode saat ini jika diminta — jangan pernah 123456. Ini normal, bukan kesalahan. Perangkat mungkin tidak muncul di Pengaturan Sistem sampai ikatan berhasil.",
       "offlineHintBle": "Untuk menghapus kesalahan ini, Anda mungkin perlu menghapus antarmuka ini dan menambahkannya kembali (Pilih perangkat) agar ID Bluetooth tersimpan diperbarui, lalu mulai ulang stack. OS Anda mungkin meminta PIN Bluetooth 6 digit (macOS, Windows, atau Linux). RNode menghasilkan kode baru setiap pemasangan — jangan pernah menggunakan 123456 (itu default Meshtastic, bukan RNode). RNode tidak perlu muncul di Pengaturan Sistem → Bluetooth sebelum aplikasi ini terhubung; dialog OS muncul saat stack memasangkan. Radio tanpa layar: sambungkan USB → Reticulum Admin → Bluetooth → Mulai pemasangan → masukkan PIN yang ditampilkan di panel Admin (bukan di layar radio) ke dialog OS. Radio dengan layar: tahan tombol ~7 dtk pada perangkat Heltec (waktu bervariasi; ~10 dtk pada banyak papan mengaktifkan Wi‑Fi AP), baca PIN di layar, lalu masukkan ke dialog OS. Hapus ikatan yang gagal di pengaturan Bluetooth OS sebelum mencoba lagi.",
       "offlineHintBleBondStale": "macOS masih menampilkan RNode ini sebagai Dipasangkan, tetapi kunci Bluetooth tidak lagi cocok (informasi pemasangan dihapus oleh peer). Lupakan perangkat di Pengaturan Sistem → Bluetooth, masukkan RNode ke mode pemasangan (Admin → Bluetooth → Mulai pemasangan, atau tahan tombol ~7 dtk), lalu hapus dan tambahkan kembali antarmuka ini (Pilih perangkat), mulai ulang stack, dan masukkan PIN 6 digit baru saat diminta.",
       "tcpFastFlap": "{{name}}: hub kemungkinan memblokir IP Anda setelah tumpukan sering dimulai ulang ({{host}}:{{port}})",
-      "tcpFastFlapHint": "Reticulum 1.4.0+ hub publik memblokir IP setelah lima sesi TCP singkat dalam waktu 12 jam. Restart cepat sarmesh atau stack dihitung. Nonaktifkan hub ini dan tunggu hingga 12 jam — memulai ulang lagi memperpanjang blok."
+      "tcpFastFlapHint": "Reticulum 1.4.0+ hub publik memblokir IP setelah lima sesi TCP singkat dalam waktu 12 jam. Restart cepat SARMesh atau stack dihitung. Nonaktifkan hub ini dan tunggu hingga 12 jam — memulai ulang lagi memperpanjang blok."
     },
     "autoConnectingTo": "Menghubungkan otomatis ke {{deviceName}}…",
     "autoReconnectInProgress": "Sambungan ulang otomatis sedang berlangsung…",
@@ -1845,7 +1845,7 @@
         "rmap_transport_disabled": "Antarmuka yang dapat ditemukan dikonfigurasi tetapi mode transportasi tidak aktif.",
         "rmap_i2p_not_connectable": "Antarmuka I2P \"{{name}}\" dapat ditemukan tetapi terhubung bukan ya.",
         "shared_instance_client": "Share instance attached as a client of another app — local TCP hubs in this config are not started.",
-        "rmap_mode_autocorrect": "Antarmuka \"{{name}}\" dapat ditemukan dengan mode non — AP/Gateway — Reticulum akan menjalankannya sebagai Access Point kecuali jika ignore_config_warnings ditetapkan. Edit antarmuka atau mulai ulang tumpukan sehingga sarmesh dapat mencap opt - out."
+        "rmap_mode_autocorrect": "Antarmuka \"{{name}}\" dapat ditemukan dengan mode non — AP/Gateway — Reticulum akan menjalankannya sebagai Access Point kecuali jika ignore_config_warnings ditetapkan. Edit antarmuka atau mulai ulang tumpukan sehingga SARMesh dapat mencap opt - out."
       },
       "runtime": {
         "rnsNotReady": "Tumpukan RNS belum siap",
@@ -1878,7 +1878,7 @@
         "announceBusPressureTipBoundaryHubs": "Mengaktifkan hub batas / backbone: {{hubs}}.",
         "announceBusPressureTipTxSaturated": "Antrean TX turun pada: {{names}} — antarmuka itu mungkin jenuh.",
         "tooManyDefaultBackbones": "Anda telah mengaktifkan {{count}} backbone default. Pertimbangkan untuk menonaktifkan ekstra dan menyimpan sekitar 2 untuk redundansi.",
-        "decommissionedHubEnabled": "Hub yang dinonaktifkan «{{name}}» masih aktif — sarmesh mematikannya setiap kali stack dimulai. Gunakan «Tambahkan backbone default» atau direktori backbone untuk endpoint aktif.",
+        "decommissionedHubEnabled": "Hub yang dinonaktifkan «{{name}}» masih aktif — SARMesh mematikannya setiap kali stack dimulai. Gunakan «Tambahkan backbone default» atau direktori backbone untuk endpoint aktif.",
         "txQueueDropsBle": "Antarmuka \"{{name}}\" menjatuhkan paket keluar {{count}} (antrean TX penuh) — tautan BLE RNode macet; lebih suka USB atau pasang ulang",
         "txQueueDropsBleBondStale": "Antarmuka \"{{name}}\" menjatuhkan paket keluar {{count}} (antrean TX penuh) — ikatan BLE basi; Lupakan di OS Bluetooth dan pasangkan kembali",
         "txQueueDropsNeutral": "Antarmuka \"{{name}}\" menjatuhkan paket keluar {{count}} (antrean TX penuh) — periksa tautan antarmuka tersebut",
@@ -2145,11 +2145,11 @@
       },
       "database-chmod": {
         "label": "Chmod basis data (tidak fatal)",
-        "recommendation": "Perubahan izin file database gagal (seringkali tidak berbahaya di Windows). Jika Anda melihat kesalahan DB nyata di tempat lain, periksa antivirus dan izin folder untuk direktori userData sarmesh."
+        "recommendation": "Perubahan izin file database gagal (seringkali tidak berbahaya di Windows). Jika Anda melihat kesalahan DB nyata di tempat lain, periksa antivirus dan izin folder untuk direktori userData SARMesh."
       },
       "database-writable": {
         "label": "Basis Data Tidak Dapat Ditulis",
-        "recommendation": "Aplikasi tidak dapat menulis folder database-nya. Perbaiki izin pada direktori userData sarmesh (lihat pemecahan masalah: Direktori database tidak dapat ditulis)."
+        "recommendation": "Aplikasi tidak dapat menulis folder database-nya. Perbaiki izin pada direktori userData SARMesh (lihat pemecahan masalah: Direktori database tidak dapat ditulis)."
       },
       "tak-server": {
         "label": "Masalah Server TAK",
@@ -2652,7 +2652,7 @@
       "remoteHardwareEnabledDesc": "Izinkan node jarak jauh membaca dan menulis pin GPIO di perangkat ini.",
       "remoteHardwareAllowUndefinedPins": "Izinkan Akses Pin Tak Terdefinisi",
       "remoteHardwareAllowUndefinedPinsDesc": "Izinkan pembacaan/penulisan pin yang tidak tercantum dalam konfigurasi pin yang tersedia.",
-      "mqttProxyGatewayHint": "Dengan proxy diaktifkan, sarmesh menjembatani lalu lintas broker melalui MqttClientProxyMessage. Aktifkan downlink per saluran pada tab Radio untuk relai→ RF MQTT.",
+      "mqttProxyGatewayHint": "Dengan proxy diaktifkan, SARMesh menjembatani lalu lintas broker melalui MqttClientProxyMessage. Aktifkan downlink per saluran pada tab Radio untuk relai→ RF MQTT.",
       "mapReportPublishInterval": "Interval laporan peta (detik)",
       "mapReportPublishIntervalDesc": "0 menggunakan firmware default. Seberapa sering perangkat memublikasikan laporan peta saat pelaporan peta diaktifkan.",
       "mapReportPositionPrecision": "Presisi posisi laporan peta",
@@ -3336,7 +3336,7 @@
       "missingIdentity": "Node ini belum memiliki identitas yang diingat. Tunggu pengumuman Nomad, lalu coba lagi.",
       "transportUnavailable": "Transport Reticulum tidak tersedia. Mulai ulang stack dan coba lagi.",
       "sidecarNotRunning": "Sidecar Reticulum tidak berjalan. Mulai stack dari Connection, lalu coba lagi.",
-      "responseTooLarge": "The node returned more data than sarmesh will accept for this request.",
+      "responseTooLarge": "The node returned more data than SARMesh will accept for this request.",
       "nomadBusy": "Permintaan halaman atau berkas Nomad lain masih berlangsung. Coba lagi sebentar lagi.",
       "nomadNotServing": "Ini adalah node Nomad Anda, tetapi hosting Halaman Saya tidak berjalan. Buka Halaman Saya, pilih folder, dan mulai melayani untuk melihat pratinjau secara lokal.",
       "networkNotReady": "Menunggu hub atau antarmuka radio online. Coba lagi setelah Koneksi menampilkan antarmuka.",
@@ -4712,7 +4712,7 @@
     "localHostStats": "{{count}} antri · {{bytes}} byte",
     "localHostName": "Node propagasi host",
     "syncPeerCostExceedsMax": "Biaya peering node propagasi ini berada di atas biaya peering maksimal Anda — naikkan biaya maksimal di Jaringan → Hosting PN tingkat lanjut, atau pilih node lain.",
-    "offerUnsupported": "Tujuan ini tidak mendukung sinkronisasi LXMF /offer — sarmesh tidak dapat menggunakannya sebagai node propagasi.",
+    "offerUnsupported": "Tujuan ini tidak mendukung sinkronisasi LXMF /offer — SARMesh tidak dapat menggunakannya sebagai node propagasi.",
     "offerProbeTimeout": "Waktu habis saat memeriksa / menawarkan dukungan — node mungkin tidak dapat dijangkau. Coba lagi ketika jalur tersedia.",
     "offerProbeFailed": "Tidak dapat memverifikasi/offer dukungan untuk node propagasi ini — coba lagi sebentar lagi.",
     "enableLocalHostConfirmTitle": "Aktifkan hosting node propagasi lokal?",
@@ -4959,7 +4959,7 @@
     "legendNotSavedTooltip": "Lingkaran kosong — tidak ada kata sandi yang disimpan untuk ruangan ini",
     "legendSavedTooltip": "Setengah lingkaran biru langit — kata sandi disimpan; masuk untuk membuka sesi",
     "legendLoggedInTooltip": "Titik hijau — sesi klien aktif (tinggalkan ruangan jika server offline)",
-    "historyLocalHint": "Saat login, sarmesh meminta pos terbaru yang masih ada di buffer cincin server ruangan (ketika perangkat ini belum punya watermark lokal). Aktifkan Sinkronisasi otomatis agar tetap berlangganan saat terhubung.",
+    "historyLocalHint": "Saat login, SARMesh meminta pos terbaru yang masih ada di buffer cincin server ruangan (ketika perangkat ini belum punya watermark lokal). Aktifkan Sinkronisasi otomatis agar tetap berlangganan saat terhubung.",
     "loginAllSavedDisabledNoSavedPasswords": "Simpan kata sandi ruangan terlebih dahulu untuk menggunakan log masuk semua",
     "membersHeadingWithCount": "Anggota ({{count}})",
     "collapseRoomList": "Ciutkan daftar ruangan",
@@ -5623,7 +5623,7 @@
       "enabled": "Penerimaan file diaktifkan.",
       "enableFailed": "Tidak dapat mengaktifkan penerimaan file: {{error}}",
       "saveDirRequired": "Pilih folder penyimpanan untuk mengaktifkan penerimaan.",
-      "shareDestWarning": "Jika Anda mengaktifkannya, sarmesh akan mengirimkan tujuan penerimaan rncp Anda ke rekan ini sehingga mereka dapat mengisi otomatis pengiriman file.",
+      "shareDestWarning": "Jika Anda mengaktifkannya, SARMesh akan mengirimkan tujuan penerimaan rncp Anda ke rekan ini sehingga mereka dapat mengisi otomatis pengiriman file.",
       "lxmfBody": "Harap aktifkan penerimaan file rncp dan balas dengan hash tujuan penerimaan rncp Anda.",
       "lxmfShareBody": "Penerimaan file diaktifkan. Rncp saya menerima hash tujuan:",
       "identityUnknown": "Tanya Masuk aktif, namun hash identitas rekan ini belum diketahui sehingga tidak ditambahkan ke Selalu izinkan. Anda masih akan ditanya sebelum setiap file; coba Selalu izinkan lagi setelah jalur atau pengumuman tiba."
@@ -5727,7 +5727,7 @@
     "capabilityHeardShort": "LXST",
     "capabilityUnknownShort": "?",
     "help": {
-      "interop": "Suara LXST membutuhkan rekan yang menjalankan telepon LXST (Sideband, Ratspeak, atau sarmesh). Bukan klip catatan suara. Python LXST adalah referensi; rsLXST adalah eksperimental."
+      "interop": "Suara LXST membutuhkan rekan yang menjalankan telepon LXST (Sideband, Ratspeak, atau SARMesh). Bukan klip catatan suara. Python LXST adalah referensi; rsLXST adalah eksperimental."
     },
     "toast": {
       "busy": "Line sedang sibuk",
@@ -5876,7 +5876,7 @@
   },
   "longSession": {
     "title": "Mulai ulang direkomendasikan",
-    "body": "sarmesh telah berjalan selama empat hari dengan radio Bluetooth yang terhubung. Mulai ulang aplikasi untuk mengurangi risiko crash pada sesi Noble BLE yang panjang.",
+    "body": "SARMesh telah berjalan selama empat hari dengan radio Bluetooth yang terhubung. Mulai ulang aplikasi untuk mengurangi risiko crash pada sesi Noble BLE yang panjang.",
     "restart": "Start Ulang",
     "dismiss": "Tutup"
   },

@@ -1,5 +1,5 @@
-site_name: Colorado SARMesh
-repo_url: https://github.com/Colorado-Mesh/mesh-client
+site_name: SARMesh
+repo_url: https://github.com/W9MDM/SARMesh
 edit_uri: edit/main/docs/
 
 theme:
@@ -44,8 +44,8 @@ nav:
       - Diagnostics: diagnostics.md
       - Troubleshooting: troubleshooting.md
       - Community:
-          - Discord: https://discord.com/invite/McChKR5NpS
-          - Website: https://coloradomesh.org/
+          - Discord: https://discord.gg/4wQ5SWPBfQ
+          - Website: https://nwimesh.net/
   - Project:
       - License: license.md
       - Credits: credits.md

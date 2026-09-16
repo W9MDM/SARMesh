@@ -206,7 +206,7 @@
     "debugSnapshotFailed": "Не удалось скопировать снимок отладки",
     "meshcoreOpenWireExperimentalTitle": "MeshCore Open wire (экспериментально)",
     "meshcoreOpenWireCompatLabel": "Включить совместимость MeshCore Open",
-    "meshcoreOpenWireCompatHint": "Если включено, sarmesh отправляет текстовые ответы с ключом (@[Name#key]), компактные реакции r: и GIF Giphy g:. Это может не соответствовать официальному формату wire companion; получателям нужны клиенты с поддержкой MeshCore Open.",
+    "meshcoreOpenWireCompatHint": "Если включено, SARMesh отправляет текстовые ответы с ключом (@[Name#key]), компактные реакции r: и GIF Giphy g:. Это может не соответствовать официальному формату wire companion; получателям нужны клиенты с поддержкой MeshCore Open.",
     "meshcorePathHashExperimentalTitle": "Размер хэша пути MeshCore (экспериментальный)",
     "meshcorePathHashModeLabel": "Размер хэша пути по умолчанию",
     "meshcorePathHashMode1Byte": "1 байт (устаревший, до 64 прыжков)",
@@ -763,7 +763,7 @@
       "tooLargeForWire": "Голосовая заметка слишком велика для отправки. Запишите более короткий клип.",
       "tooLargeForPropagation": "Голосовое сообщение больше предела узла распространения. Он будет доставлен только тогда, когда получатель находится в сети. Сократите его, чтобы сохранить для автономной доставки.",
       "directOnlyBadge": "Только прямой — слишком большой для автономного хранения",
-      "recordTooltip": "Голосовая заметка LXMF — записывает короткий клип Opus для этого прямого сообщения. Поддерживается sarmesh, Ratspeak и Sideband (FIELD_AUDIO). Не то же самое, что LXST Call.",
+      "recordTooltip": "Голосовая заметка LXMF — записывает короткий клип Opus для этого прямого сообщения. Поддерживается SARMesh, Ratspeak и Sideband (FIELD_AUDIO). Не то же самое, что LXST Call.",
       "sendTooltip": "Отправить записанную голосовую заметку LXMF",
       "startFailed": "Не удалось начать запись голосовой заметки. Повторите попытку.",
       "sendAriaWithElapsed": "Отправить голосовую заметку ({{seconds}} секунд записано)",
@@ -996,7 +996,7 @@
         "accessDeniedLinuxHint": "В Linux добавьте своего пользователя в группу дозвона: sudo usermod -aG Diaout $USER (затем выйдите из системы и снова войдите в систему).",
         "disconnectedHint": "Убедитесь, что USB-кабель подключен и устройство включено.",
         "timeoutHint": "Если порт появился ненадолго, попробуйте переподсоединить USB-кабель.",
-        "portStillOpenHint": "The USB serial port did not release cleanly. Quit sarmesh completely and reopen it, or unplug and replug the USB cable, then connect again."
+        "portStillOpenHint": "The USB serial port did not release cleanly. Quit SARMesh completely and reopen it, or unplug and replug the USB cable, then connect again."
       },
       "http": {
         "timeoutMdnsWindows": "В Windows для работы meshtastic.local требуется Bonjour (устанавливается вместе с iTunes). Вместо этого используйте IP-адрес устройства.",
@@ -1024,7 +1024,7 @@
         "connectionAttemptFailedLinuxHint": "В Linux вы можете управлять сопряжениями через системные настройки Bluetooth или инструмент bluetoothctl.",
         "meshcoreHandshakeHint": "Убедитесь, что ваше устройство MeshCore находится в режиме Bluetooth Companion и сопряжено с вашим компьютером с помощью PIN-кода. Удалите все существующие сопряжения и выполните повторное сопряжение, если проблемы с подключением не исчезнут.",
         "meshcoreHandshakeWindowsExtra": "В Windows выключите/включите Bluetooth и обновите драйвер адаптера в диспетчере устройств, если отключение сохраняется.",
-        "macWakeRecoveryHint": "After sleep, quit sarmesh (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
+        "macWakeRecoveryHint": "After sleep, quit SARMesh (Cmd+Q), toggle Bluetooth off and on in System Settings, wait a few seconds, then Connect again. With two radios, connect MeshCore before Meshtastic.",
         "dualProtocolContentionHint": "Другой протокол все еще может подключаться по Bluetooth. Подождите несколько секунд и повторите попытку или перейдите на вкладку другого протокола, чтобы проверить статус подключения.",
         "scanBusy": "Выполняется еще одно сканирование Bluetooth. Повторите попытку через минуту.",
         "sameDeviceConflict": "Это устройство Bluetooth уже подключено к {{owner}}.",
@@ -1054,9 +1054,9 @@
     "reticulumStackHint": "Запустите локальный sidecar Reticulum/LXMF перед созданием идентичности или добавлением интерфейсов.",
     "reticulumStartStack": "Запустить стек",
     "reticulumNetworkEmpty": "Интерфейсы пока не сообщались.",
-    "reticulumSidecarMissing": "Sidecar Reticulum не собран. В репозитории sarmesh выполните `pnpm run reticulum:sidecar:build` (требуется Rust).",
+    "reticulumSidecarMissing": "Sidecar Reticulum не собран. В репозитории SARMesh выполните `pnpm run reticulum:sidecar:build` (требуется Rust).",
     "reticulumSidecarCargoMissing": "Toolchain Rust (cargo) не найден. Установите с https://rustup.rs, затем выполните `pnpm run reticulum:sidecar:build`.",
-    "reticulumSidecarPatchMissing": "Сборка sidecar Reticulum требует overlay rsReticulum packet-tap. В репозитории sarmesh выполните `pnpm run reticulum:sidecar:build` (автоматически применяет патчи).",
+    "reticulumSidecarPatchMissing": "Сборка sidecar Reticulum требует overlay rsReticulum packet-tap. В репозитории SARMesh выполните `pnpm run reticulum:sidecar:build` (автоматически применяет патчи).",
     "reticulumSidecarStartFailed": "Не удалось запустить стек Reticulum: {{message}}",
     "reticulumStopStack": "Остановить стек",
     "reticulumAutostart": "Автоматический запуск стека при открытии соединения",
@@ -1294,7 +1294,7 @@
       "advancedAria": "Расширенные параметры ключ-значение интерфейса",
       "advancedKeyReserved": "Ключ \"{{key}}\" является известным полем и был проигнорирован — используйте форму выше.",
       "pickerDeviceAriaWithRssi": "{{name}} {{address}}, {{rssi}} дБм",
-      "decommissionedHubEnableBlocked": "Этот хаб выведен из эксплуатации и не может оставаться включённым — sarmesh отключает его при каждом запуске стека. Используйте «Добавить магистрали по умолчанию» или каталог магистралей для рабочих конечных точек.",
+      "decommissionedHubEnableBlocked": "Этот хаб выведен из эксплуатации и не может оставаться включённым — SARMesh отключает его при каждом запуске стека. Используйте «Добавить магистрали по умолчанию» или каталог магистралей для рабочих конечных точек.",
       "decommissionedBadge": "выведена из эксплуатации",
       "defaultHubsPickerTitle": "Добавить магистрали по умолчанию",
       "defaultHubsPickerConfirm": "Добавить {{count}} концентраторов",
@@ -1339,7 +1339,7 @@
       "rmapFullModeHint": "Полный режим с публикацией RMAP сохраняется через ignore_config_warnings. Объявления о доставке LXMF выведут это радио на интервал объявления стека (по умолчанию 1 час).",
       "effectiveModeBadge": "Действует с: {{mode}}",
       "effectiveModeAria": "Эффективный режим работы {{mode}}. Настроенный режим отличается от того, что работает Reticulum.",
-      "effectiveModeTooltip": "Reticulum переписала этот обнаруживаемый интерфейс на точку доступа (или другой разрешенный режим), поскольку для обнаружения требуется шлюз, внутренний или точка доступа, если не установлено ignore_config_warnings. Перезапустите стек после того, как вступят в силу метки sarmesh, которые откажутся от режима Full (или настроенного вами режима).",
+      "effectiveModeTooltip": "Reticulum переписала этот обнаруживаемый интерфейс на точку доступа (или другой разрешенный режим), поскольку для обнаружения требуется шлюз, внутренний или точка доступа, если не установлено ignore_config_warnings. Перезапустите стек после того, как вступят в силу метки SARMesh, которые откажутся от режима Full (или настроенного вами режима).",
       "flowControlBleHint": "На Bluetooth радио часто никогда не отправляет CMD_READY. SARMesh все еще шагает TX (ненадолго ждет ГОТОВНОСТИ, затем продолжает), поэтому управление потоком уменьшает перегрузку, не замораживая очередь.",
       "advancedFields": "Дополнительные настройки",
       "field": {
@@ -1406,12 +1406,12 @@
       "connectingRow": "{{name}}: подключение через Bluetooth",
       "offlineHintWifi": "Убедитесь, что RNode находится в вашей локальной сети, включен и доступен по настроенному IP-адресу (порт TCP по умолчанию 7633, а не 4242). Обновите узел ниже, если DHCP назначил новый адрес, или повторно предоставьте Wi-Fi в Reticulum → Admin.",
       "tcpUnreachable": "{{name}}: концентратор TCP недоступен ({{host}}:{{port}})",
-      "tcpUnreachableHint": "Удалённый экземпляр Reticulum может быть offline или блокировать подключения. Отключите этот интерфейс или проверьте хост и порт. Частые перезапуски sarmesh или стека могут привести к блокировке вашего IP концентраторами Reticulum 1.4.0+ на 12 часов — лучше подождать, чем перезапускать снова.",
+      "tcpUnreachableHint": "Удалённый экземпляр Reticulum может быть offline или блокировать подключения. Отключите этот интерфейс или проверьте хост и порт. Частые перезапуски SARMesh или стека могут привести к блокировке вашего IP концентраторами Reticulum 1.4.0+ на 12 часов — лучше подождать, чем перезапускать снова.",
       "connectingHintBle": "Ссылки BLE RNode могут занять до 60 секунд после запуска стека (окно пароля ОС). Введите текущий PIN-код RNode, если будет предложено, — никогда не 123456. Это нормально, а не ошибка. Устройство может не появиться в настройках системы до тех пор, пока не будет выполнено успешное соединение.",
       "offlineHintBle": "Чтобы устранить эту ошибку, удалите этот интерфейс и добавьте его снова (Выбрать устройство), чтобы обновить сохранённый Bluetooth‑идентификатор, затем перезапустите стек. ОС может запросить 6‑значный Bluetooth PIN (macOS, Windows или Linux). RNode генерирует новый код при каждом сопряжении — никогда не используйте 123456 (это значение по умолчанию Meshtastic, не RNode). RNode не обязательно должен отображаться в Системных настройках → Bluetooth до подключения этого приложения; диалог ОС появляется, когда стек выполняет сопряжение. Радио без дисплея: подключите USB → Reticulum Admin → Bluetooth → Начать сопряжение → введите PIN, показанный в панели Admin (не на дисплее радио), в диалоге ОС. Радио с дисплеем: удерживайте кнопку ~7 с на устройствах Heltec (время различается; ~10 с на многих платах включает Wi‑Fi AP), прочитайте PIN на экране и введите его в диалоге ОС. Очистите неудачные связи в настройках Bluetooth ОС перед повторной попыткой.",
       "offlineHintBleBondStale": "В macOS этот RNode по‑прежнему отображается как Сопряжённый, но ключи Bluetooth больше не совпадают (одноранговый узел удалил информацию о сопряжении). Забудьте устройство в Системных настройках → Bluetooth, переведите RNode в режим сопряжения (Admin → Bluetooth → Начать сопряжение или удерживайте кнопку ~7 с), затем удалите и снова добавьте этот интерфейс (Выбрать устройство), перезапустите стек и введите новый 6‑значный PIN по запросу.",
       "tcpFastFlap": "{{name}}: концентратор, вероятно, заблокировал ваш IP-адрес после частых перезагрузок стека ({{host}}:{{port}})",
-      "tcpFastFlapHint": "Публичные концентраторы Reticulum 1.4.0+ блокируют IP после пяти коротких сеансов TCP в течение 12 часов. Быстрые перезапуски sarmesh или стека учитываются. Отключите этот концентратор и подождите до 12 часов — повторный запуск продлевает блокировку."
+      "tcpFastFlapHint": "Публичные концентраторы Reticulum 1.4.0+ блокируют IP после пяти коротких сеансов TCP в течение 12 часов. Быстрые перезапуски SARMesh или стека учитываются. Отключите этот концентратор и подождите до 12 часов — повторный запуск продлевает блокировку."
     },
     "autoConnectingTo": "Автоматическое подключение к {{deviceName}}…",
     "autoReconnectInProgress": "Выполняется автоматическое повторное подключение…",
@@ -1885,7 +1885,7 @@
         "rmap_transport_disabled": "Обнаруживаемые интерфейсы настроены, но режим транспортировки выключен.",
         "rmap_i2p_not_connectable": "Интерфейс I2P \"{{name}}\" обнаруживается, но не подключается.",
         "shared_instance_client": "Share instance attached as a client of another app — local TCP hubs in this config are not started.",
-        "rmap_mode_autocorrect": "Интерфейс \"{{name}}\" обнаруживается в режиме не-AP/Gateway — Reticulum будет запускать его как точку доступа, если не установлено ignore_config_warnings. Отредактируйте интерфейс или перезапустите стек, чтобы sarmesh мог штамповать отказ."
+        "rmap_mode_autocorrect": "Интерфейс \"{{name}}\" обнаруживается в режиме не-AP/Gateway — Reticulum будет запускать его как точку доступа, если не установлено ignore_config_warnings. Отредактируйте интерфейс или перезапустите стек, чтобы SARMesh мог штамповать отказ."
       },
       "runtime": {
         "rnsNotReady": "Стек RNS не готов",
@@ -1918,7 +1918,7 @@
         "announceBusPressureTipBoundaryHubs": "Включенные граничные / магистральные концентраторы: {{hubs}}.",
         "announceBusPressureTipTxSaturated": "Очередь TX падает на: {{names}} — этот интерфейс может быть насыщенным.",
         "tooManyDefaultBackbones": "У вас включена {{count}} магистраль по умолчанию. Подумайте о том, чтобы отключить дополнительные услуги и оставить около 2 для резервирования.",
-        "decommissionedHubEnabled": "Выведенный из эксплуатации хаб «{{name}}» всё ещё включён — sarmesh отключает его при каждом запуске стека. Используйте «Добавить магистрали по умолчанию» или каталог магистралей для рабочих конечных точек.",
+        "decommissionedHubEnabled": "Выведенный из эксплуатации хаб «{{name}}» всё ещё включён — SARMesh отключает его при каждом запуске стека. Используйте «Добавить магистрали по умолчанию» или каталог магистралей для рабочих конечных точек.",
         "txQueueDropsBle": "Интерфейс \"{{name}}\" сбросил {{count}} исходящих пакетов (очередь TX заполнена) — канал BLE RNode застрял; предпочтительнее USB или повторная сопряжение",
         "txQueueDropsBleBondStale": "Интерфейс \"{{name}}\" сбросил {{count}} исходящих пакетов (очередь TX заполнена) — связь BLE устарела; забыть в ОС Bluetooth и выполнить повторную сопряжение",
         "txQueueDropsNeutral": "Интерфейс \"{{name}}\" сбросил {{count}} исходящих пакетов (очередь TX заполнена) — проверьте ссылку на этот интерфейс",
@@ -2197,11 +2197,11 @@
       },
       "database-chmod": {
         "label": "База данных chmod (не фатальный)",
-        "recommendation": "Database file permission tweak failed (often benign on Windows). If you see real DB errors elsewhere, check antivirus and folder permissions for the sarmesh userData directory."
+        "recommendation": "Database file permission tweak failed (often benign on Windows). If you see real DB errors elsewhere, check antivirus and folder permissions for the SARMesh userData directory."
       },
       "database-writable": {
         "label": "База данных недоступна для записи",
-        "recommendation": "The app cannot write its database folder. Fix permissions on the sarmesh userData directory (see troubleshooting: Database directory is not writable)."
+        "recommendation": "The app cannot write its database folder. Fix permissions on the SARMesh userData directory (see troubleshooting: Database directory is not writable)."
       },
       "tak-server": {
         "label": "Проблемы с сервером TAK",
@@ -2706,7 +2706,7 @@
       "remoteHardwareEnabledDesc": "Разрешить удалённым узлам читать и записывать GPIO-пины на этом устройстве.",
       "remoteHardwareAllowUndefinedPins": "Разрешить доступ к неопределённым пинам",
       "remoteHardwareAllowUndefinedPinsDesc": "Разрешить чтение/запись пинов, не указанных в конфигурации доступных пинов.",
-      "mqttProxyGatewayHint": "С включенным прокси-сервером sarmesh bridges broker traffic via MqttClientProxyMessage. Включите нисходящую линию связи для каждого канала на вкладке «Радио» для→ РЧ-реле MQTT.",
+      "mqttProxyGatewayHint": "С включенным прокси-сервером SARMesh bridges broker traffic via MqttClientProxyMessage. Включите нисходящую линию связи для каждого канала на вкладке «Радио» для→ РЧ-реле MQTT.",
       "mapReportPublishInterval": "Интервал отчета о карте (секунды)",
       "mapReportPublishIntervalDesc": "0 использует прошивку по умолчанию. Как часто устройство публикует отчеты о картах, когда отчеты о картах включены.",
       "mapReportPositionPrecision": "Точность позиционирования картографического отчета",
@@ -3412,7 +3412,7 @@
       "missingIdentity": "Этот узел еще не запомнил личность. Дождитесь объявления Nomad и повторите попытку.",
       "transportUnavailable": "Транспорт Reticulum недоступен. Перезапустите стек и повторите попытку.",
       "sidecarNotRunning": "Sidecar Reticulum не запущен. Запустите стек из Connection и повторите попытку.",
-      "responseTooLarge": "The node returned more data than sarmesh will accept for this request.",
+      "responseTooLarge": "The node returned more data than SARMesh will accept for this request.",
       "nomadBusy": "Другой запрос страницы или файла Nomad всё ещё выполняется. Попробуйте снова через мгновение.",
       "nomadNotServing": "Это ваш узел Nomad, но хостинг My Pages не работает. Откройте «Мои страницы», выберите папку и начните локальный предварительный просмотр.",
       "networkNotReady": "Ожидание подключения концентратора или радиоинтерфейса к сети. Попробуйте еще раз, как только Connection отобразит интерфейс.",
@@ -4792,7 +4792,7 @@
     "localHostStats": "{{count}} в очереди · {{bytes}} байт",
     "localHostName": "Узел распространения хоста",
     "syncPeerCostExceedsMax": "Стоимость пиринга этого узла распространения превышает максимальную стоимость пиринга — увеличьте максимальную стоимость в разделе «Сеть» → «Расширенный хостинг PN» или выберите другой узел.",
-    "offerUnsupported": "Этот адрес не поддерживает синхронизацию LXMF /offer — sarmesh не может использовать его как узел распространения.",
+    "offerUnsupported": "Этот адрес не поддерживает синхронизацию LXMF /offer — SARMesh не может использовать его как узел распространения.",
     "offerProbeTimeout": "Время ожидания проверки/предложения поддержки истекло — узел может быть недоступен. Попробуйте еще раз, когда путь станет доступен.",
     "offerProbeFailed": "Не удалось проверить/предложить поддержку для этого узла распространения. Повторите попытку через минуту.",
     "enableLocalHostConfirmTitle": "Включить локальный хостинг узла распространения?",
@@ -5039,7 +5039,7 @@
     "legendNotSavedTooltip": "Пустой круг — пароль для этой комнаты не сохранен",
     "legendSavedTooltip": "Полукруг неба — пароль сохранен; войдите, чтобы открыть сессию",
     "legendLoggedInTooltip": "Зелёная точка — активная клиентская сессия (покиньте комнату, если сервер не в сети)",
-    "historyLocalHint": "При входе sarmesh запрашивает недавние публикации, ещё находящиеся в кольцевом буфере сервера комнаты (если на этом устройстве ещё нет локальной метки). Включите автоматическую синхронизацию, чтобы оставаться подписанным во время подключения.",
+    "historyLocalHint": "При входе SARMesh запрашивает недавние публикации, ещё находящиеся в кольцевом буфере сервера комнаты (если на этом устройстве ещё нет локальной метки). Включите автоматическую синхронизацию, чтобы оставаться подписанным во время подключения.",
     "loginAllSavedDisabledNoSavedPasswords": "Сначала сохраните пароль комнаты, чтобы использовать вход во все",
     "membersHeadingWithCount": "Участники ({{count}})",
     "collapseRoomList": "Свернуть список комнат",
@@ -5717,7 +5717,7 @@
       "enabled": "Получение файлов включено.",
       "enableFailed": "Не удалось включить получение файлов: {{error}}",
       "saveDirRequired": "Выберите папку сохранения, чтобы включить получение.",
-      "shareDestWarning": "Если вы включите этот параметр, sarmesh отправит пункт назначения получения rncp этому узлу, чтобы он мог автоматически заполнить файл для отправки.",
+      "shareDestWarning": "Если вы включите этот параметр, SARMesh отправит пункт назначения получения rncp этому узлу, чтобы он мог автоматически заполнить файл для отправки.",
       "lxmfBody": "Пожалуйста, включите получение файлов rncp и ответьте, указав хэш получателя rncp.",
       "lxmfShareBody": "Прием файлов включен. Мой rncp получает хеш назначения:",
       "identityUnknown": "Входящий запрос включен, но хэш идентификатора этого узла еще не известен, поэтому он не был добавлен в список «Всегда разрешать». Вас по-прежнему будут спрашивать перед каждым файлом; попробуйте Всегда разрешать снова после поступления пути или объявления."
@@ -5821,7 +5821,7 @@
     "capabilityHeardShort": "LXST",
     "capabilityUnknownShort": "?",
     "help": {
-      "interop": "Голос LXST нуждается в одноранговой телефонии LXST (Sideband, Ratspeak или sarmesh). Не клип голосовой заметки. Python LXST является эталоном; rsLXST является экспериментальным."
+      "interop": "Голос LXST нуждается в одноранговой телефонии LXST (Sideband, Ratspeak или SARMesh). Не клип голосовой заметки. Python LXST является эталоном; rsLXST является экспериментальным."
     },
     "toast": {
       "busy": "Линия занята.",
@@ -5970,7 +5970,7 @@
   },
   "longSession": {
     "title": "Рекомендуется перезапуск",
-    "body": "sarmesh работает уже четыре дня с подключенным Bluetooth-радио. Перезапустите приложение, чтобы снизить риск сбоев при длительных сеансах Noble BLE.",
+    "body": "SARMesh работает уже четыре дня с подключенным Bluetooth-радио. Перезапустите приложение, чтобы снизить риск сбоев при длительных сеансах Noble BLE.",
     "restart": "Перезапустить",
     "dismiss": "Пропустить"
   },

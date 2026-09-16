@@ -141,7 +141,7 @@ Flashing MeshCore firmware on hardware that previously ran Meshtastic **replaces
 
 ### Full companion JSON backup (evaluation, 2026)
 
-The official MeshCore companion can export/import a **full device JSON** (contacts, channels, radio params, and related fields). sarmesh today supports:
+The official MeshCore companion can export/import a **full device JSON** (contacts, channels, radio params, and related fields). SARMesh today supports:
 
 - Per-node **Security** archives (`mesh-client:meshcore-key-backup:<nodeId>`) — public + private key pairs only.
 - **Radio** JSON import for a subset of fields (`setRadioParams`, channels where APIs exist).

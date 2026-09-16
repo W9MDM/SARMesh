@@ -6,8 +6,10 @@ We take the security of our project seriously and appreciate your efforts to hel
 
 If you believe you have found a security vulnerability, please **do not report it via a public GitHub issue**. Instead, please
 
-- send an email to: **nv0n@coloradomesh.org** or,
-- DM nv0n on our Discord
+- open a private report via [GitHub Security Advisories](https://github.com/W9MDM/SARMesh/security/advisories/new), or
+- DM **W9MDM** on the [NWI Mesh Net Discord](https://discord.gg/4wQ5SWPBfQ)
+
+If the issue is inherited from upstream [Mesh-Client](https://github.com/Colorado-Mesh/mesh-client) rather than SARMesh-specific, please also notify upstream at **nv0n@coloradomesh.org** so every fork gets the fix.
 
 To help us investigate and triage the issue as quickly as possible, please include:
 

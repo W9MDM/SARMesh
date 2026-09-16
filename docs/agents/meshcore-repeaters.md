@@ -4,7 +4,7 @@ Deep subsystem reference for AI assistants. Open this when a task touches MeshCo
 
 **Repeaters & Rooms ops tab:** [`RepeatersPanel.tsx`](../../src/renderer/components/RepeatersPanel.tsx) lists **both** `hw_model === 'Repeater'` and `hw_model === 'Room'` (All / Repeaters / Rooms filter). Sidebar label is `tabs.repeaters` (**Repeaters**); in-panel title is `repeatersPanel.title` (**Repeaters & Rooms**). Rooms BBS stays on the Rooms tab; Manage there jumps here via `pendingFocusNodeId`. **Open room** on a room row jumps back to Rooms. Admin passwords use [`meshcoreInfraAdminSecrets.ts`](../../src/renderer/lib/meshcoreInfraAdminSecrets.ts) (two `app_settings` prefixes; room forget clears **admin only**). Room CLI goes through `sendRepeaterCliCommand` / thin `sendRoomAdminCliCommand` alias (forwards `confirmedDanger`); room remote CLI requires ACL admin password (not guest BBS). Room-only CLI pills: `get acl`, `allow.read.only on|off` + ACL `setperm` form.
 
-MeshCore firmware **serializes traceroutes** — one active trace cycle per RF link. sarmesh enforces:
+MeshCore firmware **serializes traceroutes** — one active trace cycle per RF link. SARMesh enforces:
 
 - **Trace queue** (`meshcoreRepeaterRpcInFlight.ts`): global ping queue; duplicate clicks coalesce per node.
 - **Companion queue** (`repeaterRemoteRpcQueue.ts`): serializes RPC _sends_ (Status, Telemetry, Neighbors binary req, trace SendTracePath, CLI login).

@@ -58,7 +58,7 @@ Also useful:
 - [Troubleshooting](troubleshooting.md)
 - [Contributing](contributing.md)
 
-**Reticulum tab:** packaged builds include the `mesh-client-reticulum` sidecar. Dev builds need Rust and `pnpm run reticulum:sidecar:build` — see [Reticulum in sarmesh](reticulum.md) and [Reticulum sidecar (optional)](development-environment.md#reticulum-sidecar-optional).
+**Reticulum tab:** packaged builds include the `mesh-client-reticulum` sidecar. Dev builds need Rust and `pnpm run reticulum:sidecar:build` — see [Reticulum in SARMesh](reticulum.md) and [Reticulum sidecar (optional)](development-environment.md#reticulum-sidecar-optional).
 
 ---
 
@@ -75,7 +75,7 @@ Also useful:
   - [MQTT Auth](letsmesh-mqtt-auth.md)
   - Room login/posts — [Troubleshooting](troubleshooting.md#meshcore-room-server-login-posts-and-windows-10)
 - **Reticulum**
-  - [Reticulum in sarmesh](reticulum.md) (sidecar, interfaces, LXMF chat, **RRC**, **Remote** rnsh/rncp, **Nomad My Pages**, propagation)
+  - [Reticulum in SARMesh](reticulum.md) (sidecar, interfaces, LXMF chat, **RRC**, **Remote** rnsh/rncp, **Nomad My Pages**, propagation)
   - [Sidecar IPC contract](reticulum-sidecar-ipc.md)
   - [Reticulum troubleshooting](troubleshooting.md#reticulum) (sidecar, interfaces, Nomad, Remote transfer, RNode Wi‑Fi)
   - Noble BLE coexistence when a Reticulum BLE RNode is connected — [Troubleshooting](troubleshooting.md#reticulum-ble-rnode-blocks-meshtasticmeshcore-noble-ble)
