@@ -42,6 +42,14 @@ function cfgBool(v: unknown, fallback: boolean): boolean {
   return typeof v === 'boolean' ? v : fallback;
 }
 
+/** Clamp a config number to its declared range; bounds are optional. */
+export function clampToRange(value: number, min?: number, max?: number): number {
+  let next = value;
+  if (typeof min === 'number' && next < min) next = min;
+  if (typeof max === 'number' && next > max) next = max;
+  return next;
+}
+
 function cfgNum(v: unknown, fallback: number): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
 }
@@ -191,6 +199,15 @@ function ConfigNumber({
             const n = Number(e.target.value);
             if (!Number.isFinite(n)) return;
             onChange(n);
+          }}
+          onBlur={(e) => {
+            // min/max are only advisory as HTML attributes: without this, a typed
+            // or device-supplied out-of-range value is sent to the radio as-is.
+            // These fields govern airtime, so an absurd interval must not ship.
+            const n = Number(e.target.value);
+            if (!Number.isFinite(n)) return;
+            const clamped = clampToRange(n, min, max);
+            if (clamped !== value) onChange(clamped);
           }}
           min={min}
           max={max}
@@ -1461,9 +1478,11 @@ export default function ModulePanel({
           onApply={() => {
             applyMeshtasticModule(t('modulePanel.sectionTelemetryModule'), 'telemetry', telCfg, {
               deviceTelemetryEnabled: telDeviceTelemetryEnabled,
-              deviceUpdateInterval: telDeviceInterval,
+              // Never re-persist an out-of-range interval the radio reported:
+              // these govern airtime, and INT32_MAX here is not a real setting.
+              deviceUpdateInterval: clampToRange(telDeviceInterval, 0, 86400),
               environmentMeasurementEnabled: telEnvEnabled,
-              environmentUpdateInterval: telEnvInterval,
+              environmentUpdateInterval: clampToRange(telEnvInterval, 0, 86400),
               environmentScreenEnabled: telEnvScreenEnabled,
               environmentDisplayFahrenheit: telEnvFahrenheit,
               airQualityEnabled: telAirQualityEnabled,
