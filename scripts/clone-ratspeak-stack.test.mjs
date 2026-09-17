@@ -94,11 +94,19 @@ function runEnsureRepo({ remoteUrl, destDir, pinRef = '', env = {}, mergeStderr 
 }
 
 describe('clone-ratspeak-stack.sh float policy', () => {
-  it('floats rsReticulum and rsLXMF to origin/main by default', () => {
+  it('floats rsLXMF to origin/main by default (rsReticulum is temporarily pinned)', () => {
     expect(cloneScript).toContain('WORKSPACE_ROOT="${WORKSPACE_ROOT:-${REPO_ROOT}/.rsstack}"');
     expect(cloneScript).toContain("target_ref='origin/main'");
     expect(cloneScript).toContain('checkout --quiet --detach');
-    expect(cloneScript).toMatch(/RS_RETICULUM_REF="\$\{RS_RETICULUM_REF:-\}"/);
+    // TEMPORARY: rsReticulum is pinned because upstream 92b91d6 moved the context
+    // rsReticulum-path-medium-slots.patch anchors on. Once the overlay is rebased,
+    // restore the float default here and delete RS_RETICULUM_PIN_DEFAULT.
+    expect(cloneScript).toMatch(
+      /RS_RETICULUM_REF="\$\{RS_RETICULUM_REF:-\$RS_RETICULUM_PIN_DEFAULT\}"/,
+    );
+    // The pin must stay explained, so it is removed deliberately rather than inherited.
+    expect(cloneScript).toContain('TEMPORARY PIN (rsReticulum only)');
+    expect(cloneScript).toContain('Remove this pin once the overlay is rebased');
     expect(cloneScript).toMatch(/RS_LXMF_REF="\$\{RS_LXMF_REF:-\}"/);
     expect(cloneScript).not.toContain('ratspeak-stack-ci-pins.env');
     expect(cloneScript).toContain('open upstream feature PRs are overlays');
