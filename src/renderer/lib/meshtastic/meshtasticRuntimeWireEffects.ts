@@ -6,7 +6,6 @@ import { errLikeToLogString } from '@/renderer/lib/errLikeToLogString';
 import { persistLastRfSelfNodeId } from '@/renderer/lib/meshtasticMqttIdentity';
 import type { MeshtasticLoraConfig } from '@/shared/meshtasticUrlEncoder';
 
-import { meshtasticNodeLacksDisplayIdentity } from '../../../shared/nodeNameUtils';
 import { setConnection } from '../../stores/connectionStore';
 import { setMeshtasticConfigSlice } from '../../stores/deviceStore';
 import { useDiagnosticsStore } from '../../stores/diagnosticsStore';
@@ -69,6 +68,7 @@ import {
 import { attachMeshtasticStoreForwardSideEffects } from './meshtasticStoreForwardSideEffects';
 import { attachMeshtasticTraceSideEffects } from './meshtasticTraceSideEffects';
 import { pushMeshtasticTransportSideEffectUnsubs } from './meshtasticTransportSideEffects';
+import { shouldRequestNodeInfo } from './shouldRequestNodeInfo';
 
 const REQUEST_NODEINFO_MIN_INTERVAL_MS = 120_000;
 const { DeviceStatusEnum } = Types;
@@ -635,18 +635,21 @@ export function attachMeshtasticRuntimeWireEffects(
     from: number,
     opts?: { ignoreDisplayIdentity?: boolean },
   ): void => {
-    if (from === 0 || from === myNodeNumRef.current) return;
-    if (getMeshtasticConfigurePhase()) return;
-    // Missing-recipient-key recovery must refresh even nodes that already have a
-    // display name (we know who they are, we just lack a usable public key), so it
-    // opts out of the display-identity short-circuit while keeping the rate limit.
-    if (!opts?.ignoreDisplayIdentity) {
-      const existing = getIdentityNode(meshtasticIdentityIdRef.current, from);
-      if (existing && !meshtasticNodeLacksDisplayIdentity(existing, from)) return;
-    }
     const now = Date.now();
-    const last = lastNodeInfoRequestAtRef.current.get(from) ?? 0;
-    if (now - last < REQUEST_NODEINFO_MIN_INTERVAL_MS) return;
+    if (
+      !shouldRequestNodeInfo({
+        nodeNum: from,
+        existing: getIdentityNode(meshtasticIdentityIdRef.current, from),
+        myNodeNum: myNodeNumRef.current,
+        isConfiguring: getMeshtasticConfigurePhase(),
+        lastRequestAtMs: lastNodeInfoRequestAtRef.current.get(from),
+        nowMs: now,
+        minIntervalMs: REQUEST_NODEINFO_MIN_INTERVAL_MS,
+        ignoreDisplayIdentity: opts?.ignoreDisplayIdentity,
+      })
+    ) {
+      return;
+    }
     lastNodeInfoRequestAtRef.current.set(from, now);
     void (async () => {
       try {
