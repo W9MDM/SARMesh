@@ -24,23 +24,6 @@ Key outcomes:
 
 ## Visuals
 
-![Nodes](images/nodes.png)
-![Map](images/map.png)
-![Diagnostics](images/diagnostics.png)
-![Stats](images/stats.png)
-
-![Chat](images/chat.png)
-![Connection](images/connection.png)
-![Repeaters](images/repeaters.png)
-![Node Detail](images/node-detail.png)
-
-![Peers](images/peers.png)
-![Nomad Network](images/nomad.png)
-![RF](images/RF.png)
-![Graph](images/graph.png)
-![Sniffer](images/sniffer.png)
-![Language selector](images/language-selection.png)
-
 ---
 
 ## Quick Start

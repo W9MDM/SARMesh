@@ -59,32 +59,13 @@ firmware flasher, and a 15-language UI.
 <details>
 <summary>Screenshots</summary>
 
-<table>
-  <tr>
-    <td><img src="docs/images/nodes.png" height="200" alt="Nodes"/></td>
-    <td><img src="docs/images/map.png" height="200" alt="Map"/></td>
-    <td><img src="docs/images/diagnostics.png" height="200" alt="Diagnostics"/></td>
-    <td><img src="docs/images/stats.png" height="200" alt="Stats"/></td>
-  </tr>
-  <tr>
-    <td colspan="4" align="center">
-      <img src="docs/images/chat.png" height="200" alt="Chat"/>
-      <img src="docs/images/connection.png" height="200" alt="Connection"/>
-      <img src="docs/images/repeaters.png" height="200" alt="Repeaters"/>
-      <img src="docs/images/node-detail.png" height="200" alt="Node Detail"/>
-    </td>
-  </tr>
-  <tr>
-    <td colspan="4" align="center">
-      <img src="docs/images/peers.png" height="200" alt="Peers"/>
-      <img src="docs/images/nomad.png" height="200" alt="Nomad Network"/>
-      <img src="docs/images/RF.png" height="200" alt="RF"/>
-      <img src="docs/images/graph.png" height="200" alt="Graph"/>
-      <img src="docs/images/sniffer.png" height="200" alt="Sniffer"/>
-      <img src="docs/images/language-selection.png" height="200" alt="Language selector"/>
-    </td>
-  </tr>
-</table>
+Screenshots are pending. The previous gallery was inherited from upstream
+Mesh-Client and showed Colorado Mesh branding, their MQTT broker and their
+node — and none of the SARMesh panels (Inventory, APRS, Firmware), so it
+advertised the wrong product.
+
+The image files are still in [docs/images/](docs/images/): drop replacements in
+under the same names and the gallery can be restored as-is.
 
 </details>
 
