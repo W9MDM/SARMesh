@@ -422,6 +422,10 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y squashfs-tools
 
       - name: Run packaging smoke test
+        env:
+          # SARMesh ships no Reticulum sidecar; the bundle verifiers skip the
+          # sidecar assertions when this is set. See release.yaml build step.
+          SARMESH_ALLOW_MISSING_SIDECAR: '1'
         run: ${{ matrix.smoke_run }}
 
       - name: Upload Windows x64 install failure logs

@@ -32,12 +32,28 @@ export function resolveBundledSidecarPath(platform, bundleRoot) {
  * @param {(message: string) => void} opts.fail
  * @param {number} [opts.minBytes]
  */
+/**
+ * True when this build intentionally ships no sidecar.
+ *
+ * SARMesh does not bundle the Reticulum sidecar: it needed a Rust toolchain and
+ * overlay patches against a third-party crate, and upstream drift in that crate
+ * blocked releases outright. The packaging verifiers share this check so the
+ * decision lives in one place instead of three.
+ */
+function sidecarIntentionallyAbsent() {
+  return process.env.SARMESH_ALLOW_MISSING_SIDECAR === '1';
+}
+
 export function assertBundledReticulumSidecar({
   label,
   sidecarPath,
   fail,
   minBytes = MIN_SIDECAR_BYTES,
 }) {
+  if (sidecarIntentionallyAbsent()) {
+    console.debug(`[assert-bundled-reticulum-sidecar] Skipping ${label}: sidecar not shipped.`);
+    return;
+  }
   if (!existsSync(sidecarPath)) {
     fail(`Missing ${label}: ${sidecarPath}`);
   }

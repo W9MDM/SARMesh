@@ -506,6 +506,9 @@ function assertMacCodeSignatureIfDeveloperId(bundleRoot, label, deps = {}) {
     );
   }
 
+  // SARMesh ships no Reticulum sidecar, so there is nothing to codesign-verify.
+  if (process.env.SARMESH_ALLOW_MISSING_SIDECAR === '1') return;
+
   const sidecarPath = resolveSidecar(bundleRoot);
   if (!sidecarPath || !existsSync(sidecarPath)) {
     fail(`${label} missing Reticulum sidecar for codesign check: ${sidecarPath ?? '(null)'}`);
