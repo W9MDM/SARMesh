@@ -22,19 +22,7 @@ export RS_LXMF_DIR="${LXMF_DIR}"
 
 # Optional bisect overrides only. Unset or empty → float to origin/main.
 # CI and pnpm run update never set these — open upstream feature PRs are overlays.
-#
-# TEMPORARY PIN (rsReticulum only). Upstream 92b91d6 "encapsulate recursive
-# discovery ownership for 1.3" added `pub use crate::path_discovery::
-# DiscoveryPathRequest;` to crates/rns-transport/src/actor/mod.rs, which moved
-# the context rsReticulum-path-medium-slots.patch anchors on, so the overlay no
-# longer applies and every release cut fails in the sidecar tests.
-#
-# 25c69c6 is that commit's parent: the newest upstream state the overlay still
-# applies to. Remove this pin once the overlay is rebased against current main
-# (see reticulum-sidecar/patches/README.md) — it is a release unblock, not a
-# policy change, and it freezes only rsReticulum.
-RS_RETICULUM_PIN_DEFAULT='25c69c6f378a745d5a3ae93558ebdf8f0de901b7'
-RS_RETICULUM_REF="${RS_RETICULUM_REF:-$RS_RETICULUM_PIN_DEFAULT}"
+RS_RETICULUM_REF="${RS_RETICULUM_REF:-}"
 RS_LXMF_REF="${RS_LXMF_REF:-}"
 RS_NOMAD_REF="${RS_NOMAD_REF:-}"
 RS_LXST_REF="${RS_LXST_REF:-}"

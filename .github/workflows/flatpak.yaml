@@ -44,60 +44,13 @@ jobs:
           path: READ-ME-FIRST-flatpak.md
           retention-days: 30
 
-  # Sidecar is built on bare Ubuntu runners (apt). The flathub-infra Flatpak container is a
-  # minimal freedesktopsdk/sdk rootfs with no apt/dnf — host cargo builds cannot install deps there.
-  reticulum-sidecar:
-    name: Reticulum sidecar (${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
-    permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-latest
-            cargo_target: x86_64-unknown-linux-gnu
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
-            cargo_target: aarch64-unknown-linux-gnu
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Clone Ratspeak stack (rsReticulum, rsLXMF)
-        env:
-          WORKSPACE_ROOT: ${{ github.workspace }}/.rsstack
-        run: bash scripts/clone-ratspeak-stack.sh
-
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
-        with:
-          targets: ${{ matrix.cargo_target }}
-
-      - name: Install Reticulum sidecar Linux build deps
-        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
-
-      - name: Build Reticulum sidecar for Flatpak payload
-        working-directory: reticulum-sidecar
-        run: |
-          cargo build --release --target "${{ matrix.cargo_target }}" \
-            --features rns-stack,rns-ble,rns-rnode-tcp
-          install -Dm755 \
-            "target/${{ matrix.cargo_target }}/release/mesh-client-reticulum" \
-            "${GITHUB_WORKSPACE}/resources/reticulum-sidecar/mesh-client-reticulum"
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: mesh-client-reticulum-${{ matrix.arch }}
-          path: resources/reticulum-sidecar/mesh-client-reticulum
-          retention-days: 1
-
   # Both arches use the flathub-infra container (Flathub remote, flatpak-builder, privileged
   # system installs). aarch64 uses GitHub's native ARM runners — do not build on bare
   # ubuntu-latest with apt flatpak; that lacks --privileged and fails with
   # "Flatpak system operation Deploy not allowed for user".
   flatpak:
     name: Flatpak (${{ matrix.arch }})
-    needs: [reticulum-sidecar, schema-release-compare]
+    needs: [schema-release-compare]
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
@@ -115,11 +68,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: mesh-client-reticulum-${{ matrix.arch }}
-          path: resources/reticulum-sidecar
 
       - name: Write schema upgrade installer notice
         env:
@@ -218,8 +166,7 @@ jobs:
           flatpak install --assumeyes ./net.nwimesh.SARMesh.flatpak
 
           flatpak run --branch=stable --command=sh net.nwimesh.SARMesh -c \
-            'test -x /app/lib/sarmesh/electron/electron;
-            test -f /app/lib/sarmesh/resources/reticulum-sidecar/mesh-client-reticulum'
+            'test -x /app/lib/sarmesh/electron/electron'
 
           set +e
           out=$(dbus-run-session xvfb-run -a timeout 20s flatpak run --branch=stable net.nwimesh.SARMesh 2>&1)

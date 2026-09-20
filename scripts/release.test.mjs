@@ -34,7 +34,8 @@ const REQUIRED_PNPM_CHECKS = [
   'check:flatpak',
   'check:flatpak-offline-pnpm',
   'test:run',
-  'reticulum:sidecar:test',
+  // reticulum:sidecar:test is deliberately absent: SARMesh does not ship the
+  // Reticulum sidecar, so the release gate no longer needs a Rust toolchain.
 ];
 
 describe('release.sh full-suite gate', () => {

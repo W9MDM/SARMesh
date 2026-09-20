@@ -28,17 +28,20 @@ export default async function beforePack(context) {
   const stagedPath = resolveStagedSidecarPathForPackContext(projectRoot, platform, context.arch);
   if (!existsSync(stagedPath)) {
     // The sidecar is a Rust binary, so a machine without a Rust toolchain cannot
-    // produce one and therefore cannot make a local test build at all. This
-    // opt-out unblocks that, and only that: it is never set in CI or by any
-    // dist:* script, so a real release still fails hard rather than shipping an
-    // app whose Reticulum features are silently absent. The app already handles
-    // the missing binary at runtime (RETICULUM_SIDECAR_BUNDLED_MISSING).
+    // produce one. SARMesh no longer ships it at all: it is a Meshtastic
+    // search-and-rescue client, nobody deploying it runs RNode hardware, and
+    // carrying the sidecar put a Rust toolchain and 20 overlay patches against a
+    // third-party crate in the release path — where upstream drift then blocked
+    // every release. release.yaml and flatpak.yaml therefore set this flag, so
+    // it is now the normal release path rather than a local-only opt-out.
+    // The app handles the missing binary at runtime
+    // (RETICULUM_SIDECAR_BUNDLED_MISSING): the Reticulum tab reports the stack
+    // as unavailable instead of crashing.
     if (process.env.SARMESH_ALLOW_MISSING_SIDECAR === '1') {
-      console.warn(
-        `[beforePack] WARNING: no Reticulum sidecar for ${platform}/${context.arch}. ` +
-          'SARMESH_ALLOW_MISSING_SIDECAR=1 is set, so packaging continues. This build is ' +
-          'for TESTING ONLY — Reticulum/LXMF features will be unavailable in it. ' +
-          'Do not distribute it as a release.',
+      console.debug(
+        `[beforePack] No Reticulum sidecar for ${platform}/${context.arch}; ` +
+          'SARMESH_ALLOW_MISSING_SIDECAR=1 is set. Reticulum/LXMF features are ' +
+          'unavailable in this build by design.',
       );
       return;
     }

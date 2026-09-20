@@ -746,16 +746,21 @@ if ! pnpm run test:run; then
   exit 1
 fi
 
-# Reticulum sidecar (Rust) — required before release; same gate as release/build CI packaging.
-if ! command -v cargo > /dev/null 2>&1; then
-  print_error "cargo not found. Install Rust (https://rustup.rs/) — Reticulum sidecar tests are required for release."
-  exit 1
-fi
-echo "Running Reticulum sidecar tests..."
-if ! pnpm run reticulum:sidecar:test; then
-  print_error "Reticulum sidecar tests failed."
-  exit 1
-fi
+# Reticulum sidecar (Rust) is NOT built or tested for SARMesh releases.
+#
+# SARMesh is a search-and-rescue client for Meshtastic fleets; nobody deploying
+# it runs RNode hardware, so the Reticulum features the sidecar powers are
+# unreachable in practice. Carrying it cost a Rust toolchain in the release
+# path, 20 overlay patches against a third-party crate, and — when upstream
+# rsReticulum drifted — a hard block on cutting any release at all.
+#
+# Shipped builds therefore have no sidecar binary. The app already handles that
+# at runtime (RETICULUM_SIDECAR_BUNDLED_MISSING): the Reticulum tab reports the
+# stack as unavailable instead of crashing. Meshtastic and MeshCore, which are
+# what SARMesh is for, are unaffected.
+#
+# To restore it: rebase reticulum-sidecar/patches against current upstream, then
+# put back the cargo gate here and the build steps in release.yaml/flatpak.yaml.
 
 print_success "All pre-flight checks passed!"
 
