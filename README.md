@@ -1,15 +1,18 @@
 # SARMesh
 
-> Search and rescue desktop client for **Meshtastic**, **MeshCore** and **Reticulum (LXMF)** on
-> **Windows**, **Linux** and **macOS** — with an **APRS bridge** that feeds field team positions
-> straight into **CalTopo / SARTopo**, plus BLE, USB serial, Wi-Fi/TCP, MQTT, local SQLite
-> history and routing diagnostics.
+> Search and rescue desktop client for **Meshtastic** and **MeshCore** on **Windows**, **Linux**
+> and **macOS** — with an **APRS bridge** that feeds field team positions straight into
+> **CalTopo / SARTopo**, an accountable **radio inventory** with batch config applied on connect,
+> **firmware flashing**, plus BLE, USB serial, Wi-Fi/TCP, MQTT, local SQLite history and routing
+> diagnostics.
 
 ![License](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)
 [![CI Build](https://github.com/W9MDM/SARMesh/actions/workflows/ci.yaml/badge.svg)](https://github.com/W9MDM/SARMesh/actions/workflows/ci.yaml)
 [![Tests](https://github.com/W9MDM/SARMesh/actions/workflows/tests.yaml/badge.svg)](https://github.com/W9MDM/SARMesh/actions/workflows/tests.yaml)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/W9MDM/SARMesh)
+[![GitHub release](https://img.shields.io/github/v/release/W9MDM/SARMesh?label=release)](https://github.com/W9MDM/SARMesh/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/W9MDM/SARMesh/total?label=downloads)](https://github.com/W9MDM/SARMesh/releases)
+[![Latest release downloads](https://img.shields.io/github/downloads/W9MDM/SARMesh/latest/total?label=latest%20release)](https://github.com/W9MDM/SARMesh/releases/latest)
 
 SARMesh is a fork of [Mesh-Client](https://github.com/Colorado-Mesh/mesh-client) by Colorado Mesh,
 rebuilt around what a search and rescue team actually needs on a callout. See [FORK.md](FORK.md)
