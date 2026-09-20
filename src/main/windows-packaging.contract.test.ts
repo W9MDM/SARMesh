@@ -399,7 +399,9 @@ describe('Windows packaging (contract)', () => {
       expect(workflow).toContain('label: Linux packaging');
       expect(workflow).toContain('node scripts/verify-mac-packaging.mjs');
       expect(workflow).toContain('node scripts/verify-linux-packaging.mjs');
-      expect(workflow).toContain('node scripts/test-linux-appimage-reticulum-sidecar.mjs');
+      // The AppImage sidecar smoke test is gone with the Reticulum sidecar:
+      // SARMesh no longer ships that binary, so there is nothing to assert.
+      expect(workflow).not.toContain('test-linux-appimage-reticulum-sidecar');
       expect(workflow).toContain(
         'node scripts/assert-update-yml-artifacts.mjs --require latest-mac.yml',
       );
@@ -414,7 +416,11 @@ describe('Windows packaging (contract)', () => {
       expect(workflow).toContain('release/latest-linux.yml');
       expect(workflow).toContain('release/latest-linux-arm64.yml');
       expect(workflow).toContain('release/latest.yml');
-      expect(workflow).toContain('verify-reticulum-sidecar-staged.mjs');
+      // SARMesh does not ship the Reticulum sidecar, so neither workflow builds
+      // or stages one. Asserted as absent so the removal cannot silently regress.
+      expect(workflow).not.toContain('verify-reticulum-sidecar-staged.mjs');
+      expect(workflow).not.toContain('build-reticulum-sidecar-release.mjs');
+      expect(workflow).toContain("SARMESH_ALLOW_MISSING_SIDECAR: '1'");
       expect(workflow).not.toContain('release/mac*/**/SARMesh.app/**');
       expect(workflow).toMatch(/upload-artifact@v7[\s\S]*?symlinks/);
     }

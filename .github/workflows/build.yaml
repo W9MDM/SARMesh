@@ -105,19 +105,6 @@ jobs:
             pkg-config \
             gcc-aarch64-linux-gnu
 
-      - name: Install Rust toolchain for Reticulum sidecar
-        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8
-        with:
-          targets: ${{ matrix.rust_targets }}
-
-      - name: Build Reticulum sidecar for Electron packaging
-        env:
-          WORKSPACE_ROOT: ${{ github.workspace }}/.rsstack
-        run: node scripts/build-reticulum-sidecar-release.mjs --platform ${{ matrix.sidecar_platform }}
-
-      - name: Verify staged Reticulum sidecars
-        run: node scripts/verify-reticulum-sidecar-staged.mjs --platform ${{ matrix.sidecar_platform }}
-
       - name: Validate Windows build runner
         if: contains(matrix.build_script, 'dist:win') && matrix.os != 'windows-latest'
         run: |
@@ -181,6 +168,8 @@ jobs:
           APPLE_ID: ${{ matrix.os == 'macos-latest' && secrets.APPLE_ID || '' }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.os == 'macos-latest' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ matrix.os == 'macos-latest' && secrets.APPLE_TEAM_ID || '' }}
+          # SARMesh does not ship the Reticulum sidecar — see release.yaml.
+          SARMESH_ALLOW_MISSING_SIDECAR: '1'
         run: ${{ matrix.build_script }}
 
       # Stamp downloadable installer basenames with -run{N} so same-semver test
@@ -274,7 +263,6 @@ jobs:
             smoke_run: >-
               node scripts/assert-update-yml-artifacts.mjs --require latest-linux.yml
               --require latest-linux-arm64.yml && node scripts/verify-linux-packaging.mjs
-              && node scripts/test-linux-appimage-reticulum-sidecar.mjs
           - os: windows-latest
             label: x64 NSIS install
             artifact: sarmesh-windows-${{ github.sha }}

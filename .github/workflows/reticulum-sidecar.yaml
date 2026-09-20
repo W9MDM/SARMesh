@@ -9,7 +9,9 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    tags: ['v*']
+    # No tag trigger: SARMesh releases no longer build or ship the sidecar, so
+    # this must not run — and fail on upstream overlay drift — against a release
+    # tag. It still runs on demand and when sidecar sources change.
     paths:
       - 'reticulum-sidecar/**'
       - '.github/workflows/reticulum-sidecar.yaml'
