@@ -59,13 +59,16 @@ firmware flasher, and a 15-language UI.
 <details>
 <summary>Screenshots</summary>
 
-Screenshots are pending. The previous gallery was inherited from upstream
-Mesh-Client and showed Colorado Mesh branding, their MQTT broker and their
-node — and none of the SARMesh panels (Inventory, APRS, Firmware), so it
-advertised the wrong product.
-
-The image files are still in [docs/images/](docs/images/): drop replacements in
-under the same names and the gallery can be restored as-is.
+<table>
+  <tr>
+    <td><img src="docs/images/map.png" height="220" alt="Map — team and node positions"/></td>
+    <td><img src="docs/images/inventory.png" height="220" alt="Radio Inventory"/></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/firmware.png" height="220" alt="Device firmware flasher"/></td>
+    <td><img src="docs/images/connection.png" height="220" alt="Connection"/></td>
+  </tr>
+</table>
 
 </details>
 
