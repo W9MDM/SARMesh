@@ -19,6 +19,7 @@
   <url type="bugtracker">https://github.com/W9MDM/SARMesh/issues</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.1.0" date="2026-09-20"/>
     <release version="1.0.0" date="2026-09-14"/>
   </releases>
   <developer id="net.nwimesh">

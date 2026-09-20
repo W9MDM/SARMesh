@@ -1,6 +1,6 @@
 {
   "name": "sarmesh",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Search and rescue desktop client for Meshtastic, MeshCore and Reticulum on Windows, Linux and macOS, with an APRS bridge for CalTopo/SARTopo, an accountable radio inventory, and batch configuration applied on connect.",
   "keywords": [
     "search-and-rescue",
