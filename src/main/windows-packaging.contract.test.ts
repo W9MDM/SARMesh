@@ -426,6 +426,43 @@ describe('Windows packaging (contract)', () => {
     }
   });
 
+  // build.yaml and release.yaml are near-duplicates of the same packaging
+  // pipeline. They have silently diverged twice: once when a macOS signing fix
+  // went to only one of them, and again when the Reticulum sidecar steps were
+  // removed from release.yaml but left in build.yaml — which only surfaced
+  // after a release had already been tagged. Any packaging marker must be
+  // present in both or neither.
+  it('keeps build.yaml and release.yaml in step on packaging markers', () => {
+    const buildWorkflow = readFileSync(
+      join(REPO_ROOT, '.github', 'workflows', 'build.yaml'),
+      'utf-8',
+    );
+    const releaseWorkflow = readFileSync(
+      join(REPO_ROOT, '.github', 'workflows', 'release.yaml'),
+      'utf-8',
+    );
+
+    const PACKAGING_MARKERS = [
+      'SARMESH_ALLOW_MISSING_SIDECAR',
+      'dtolnay/rust-toolchain',
+      'build-reticulum-sidecar-release.mjs',
+      'verify-reticulum-sidecar-staged.mjs',
+      'test-linux-appimage-reticulum-sidecar',
+      'node scripts/verify-linux-packaging.mjs',
+      'node scripts/verify-mac-packaging.mjs',
+      'node scripts/assert-win-setup-installers.mjs',
+      'node scripts/normalize-win-setup-artifact-names.mjs',
+    ];
+
+    for (const marker of PACKAGING_MARKERS) {
+      expect(
+        releaseWorkflow.includes(marker),
+        `"${marker}" is in build.yaml but not release.yaml (or vice versa) — ` +
+          'the two packaging pipelines have drifted.',
+      ).toBe(buildWorkflow.includes(marker));
+    }
+  });
+
   it('enables macOS notarization and documents signing env vars in release workflow', () => {
     const yml = readFileSync(join(REPO_ROOT, 'electron-builder.yml'), 'utf-8');
     expect(yml).toContain('notarize: true');

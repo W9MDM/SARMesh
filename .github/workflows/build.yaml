@@ -5,6 +5,27 @@ env:
 
 on:
   workflow_dispatch:
+  # Packaging used to be exercised only after a release was tagged, so a broken
+  # packaging step could not be discovered until the release build ran — which
+  # is exactly how v1.1.0 shipped a tag with no desktop artifacts. Run on pushes
+  # that touch the packaging pipeline so those breaks surface before a cut.
+  # Path-filtered deliberately: this builds macOS/Windows/Linux and is far too
+  # expensive for every push to main.
+  push:
+    branches: [main]
+    paths:
+      - 'electron-builder.yml'
+      - '.github/workflows/build.yaml'
+      - '.github/workflows/release.yaml'
+      - 'scripts/electron-builder-before-pack.mjs'
+      - 'scripts/verify-win-packaging.mjs'
+      - 'scripts/verify-mac-packaging.mjs'
+      - 'scripts/verify-linux-packaging.mjs'
+      - 'scripts/assert-bundled-reticulum-sidecar.mjs'
+      - 'scripts/normalize-win-setup-artifact-names.mjs'
+      - 'scripts/assert-win-setup-installers.mjs'
+      - 'scripts/test-win-nsis-install.mjs'
+      - 'scripts/reticulum-sidecar-staging.mjs'
 
 jobs:
   schema-release-compare:
