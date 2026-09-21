@@ -5107,7 +5107,8 @@
     "games": "Spiele",
     "aprs": "APRS",
     "inventory": "Inventar",
-    "firmware": "Firmware"
+    "firmware": "Firmware",
+    "packetmonitor": "Paketmonitor"
   },
   "takServerPanel": {
     "title": "TAK-Server",
@@ -6123,5 +6124,34 @@
     "done": "Flashen abgeschlossen — das Funkgerät startet neu.",
     "powerWarning": "Ziehen Sie das Funkgerät während des Flashens nicht ab und schließen Sie SARMesh nicht. Ein unterbrochener Schreibvorgang kann das Funkgerät unbootbar machen, bis es erneut geflasht wird.",
     "noSerialApi": "Serieller Zugriff ist in diesem Fenster nicht verfügbar. Starten Sie SARMesh neu und versuchen Sie es erneut."
+  },
+  "packetMonitor": {
+    "title": "Paketmonitor",
+    "intro": "Führt eine dauerhafte Aufzeichnung des Mesh-Verkehrs, damit sie nach einem Einsatz ausgewertet werden kann. Der Sniffer ist eine Live-Ansicht, die bei jedem Start leer beginnt; diese Aufzeichnung übersteht einen Neustart und wird nach Alter bereinigt.",
+    "capturing": "Zeichnet auf",
+    "paused": "Zeichnet nicht auf",
+    "start": "Aufzeichnung starten",
+    "stop": "Aufzeichnung stoppen",
+    "retention": "Pakete aufbewahren für",
+    "retentionHint": "Stunden an Verkehr, die auf der Festplatte bleiben (1–168). Ältere Pakete werden automatisch entfernt.",
+    "window": "Anzeigen",
+    "lastHours": "Letzte {{count}} Stunde",
+    "lastHours_other": "Letzte {{count}} Stunden",
+    "filter": "Filter",
+    "filterPlaceholder": "Nach Knoten, Port oder Hex filtern…",
+    "stats": "{{rows}} Pakete gespeichert · {{size}} auf der Festplatte · ältestes {{oldest}}",
+    "refresh": "Aktualisieren",
+    "clear": "Alle aufgezeichneten Pakete löschen",
+    "empty": "In diesem Zeitfenster wurden noch keine Pakete aufgezeichnet.",
+    "emptyPaused": "Die Aufzeichnung ist aus, es wird nichts erfasst.",
+    "colTime": "Zeit",
+    "colFrom": "Von",
+    "colPort": "Port",
+    "colVia": "Über",
+    "colSnr": "SNR",
+    "colSize": "Bytes",
+    "viaMqtt": "MQTT",
+    "viaRf": "RF",
+    "privacyNote": "Aufgezeichnete Pakete liegen unverschlüsselt in packet-monitor.db und enthalten die ersten 64 Bytes jedes Frames. Löschen Sie sie, bevor Sie ein Support-Paket weitergeben."
   }
 }

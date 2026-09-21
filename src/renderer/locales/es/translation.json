@@ -5107,7 +5107,8 @@
     "games": "Juegos",
     "aprs": "APRS",
     "inventory": "Inventario",
-    "firmware": "Firmware"
+    "firmware": "Firmware",
+    "packetmonitor": "Monitor de paquetes"
   },
   "takServerPanel": {
     "title": "Servidor TAK",
@@ -6123,5 +6124,34 @@
     "done": "Grabación completada: la radio se está reiniciando.",
     "powerWarning": "No desconecte la radio ni cierre SARMesh durante la grabación. Una escritura interrumpida puede dejar la radio sin arrancar hasta que se vuelva a grabar.",
     "noSerialApi": "El acceso al puerto serie no está disponible en esta ventana. Reinicie SARMesh e inténtelo de nuevo."
+  },
+  "packetMonitor": {
+    "title": "Monitor de paquetes",
+    "intro": "Mantiene un registro duradero del tráfico de la malla para poder revisarlo después de una activación. El Sniffer es una vista en vivo que empieza vacía en cada arranque; este registro sobrevive a un reinicio y se depura por antigüedad.",
+    "capturing": "Capturando",
+    "paused": "Sin capturar",
+    "start": "Iniciar captura",
+    "stop": "Detener captura",
+    "retention": "Conservar paquetes durante",
+    "retentionHint": "Horas de tráfico que se guardan en disco (1–168). Los paquetes más antiguos se eliminan automáticamente.",
+    "window": "Mostrar",
+    "lastHours": "Última {{count}} hora",
+    "lastHours_other": "Últimas {{count}} horas",
+    "filter": "Filtro",
+    "filterPlaceholder": "Filtrar por nodo, puerto o hex…",
+    "stats": "{{rows}} paquetes almacenados · {{size}} en disco · más antiguo {{oldest}}",
+    "refresh": "Actualizar",
+    "clear": "Eliminar todos los paquetes capturados",
+    "empty": "Aún no se han capturado paquetes en esta ventana.",
+    "emptyPaused": "La captura está desactivada, no se registra nada.",
+    "colTime": "Hora",
+    "colFrom": "De",
+    "colPort": "Puerto",
+    "colVia": "Vía",
+    "colSnr": "SNR",
+    "colSize": "Bytes",
+    "viaMqtt": "MQTT",
+    "viaRf": "RF",
+    "privacyNote": "Los paquetes capturados se guardan sin cifrar en packet-monitor.db e incluyen los primeros 64 bytes de cada trama. Elimínelos antes de compartir un paquete de soporte."
   }
 }

@@ -25,6 +25,7 @@ export const TAB_SLOT_IDS = [
   'APRS',
   'Inventory',
   'Firmware',
+  'PacketMonitor',
 ] as const;
 
 export type TabSlotId = (typeof TAB_SLOT_IDS)[number];

@@ -5107,7 +5107,8 @@
     "games": "Game",
     "aprs": "APRS",
     "inventory": "Inventory",
-    "firmware": "Firmware"
+    "firmware": "Firmware",
+    "packetmonitor": "Monitor Paket"
   },
   "takServerPanel": {
     "title": "Server TAK",
@@ -6123,5 +6124,34 @@
     "done": "Penulisan selesai — radio sedang dimulai ulang.",
     "powerWarning": "Jangan mencabut radio atau menutup SARMesh saat penulisan berlangsung. Penulisan yang terputus dapat membuat radio gagal booting sampai diprogram ulang.",
     "noSerialApi": "Akses serial tidak tersedia di jendela ini. Mulai ulang SARMesh dan coba lagi."
+  },
+  "packetMonitor": {
+    "title": "Monitor paket",
+    "intro": "Menyimpan catatan permanen lalu lintas mesh agar dapat ditinjau setelah penugasan. Sniffer adalah tampilan langsung yang selalu kosong saat aplikasi dibuka; catatan ini bertahan setelah aplikasi dimulai ulang dan dipangkas berdasarkan usia.",
+    "capturing": "Merekam",
+    "paused": "Tidak merekam",
+    "start": "Mulai merekam",
+    "stop": "Hentikan perekaman",
+    "retention": "Simpan paket selama",
+    "retentionHint": "Jumlah jam lalu lintas yang disimpan di disk (1–168). Paket yang lebih lama dihapus otomatis.",
+    "window": "Tampilkan",
+    "lastHours": "{{count}} jam terakhir",
+    "lastHours_other": "{{count}} jam terakhir",
+    "filter": "Filter",
+    "filterPlaceholder": "Saring menurut node, port, atau hex…",
+    "stats": "{{rows}} paket tersimpan · {{size}} di disk · terlama {{oldest}}",
+    "refresh": "Segarkan",
+    "clear": "Hapus semua paket yang direkam",
+    "empty": "Belum ada paket yang direkam pada rentang ini.",
+    "emptyPaused": "Perekaman nonaktif, tidak ada yang dicatat.",
+    "colTime": "Waktu",
+    "colFrom": "Dari",
+    "colPort": "Port",
+    "colVia": "Melalui",
+    "colSnr": "SNR",
+    "colSize": "Bita",
+    "viaMqtt": "MQTT",
+    "viaRf": "RF",
+    "privacyNote": "Paket yang direkam disimpan tanpa enkripsi di packet-monitor.db dan memuat 64 bita pertama setiap frame. Hapus sebelum membagikan paket dukungan."
   }
 }

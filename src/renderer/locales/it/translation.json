@@ -5107,7 +5107,8 @@
     "games": "Giochi",
     "aprs": "APRS",
     "inventory": "Inventario",
-    "firmware": "Firmware"
+    "firmware": "Firmware",
+    "packetmonitor": "Monitor pacchetti"
   },
   "takServerPanel": {
     "title": "TAK Server",
@@ -6123,5 +6124,34 @@
     "done": "Scrittura completata: la radio si sta riavviando.",
     "powerWarning": "Non scollegare la radio né chiudere SARMesh durante la scrittura. Una scrittura interrotta può rendere la radio non avviabile finché non viene riprogrammata.",
     "noSerialApi": "L'accesso alla porta seriale non è disponibile in questa finestra. Riavviare SARMesh e riprovare."
+  },
+  "packetMonitor": {
+    "title": "Monitor pacchetti",
+    "intro": "Mantiene una registrazione persistente del traffico della rete mesh, così da poterla rivedere dopo un intervento. Lo Sniffer è una vista in tempo reale che riparte vuota a ogni avvio; questa registrazione sopravvive a un riavvio e viene ripulita in base all'età.",
+    "capturing": "Registrazione in corso",
+    "paused": "Registrazione ferma",
+    "start": "Avvia registrazione",
+    "stop": "Ferma registrazione",
+    "retention": "Conserva i pacchetti per",
+    "retentionHint": "Ore di traffico da tenere su disco (1–168). I pacchetti più vecchi vengono rimossi automaticamente.",
+    "window": "Mostra",
+    "lastHours": "Ultima {{count}} ora",
+    "lastHours_other": "Ultime {{count}} ore",
+    "filter": "Filtro",
+    "filterPlaceholder": "Filtra per nodo, porta o hex…",
+    "stats": "{{rows}} pacchetti salvati · {{size}} su disco · il più vecchio {{oldest}}",
+    "refresh": "Aggiorna",
+    "clear": "Elimina tutti i pacchetti registrati",
+    "empty": "Nessun pacchetto registrato in questa finestra.",
+    "emptyPaused": "La registrazione è disattivata, non viene salvato nulla.",
+    "colTime": "Ora",
+    "colFrom": "Da",
+    "colPort": "Porta",
+    "colVia": "Tramite",
+    "colSnr": "SNR",
+    "colSize": "Byte",
+    "viaMqtt": "MQTT",
+    "viaRf": "RF",
+    "privacyNote": "I pacchetti registrati sono salvati in chiaro in packet-monitor.db e contengono i primi 64 byte di ogni frame. Eliminali prima di condividere un pacchetto di supporto."
   }
 }

@@ -120,6 +120,10 @@ import { registerAprsIpcHandlers } from './ipc/aprs-handlers';
 import { registerGpsIpcHandlers } from './ipc/gps-handlers';
 import { registerInventoryIpcHandlers } from './ipc/inventory-handlers';
 import { registerMdnsIpcHandlers } from './ipc/mdns-handlers';
+import {
+  applyStoredPacketMonitorSettings,
+  registerPacketMonitorIpcHandlers,
+} from './ipc/packet-monitor-handlers';
 import { registerReticulumDbIpcHandlers } from './ipc/reticulum-db-handlers';
 import { registerReticulumIpcHandlers, wireReticulumSidecarBridge } from './ipc/reticulum-handlers';
 import { registerReticulumIdentityIpcHandlers } from './ipc/reticulum-identity-handlers';
@@ -161,6 +165,7 @@ import { resolveMqttBrokerClientId } from './mqtt-broker-client-id';
 import { type CachedNode, MQTTManager, parsePsk } from './mqtt-manager';
 import { handleNobleBleToRadioWrite } from './noble-ble-ipc';
 import { type NobleBleDevice, NobleBleManager, type NobleSessionId } from './noble-ble-manager';
+import { shutdownPacketMonitor, startPacketMonitorMaintenance } from './packet-monitor-db';
 import { readFileUpTo } from './readFileUpTo';
 import { createRendererHeartbeatWatchdog } from './rendererHeartbeatWatchdog';
 import { resolveRendererLoadUrl } from './resolveRendererLoadUrl';
@@ -578,6 +583,7 @@ async function shutdownAppResources(): Promise<void> {
     takServerManager?.stop();
     void aprsBridgeManager?.stop();
     mdnsDiscovery?.stop();
+    shutdownPacketMonitor();
   } catch (err) {
     console.debug(
       '[main] TAK server stop during shutdown (ignored):',
@@ -6654,6 +6660,8 @@ registerInventoryIpcHandlers({ getInventoryManager });
 
 registerMdnsIpcHandlers({ getMdnsDiscovery });
 
+registerPacketMonitorIpcHandlers();
+
 registerReticulumIpcHandlers({
   idleStatus: IDLE_RETICULUM_STATUS,
   ensureManager: ensureReticulumSidecarManager,
@@ -6744,6 +6752,22 @@ void app
       if (coldStartUrl) pendingOpenUrl = coldStartUrl;
 
       initDatabase();
+
+      // Packet capture state is persisted, so it survives a restart; the prune
+      // timer runs regardless so a disabled monitor still ages out old packets.
+      try {
+        const packetSettings = applyStoredPacketMonitorSettings();
+        startPacketMonitorMaintenance();
+        console.debug(
+          `[packet-monitor] capture=${String(packetSettings.enabled)} ` +
+            `retention=${String(packetSettings.retentionHours)}h`,
+        );
+      } catch (e: unknown) {
+        console.warn(
+          '[packet-monitor] startup failed:',
+          sanitizeLogMessage(e instanceof Error ? e.message : String(e)),
+        );
+      }
 
       // Auto-restore TAK server if auto-start is enabled
       const takSettingsPath = path.join(app.getPath('userData'), 'tak-settings.json');
@@ -6948,6 +6972,7 @@ app.on('will-quit', (event) => {
       takServerManager?.stop();
       void aprsBridgeManager?.stop();
       mdnsDiscovery?.stop();
+      shutdownPacketMonitor();
     } catch (err) {
       console.debug(
         '[main] TAK server stop during will-quit (ignored):',

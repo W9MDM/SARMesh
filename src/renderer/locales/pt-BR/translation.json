@@ -5107,7 +5107,8 @@
     "games": "Jogos",
     "aprs": "APRs",
     "inventory": "Inventário",
-    "firmware": "Firmware"
+    "firmware": "Firmware",
+    "packetmonitor": "Monitor de pacotes"
   },
   "takServerPanel": {
     "title": "Servidor TAK",
@@ -6123,5 +6124,34 @@
     "done": "Gravação concluída — o rádio está reiniciando.",
     "powerWarning": "Não desconecte o rádio nem feche o SARMesh durante a gravação. Uma gravação interrompida pode deixar o rádio sem inicializar até ser gravado novamente.",
     "noSerialApi": "O acesso à porta serial não está disponível nesta janela. Reinicie o SARMesh e tente novamente."
+  },
+  "packetMonitor": {
+    "title": "Monitor de pacotes",
+    "intro": "Mantém um registro duradouro do tráfego da malha para que possa ser revisado depois de um acionamento. O Sniffer é uma visão ao vivo que começa vazia a cada inicialização; este registro sobrevive a um reinício e é limpo por idade.",
+    "capturing": "Capturando",
+    "paused": "Sem captura",
+    "start": "Iniciar captura",
+    "stop": "Parar captura",
+    "retention": "Manter pacotes por",
+    "retentionHint": "Horas de tráfego mantidas em disco (1–168). Pacotes mais antigos são removidos automaticamente.",
+    "window": "Exibir",
+    "lastHours": "Última {{count}} hora",
+    "lastHours_other": "Últimas {{count}} horas",
+    "filter": "Filtro",
+    "filterPlaceholder": "Filtrar por nó, porta ou hex…",
+    "stats": "{{rows}} pacotes armazenados · {{size}} em disco · mais antigo {{oldest}}",
+    "refresh": "Atualizar",
+    "clear": "Excluir todos os pacotes capturados",
+    "empty": "Nenhum pacote capturado nesta janela ainda.",
+    "emptyPaused": "A captura está desligada, nada está sendo registrado.",
+    "colTime": "Hora",
+    "colFrom": "De",
+    "colPort": "Porta",
+    "colVia": "Via",
+    "colSnr": "SNR",
+    "colSize": "Bytes",
+    "viaMqtt": "MQTT",
+    "viaRf": "RF",
+    "privacyNote": "Os pacotes capturados ficam sem criptografia em packet-monitor.db e incluem os primeiros 64 bytes de cada quadro. Exclua-os antes de compartilhar um pacote de suporte."
   }
 }

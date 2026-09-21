@@ -75,6 +75,8 @@ export function TabIcon({ name }: { name: string }) {
       return <ClipboardList {...p} />;
     case 'Firmware':
       return <Cpu {...p} />;
+    case 'PacketMonitor':
+      return <FileChartColumn {...p} />;
     case 'APRS':
       return <SatelliteDish {...p} />;
     case 'TAK':

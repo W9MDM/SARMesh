@@ -93,6 +93,13 @@ function runEnsureRepo({ remoteUrl, destDir, pinRef = '', env = {}, mergeStderr 
   });
 }
 
+/**
+ * These tests run real `git clone` / `checkout` against temp repos. Vitest's
+ * 5s default is not enough under a full-suite parallel run, where they timed
+ * out intermittently and failed otherwise-green commits.
+ */
+const GIT_CLONE_TEST_TIMEOUT_MS = 30_000;
+
 describe('clone-ratspeak-stack.sh float policy', () => {
   it('floats rsReticulum and rsLXMF to origin/main by default', () => {
     expect(cloneScript).toContain('WORKSPACE_ROOT="${WORKSPACE_ROOT:-${REPO_ROOT}/.rsstack}"');
@@ -130,119 +137,143 @@ describe('clone-ratspeak-stack.sh float policy', () => {
     expect(cloneScript).not.toContain('RS_NOMAD_SKIP_PIN');
   });
 
-  it('ensure_repo floats rsLXST and reports selected ref + SHA', () => {
-    const { remote, tipSha } = createLocalRemote({ defaultBranch: 'main' });
-    const dest = join(makeTempDir('workspace-'), 'rsLXST');
-    const out = runEnsureRepo({ remoteUrl: remote, destDir: dest });
-    expect(out).toContain('SELECTED=origin/main');
-    expect(out).toContain('MODE=floated origin/main');
-    expect(out).toContain(`SHA=${tipSha}`);
-    expect(git(dest, 'rev-parse', 'HEAD')).toBe(tipSha);
-  });
+  it(
+    'ensure_repo floats rsLXST and reports selected ref + SHA',
+    () => {
+      const { remote, tipSha } = createLocalRemote({ defaultBranch: 'main' });
+      const dest = join(makeTempDir('workspace-'), 'rsLXST');
+      const out = runEnsureRepo({ remoteUrl: remote, destDir: dest });
+      expect(out).toContain('SELECTED=origin/main');
+      expect(out).toContain('MODE=floated origin/main');
+      expect(out).toContain(`SHA=${tipSha}`);
+      expect(git(dest, 'rev-parse', 'HEAD')).toBe(tipSha);
+    },
+    GIT_CLONE_TEST_TIMEOUT_MS,
+  );
 
-  it('ensure_repo discards dirty overlay state under .rsstack workspace to float', () => {
-    const { remote, tipSha } = createLocalRemote({ defaultBranch: 'main' });
-    const dest = join(makeTempDir('workspace-'), 'rsLXST');
-    runEnsureRepo({ remoteUrl: remote, destDir: dest });
-    expect(git(dest, 'rev-parse', 'HEAD')).toBe(tipSha);
+  it(
+    'ensure_repo discards dirty overlay state under .rsstack workspace to float',
+    () => {
+      const { remote, tipSha } = createLocalRemote({ defaultBranch: 'main' });
+      const dest = join(makeTempDir('workspace-'), 'rsLXST');
+      runEnsureRepo({ remoteUrl: remote, destDir: dest });
+      expect(git(dest, 'rev-parse', 'HEAD')).toBe(tipSha);
 
-    // Advance remote tip after initial clone so float must move HEAD.
-    const seed = makeTempDir('rsLXST-advance-');
-    git(seed, 'clone', remote, '.');
-    git(seed, 'config', 'user.email', 'test@example.com');
-    git(seed, 'config', 'user.name', 'test');
-    writeFileSync(join(seed, 'NEXT'), 'next\n');
-    git(seed, 'add', 'NEXT');
-    git(seed, 'commit', '-m', 'next');
-    const newTip = git(seed, 'rev-parse', 'HEAD');
-    git(seed, 'push', 'origin', 'HEAD:main');
-    expect(newTip).not.toBe(tipSha);
+      // Advance remote tip after initial clone so float must move HEAD.
+      const seed = makeTempDir('rsLXST-advance-');
+      git(seed, 'clone', remote, '.');
+      git(seed, 'config', 'user.email', 'test@example.com');
+      git(seed, 'config', 'user.name', 'test');
+      writeFileSync(join(seed, 'NEXT'), 'next\n');
+      git(seed, 'add', 'NEXT');
+      git(seed, 'commit', '-m', 'next');
+      const newTip = git(seed, 'rev-parse', 'HEAD');
+      git(seed, 'push', 'origin', 'HEAD:main');
+      expect(newTip).not.toBe(tipSha);
 
-    writeFileSync(join(dest, 'OVERLAY'), 'dirty\n');
-    expect(git(dest, 'status', '--porcelain')).toContain('OVERLAY');
+      writeFileSync(join(dest, 'OVERLAY'), 'dirty\n');
+      expect(git(dest, 'status', '--porcelain')).toContain('OVERLAY');
 
-    // Default WORKSPACE_ROOT from sourced script is repo .rsstack → discard dirty.
-    const out = runEnsureRepo({ remoteUrl: remote, destDir: dest, mergeStderr: true });
-    expect(out).toContain('discarding to float/pin');
-    expect(out).toContain(`SHA=${newTip}`);
-    expect(git(dest, 'rev-parse', 'HEAD')).toBe(newTip);
-    expect(git(dest, 'status', '--porcelain')).toBe('');
-  });
+      // Default WORKSPACE_ROOT from sourced script is repo .rsstack → discard dirty.
+      const out = runEnsureRepo({ remoteUrl: remote, destDir: dest, mergeStderr: true });
+      expect(out).toContain('discarding to float/pin');
+      expect(out).toContain(`SHA=${newTip}`);
+      expect(git(dest, 'rev-parse', 'HEAD')).toBe(newTip);
+      expect(git(dest, 'status', '--porcelain')).toBe('');
+    },
+    GIT_CLONE_TEST_TIMEOUT_MS,
+  );
 
-  it('ensure_repo refuses dirty float outside .rsstack unless RS_STACK_DISCARD_DIRTY=1', () => {
-    const { remote, tipSha } = createLocalRemote({ defaultBranch: 'main' });
-    const dest = join(makeTempDir('siblings-'), 'rsLXST');
-    runEnsureRepo({ remoteUrl: remote, destDir: dest });
-    expect(git(dest, 'rev-parse', 'HEAD')).toBe(tipSha);
+  it(
+    'ensure_repo refuses dirty float outside .rsstack unless RS_STACK_DISCARD_DIRTY=1',
+    () => {
+      const { remote, tipSha } = createLocalRemote({ defaultBranch: 'main' });
+      const dest = join(makeTempDir('siblings-'), 'rsLXST');
+      runEnsureRepo({ remoteUrl: remote, destDir: dest });
+      expect(git(dest, 'rev-parse', 'HEAD')).toBe(tipSha);
 
-    const seed = makeTempDir('rsLXST-advance-');
-    git(seed, 'clone', remote, '.');
-    git(seed, 'config', 'user.email', 'test@example.com');
-    git(seed, 'config', 'user.name', 'test');
-    writeFileSync(join(seed, 'NEXT'), 'next\n');
-    git(seed, 'add', 'NEXT');
-    git(seed, 'commit', '-m', 'next');
-    const newTip = git(seed, 'rev-parse', 'HEAD');
-    git(seed, 'push', 'origin', 'HEAD:main');
-    expect(newTip).not.toBe(tipSha);
+      const seed = makeTempDir('rsLXST-advance-');
+      git(seed, 'clone', remote, '.');
+      git(seed, 'config', 'user.email', 'test@example.com');
+      git(seed, 'config', 'user.name', 'test');
+      writeFileSync(join(seed, 'NEXT'), 'next\n');
+      git(seed, 'add', 'NEXT');
+      git(seed, 'commit', '-m', 'next');
+      const newTip = git(seed, 'rev-parse', 'HEAD');
+      git(seed, 'push', 'origin', 'HEAD:main');
+      expect(newTip).not.toBe(tipSha);
 
-    writeFileSync(join(dest, 'WIP'), 'keep\n');
+      writeFileSync(join(dest, 'WIP'), 'keep\n');
 
-    const externalWorkspace = makeTempDir('not-rsstack-');
-    expect(() =>
-      runEnsureRepo({
+      const externalWorkspace = makeTempDir('not-rsstack-');
+      expect(() =>
+        runEnsureRepo({
+          remoteUrl: remote,
+          destDir: dest,
+          env: { WORKSPACE_ROOT: externalWorkspace },
+        }),
+      ).toThrow(/refuse to float\/pin/);
+      expect(git(dest, 'rev-parse', 'HEAD')).toBe(tipSha);
+      expect(git(dest, 'status', '--porcelain')).toContain('WIP');
+
+      const out = runEnsureRepo({
         remoteUrl: remote,
         destDir: dest,
-        env: { WORKSPACE_ROOT: externalWorkspace },
-      }),
-    ).toThrow(/refuse to float\/pin/);
-    expect(git(dest, 'rev-parse', 'HEAD')).toBe(tipSha);
-    expect(git(dest, 'status', '--porcelain')).toContain('WIP');
+        mergeStderr: true,
+        env: { WORKSPACE_ROOT: externalWorkspace, RS_STACK_DISCARD_DIRTY: '1' },
+      });
+      expect(out).toContain('discarding to float/pin');
+      expect(out).toContain(`SHA=${newTip}`);
+      expect(git(dest, 'status', '--porcelain')).toBe('');
+    },
+    GIT_CLONE_TEST_TIMEOUT_MS,
+  );
 
-    const out = runEnsureRepo({
-      remoteUrl: remote,
-      destDir: dest,
-      mergeStderr: true,
-      env: { WORKSPACE_ROOT: externalWorkspace, RS_STACK_DISCARD_DIRTY: '1' },
-    });
-    expect(out).toContain('discarding to float/pin');
-    expect(out).toContain(`SHA=${newTip}`);
-    expect(git(dest, 'status', '--porcelain')).toBe('');
-  });
+  it(
+    'ensure_repo falls back to origin/master when main is absent',
+    () => {
+      const { remote, tipSha } = createLocalRemote({ defaultBranch: 'master' });
+      const dest = join(makeTempDir('workspace-'), 'rsLXST');
+      const out = runEnsureRepo({ remoteUrl: remote, destDir: dest });
+      expect(out).toContain('SELECTED=origin/master');
+      expect(out).toContain('MODE=floated origin/master');
+      expect(out).toContain(`SHA=${tipSha}`);
+    },
+    GIT_CLONE_TEST_TIMEOUT_MS,
+  );
 
-  it('ensure_repo falls back to origin/master when main is absent', () => {
-    const { remote, tipSha } = createLocalRemote({ defaultBranch: 'master' });
-    const dest = join(makeTempDir('workspace-'), 'rsLXST');
-    const out = runEnsureRepo({ remoteUrl: remote, destDir: dest });
-    expect(out).toContain('SELECTED=origin/master');
-    expect(out).toContain('MODE=floated origin/master');
-    expect(out).toContain(`SHA=${tipSha}`);
-  });
+  it(
+    'ensure_repo pins RS_LXST_REF and reports pinned mode + checkout SHA',
+    () => {
+      const { remote, pinSha } = createLocalRemote({ defaultBranch: 'main', pinTag: 'v-test-pin' });
+      const dest = join(makeTempDir('workspace-'), 'rsLXST');
+      const out = runEnsureRepo({ remoteUrl: remote, destDir: dest, pinRef: 'v-test-pin' });
+      expect(out).toMatch(/SELECTED=v-test-pin|SELECTED=origin\/v-test-pin/);
+      expect(out).toContain('MODE=pinned v-test-pin');
+      expect(out).toContain(`SHA=${pinSha}`);
+      expect(git(dest, 'rev-parse', 'HEAD')).toBe(pinSha);
+    },
+    GIT_CLONE_TEST_TIMEOUT_MS,
+  );
 
-  it('ensure_repo pins RS_LXST_REF and reports pinned mode + checkout SHA', () => {
-    const { remote, pinSha } = createLocalRemote({ defaultBranch: 'main', pinTag: 'v-test-pin' });
-    const dest = join(makeTempDir('workspace-'), 'rsLXST');
-    const out = runEnsureRepo({ remoteUrl: remote, destDir: dest, pinRef: 'v-test-pin' });
-    expect(out).toMatch(/SELECTED=v-test-pin|SELECTED=origin\/v-test-pin/);
-    expect(out).toContain('MODE=pinned v-test-pin');
-    expect(out).toContain(`SHA=${pinSha}`);
-    expect(git(dest, 'rev-parse', 'HEAD')).toBe(pinSha);
-  });
-
-  it('clones lrgp-rs with optional RS_LRGP_REF pin support', () => {
-    expect(cloneScript).toContain('LRGP_DIR=');
-    expect(cloneScript).toMatch(/RS_LRGP_REF="\$\{RS_LRGP_REF:-\}"/);
-    expect(cloneScript).toContain('https://github.com/ratspeak/lrgp-rs.git');
-    expect(cloneScript).toContain(
-      `ensure_repo "\${LRGP_DIR}" 'https://github.com/ratspeak/lrgp-rs.git' "\${RS_LRGP_REF}" 'lrgp-rs'`,
-    );
-    expect(cloneScript).toContain('lrgp-rs @');
-    const { remote, tipSha } = createLocalRemote({ defaultBranch: 'main' });
-    const dest = join(makeTempDir('workspace-'), 'lrgp-rs');
-    const out = runEnsureRepo({ remoteUrl: remote, destDir: dest });
-    expect(out).toContain('SELECTED=origin/main');
-    expect(out).toContain(`SHA=${tipSha}`);
-  });
+  it(
+    'clones lrgp-rs with optional RS_LRGP_REF pin support',
+    () => {
+      expect(cloneScript).toContain('LRGP_DIR=');
+      expect(cloneScript).toMatch(/RS_LRGP_REF="\$\{RS_LRGP_REF:-\}"/);
+      expect(cloneScript).toContain('https://github.com/ratspeak/lrgp-rs.git');
+      expect(cloneScript).toContain(
+        `ensure_repo "\${LRGP_DIR}" 'https://github.com/ratspeak/lrgp-rs.git' "\${RS_LRGP_REF}" 'lrgp-rs'`,
+      );
+      expect(cloneScript).toContain('lrgp-rs @');
+      const { remote, tipSha } = createLocalRemote({ defaultBranch: 'main' });
+      const dest = join(makeTempDir('workspace-'), 'lrgp-rs');
+      const out = runEnsureRepo({ remoteUrl: remote, destDir: dest });
+      expect(out).toContain('SELECTED=origin/main');
+      expect(out).toContain(`SHA=${tipSha}`);
+    },
+    GIT_CLONE_TEST_TIMEOUT_MS,
+  );
 
   it('applies rsReticulum and rsLXMF overlays after checkout via shared list', () => {
     expect(cloneScript).toContain('apply_ratspeak_rns_overlays');

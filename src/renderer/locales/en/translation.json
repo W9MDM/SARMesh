@@ -5766,7 +5766,8 @@
     "admin": "Administration",
     "aprs": "APRS",
     "inventory": "Inventory",
-    "firmware": "Firmware"
+    "firmware": "Firmware",
+    "packetmonitor": "Packet Monitor"
   },
   "takServerPanel": {
     "title": "TAK Server",
@@ -6123,5 +6124,34 @@
     "done": "Flash complete — the radio is restarting.",
     "powerWarning": "Do not unplug the radio or close SARMesh while flashing. An interrupted write can leave the radio unbootable until it is reflashed.",
     "noSerialApi": "Serial access is unavailable in this window. Restart SARMesh and try again."
+  },
+  "packetMonitor": {
+    "title": "Packet Monitor",
+    "intro": "Keeps a durable record of mesh traffic so it can be reviewed after a callout. The Sniffer is a live tail that starts empty each launch; this survives a restart and is pruned by age.",
+    "capturing": "Capturing",
+    "paused": "Not capturing",
+    "start": "Start capture",
+    "stop": "Stop capture",
+    "retention": "Keep packets for",
+    "retentionHint": "Hours of traffic to keep on disk (1–168). Older packets are pruned automatically.",
+    "window": "Show",
+    "lastHours": "Last {{count}} hour",
+    "lastHours_other": "Last {{count}} hours",
+    "filter": "Filter",
+    "filterPlaceholder": "Filter by node, port or hex…",
+    "stats": "{{rows}} packets stored · {{size}} on disk · oldest {{oldest}}",
+    "refresh": "Refresh",
+    "clear": "Delete all captured packets",
+    "empty": "No packets captured in this window yet.",
+    "emptyPaused": "Capture is off, so nothing is being recorded.",
+    "colTime": "Time",
+    "colFrom": "From",
+    "colPort": "Port",
+    "colVia": "Via",
+    "colSnr": "SNR",
+    "colSize": "Bytes",
+    "viaMqtt": "MQTT",
+    "viaRf": "RF",
+    "privacyNote": "Captured packets are stored unencrypted in packet-monitor.db and include the first 64 bytes of each frame. Delete them before sharing a support bundle."
   }
 }

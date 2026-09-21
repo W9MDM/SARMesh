@@ -164,6 +164,7 @@ import {
   ModulePanel,
   NomadNetworkPanel,
   PacketDistributionPanel,
+  PacketMonitorPanel,
   PeerGraphPanel,
   RadioPanel,
   RawPacketLogPanel,
@@ -203,6 +204,7 @@ import {
   MODULES_PANEL_INDEX,
   NODES_PANEL_INDEX,
   NOMAD_NETWORK_PANEL_INDEX,
+  PACKET_MONITOR_PANEL_INDEX,
   RADIO_TAB_PANEL_INDEX,
   REMOTE_PANEL_INDEX,
   resolveSavedTabOnProtocolSwitch,
@@ -4442,6 +4444,21 @@ function AppContent() {
                                 label: n.long_name || n.short_name || String(n.node_id),
                               }))}
                             />
+                          </Suspense>
+                        </ErrorBoundary>
+                      ) : null}
+                    </div>
+                    <div
+                      id={`panel-${PACKET_MONITOR_PANEL_INDEX}`}
+                      role="tabpanel"
+                      aria-labelledby={`tab-${Math.max(0, findFilteredTabIndexForPanel(selectByProtocol(tabsByProtocol, protocol), PACKET_MONITOR_PANEL_INDEX))}`}
+                      hidden={activePanelIndex !== PACKET_MONITOR_PANEL_INDEX}
+                      className="w-full min-w-0"
+                    >
+                      {activePanelIndex === PACKET_MONITOR_PANEL_INDEX ? (
+                        <ErrorBoundary>
+                          <Suspense fallback={<PanelSkeleton />}>
+                            <PacketMonitorPanel />
                           </Suspense>
                         </ErrorBoundary>
                       ) : null}

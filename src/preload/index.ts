@@ -47,6 +47,12 @@ import type {
 } from '../shared/inventory-types';
 import type { DiscoveryState } from '../shared/mdns-types';
 import type {
+  PacketMonitorQuery,
+  PacketMonitorRecord,
+  PacketMonitorSettings,
+  PacketMonitorStats,
+} from '../shared/packet-monitor-types';
+import type {
   ReticulumSidecarEvent,
   ReticulumSidecarStartOptions,
   ReticulumSidecarStatus,
@@ -1097,6 +1103,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('meshtastic:tcp-disconnected', handler);
         return () => ipcRenderer.off('meshtastic:tcp-disconnected', handler);
       },
+    },
+  },
+
+  // ─── Packet monitor (durable capture) ────────────────────────────
+  packetMonitor: {
+    getSettings: (): Promise<PacketMonitorSettings> =>
+      ipcRenderer.invoke('packetMonitor:getSettings'),
+    setSettings: (next: PacketMonitorSettings): Promise<PacketMonitorSettings> =>
+      ipcRenderer.invoke('packetMonitor:setSettings', next),
+    query: (query: PacketMonitorQuery): Promise<PacketMonitorRecord[]> =>
+      ipcRenderer.invoke('packetMonitor:query', query),
+    stats: (): Promise<PacketMonitorStats> => ipcRenderer.invoke('packetMonitor:stats'),
+    clear: (): Promise<number> => ipcRenderer.invoke('packetMonitor:clear'),
+    // Fire-and-forget: capture must never slow the packet path.
+    record: (records: PacketMonitorRecord[]): void => {
+      ipcRenderer.send('packetMonitor:record', records);
     },
   },
 

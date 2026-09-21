@@ -31,6 +31,12 @@ import type {
 import type { DiscoveryState } from './mdns-types';
 import type { MeshProtocol } from './meshProtocol';
 import type {
+  PacketMonitorQuery,
+  PacketMonitorRecord,
+  PacketMonitorSettings,
+  PacketMonitorStats,
+} from './packet-monitor-types';
+import type {
   PathCapability,
   RemoteAddressBookRow,
   RemoteFileDialogResult,
@@ -1195,6 +1201,16 @@ export interface ElectronAPI {
       ) => Promise<void>;
       remove: (id: number) => Promise<void>;
     };
+  };
+
+  // ─── Packet monitor (durable capture) ────────────────────────────────────────
+  packetMonitor: {
+    getSettings: () => Promise<PacketMonitorSettings>;
+    setSettings: (next: PacketMonitorSettings) => Promise<PacketMonitorSettings>;
+    query: (query: PacketMonitorQuery) => Promise<PacketMonitorRecord[]>;
+    stats: () => Promise<PacketMonitorStats>;
+    clear: () => Promise<number>;
+    record: (records: PacketMonitorRecord[]) => void;
   };
 
   // ─── Node discovery (mDNS) ───────────────────────────────────────────────────

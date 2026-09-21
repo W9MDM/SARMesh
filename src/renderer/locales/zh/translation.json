@@ -5107,7 +5107,8 @@
     "games": "出賽",
     "aprs": "APRS",
     "inventory": "库存",
-    "firmware": "固件"
+    "firmware": "固件",
+    "packetmonitor": "数据包监视"
   },
   "takServerPanel": {
     "title": "TAK服务器",
@@ -6123,5 +6124,34 @@
     "done": "刷写完成——电台正在重启。",
     "powerWarning": "刷写期间请勿拔下电台或关闭 SARMesh。写入中断可能导致电台无法启动，直到重新刷写为止。",
     "noSerialApi": "此窗口无法访问串口。请重启 SARMesh 后重试。"
+  },
+  "packetMonitor": {
+    "title": "数据包监视",
+    "intro": "持久记录网状网络的流量，便于任务结束后回溯。嗅探器是每次启动都从空开始的实时列表；此记录在重启后仍然保留，并按时间自动清理。",
+    "capturing": "正在记录",
+    "paused": "未记录",
+    "start": "开始记录",
+    "stop": "停止记录",
+    "retention": "数据包保留时长",
+    "retentionHint": "在磁盘上保留的流量小时数（1–168）。更早的数据包会自动清除。",
+    "window": "显示",
+    "lastHours": "最近 {{count}} 小时",
+    "lastHours_other": "最近 {{count}} 小时",
+    "filter": "筛选",
+    "filterPlaceholder": "按节点、端口或十六进制筛选…",
+    "stats": "已存储 {{rows}} 个数据包 · 占用 {{size}} · 最早 {{oldest}}",
+    "refresh": "刷新",
+    "clear": "删除所有已记录的数据包",
+    "empty": "此时间范围内尚未记录到数据包。",
+    "emptyPaused": "记录已关闭，未保存任何内容。",
+    "colTime": "时间",
+    "colFrom": "来源",
+    "colPort": "端口",
+    "colVia": "路径",
+    "colSnr": "信噪比",
+    "colSize": "字节",
+    "viaMqtt": "MQTT",
+    "viaRf": "RF",
+    "privacyNote": "记录的数据包以未加密形式保存在 packet-monitor.db 中，并包含每帧的前 64 个字节。在共享支持包之前请先删除。"
   }
 }

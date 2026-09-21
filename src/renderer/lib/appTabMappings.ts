@@ -27,6 +27,7 @@ export const GRAPH_PANEL_INDEX = TAB_SLOT_IDS.indexOf('Graph');
 export const APRS_PANEL_INDEX = TAB_SLOT_IDS.indexOf('APRS');
 export const INVENTORY_PANEL_INDEX = TAB_SLOT_IDS.indexOf('Inventory');
 export const FIRMWARE_PANEL_INDEX = TAB_SLOT_IDS.indexOf('Firmware');
+export const PACKET_MONITOR_PANEL_INDEX = TAB_SLOT_IDS.indexOf('PacketMonitor');
 
 type TabCapabilityRequirement = keyof ProtocolCapabilities | { or: (keyof ProtocolCapabilities)[] };
 
@@ -56,6 +57,7 @@ const TAB_CAPABILITY_REQUIREMENTS: (TabCapabilityRequirement | undefined)[] = [
   undefined, // APRS
   undefined, // Inventory
   'hasFirmwareFlasher', // Firmware
+  'hasRawPacketLog', // Packet Monitor — same packet source as the Sniffer
 ];
 
 function tabVisible(

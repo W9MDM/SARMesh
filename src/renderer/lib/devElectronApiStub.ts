@@ -3,6 +3,8 @@ import type { OutboxEntry, OutboxEntryInput } from '@/shared/electron-api.types'
 import { DEFAULT_APRS_SETTINGS, IDLE_APRS_STATUS } from '../../shared/aprs-types';
 import { DEFAULT_INVENTORY_SETTINGS } from '../../shared/inventory-types';
 import { IDLE_DISCOVERY_STATE } from '../../shared/mdns-types';
+import type { PacketMonitorSettings } from '../../shared/packet-monitor-types';
+import { DEFAULT_PACKET_MONITOR_SETTINGS } from '../../shared/packet-monitor-types';
 
 /* eslint-disable @typescript-eslint/require-await -- no-op async IPC stubs for browser dev */
 const noop = (): void => {};
@@ -315,6 +317,14 @@ export function createDevElectronApiStub(): typeof window.electronAPI {
       export: async () => null,
       onLine: noopUnsub,
       logDeviceConnection: noopAsync,
+    },
+    packetMonitor: {
+      getSettings: async () => DEFAULT_PACKET_MONITOR_SETTINGS,
+      setSettings: async (next: PacketMonitorSettings) => next,
+      query: async () => [],
+      stats: async () => ({ rowCount: 0, oldestMs: null, newestMs: null, fileBytes: 0 }),
+      clear: async () => 0,
+      record: () => {},
     },
     mdns: {
       start: async () => IDLE_DISCOVERY_STATE,

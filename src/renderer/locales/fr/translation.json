@@ -5107,7 +5107,8 @@
     "games": "Jeux",
     "aprs": "APRS",
     "inventory": "Inventaire",
-    "firmware": "Micrologiciel"
+    "firmware": "Micrologiciel",
+    "packetmonitor": "Moniteur de paquets"
   },
   "takServerPanel": {
     "title": "Serveur TAK",
@@ -6123,5 +6124,34 @@
     "done": "Flashage terminé — la radio redémarre.",
     "powerWarning": "Ne débranchez pas la radio et ne fermez pas SARMesh pendant le flashage. Une écriture interrompue peut rendre la radio non amorçable jusqu'à un nouveau flashage.",
     "noSerialApi": "L'accès au port série n'est pas disponible dans cette fenêtre. Redémarrez SARMesh et réessayez."
+  },
+  "packetMonitor": {
+    "title": "Moniteur de paquets",
+    "intro": "Conserve un enregistrement durable du trafic du réseau maillé afin de pouvoir l'examiner après une intervention. Le Sniffer est un flux en direct qui repart vide à chaque lancement ; cet enregistrement survit à un redémarrage et est purgé par ancienneté.",
+    "capturing": "Capture en cours",
+    "paused": "Capture arrêtée",
+    "start": "Démarrer la capture",
+    "stop": "Arrêter la capture",
+    "retention": "Conserver les paquets pendant",
+    "retentionHint": "Heures de trafic conservées sur le disque (1–168). Les paquets plus anciens sont purgés automatiquement.",
+    "window": "Afficher",
+    "lastHours": "Dernière {{count}} heure",
+    "lastHours_other": "Dernières {{count}} heures",
+    "filter": "Filtre",
+    "filterPlaceholder": "Filtrer par nœud, port ou hex…",
+    "stats": "{{rows}} paquets stockés · {{size}} sur le disque · le plus ancien {{oldest}}",
+    "refresh": "Actualiser",
+    "clear": "Supprimer tous les paquets capturés",
+    "empty": "Aucun paquet capturé dans cette fenêtre pour l'instant.",
+    "emptyPaused": "La capture est désactivée, rien n'est enregistré.",
+    "colTime": "Heure",
+    "colFrom": "De",
+    "colPort": "Port",
+    "colVia": "Par",
+    "colSnr": "SNR",
+    "colSize": "Octets",
+    "viaMqtt": "MQTT",
+    "viaRf": "RF",
+    "privacyNote": "Les paquets capturés sont stockés en clair dans packet-monitor.db et contiennent les 64 premiers octets de chaque trame. Supprimez-les avant de partager un paquet de support."
   }
 }

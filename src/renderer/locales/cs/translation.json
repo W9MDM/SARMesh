@@ -5148,7 +5148,8 @@
     "games": "Herní aktivity",
     "aprs": "APRS",
     "inventory": "Skladová zásoba",
-    "firmware": "Firmware"
+    "firmware": "Firmware",
+    "packetmonitor": "Monitor paketů"
   },
   "takServerPanel": {
     "title": "Server TAK",
@@ -6171,5 +6172,34 @@
     "done": "Nahrávání dokončeno — radiostanice se restartuje.",
     "powerWarning": "Během nahrávání neodpojujte radiostanici ani nezavírejte SARMesh. Přerušený zápis může radiostanici znefunkčnit, dokud nebude firmware nahrán znovu.",
     "noSerialApi": "Sériový přístup není v tomto okně dostupný. Restartujte SARMesh a zkuste to znovu."
+  },
+  "packetMonitor": {
+    "title": "Monitor paketů",
+    "intro": "Uchovává trvalý záznam provozu v síti, aby jej bylo možné projít po akci. Sniffer je živý výpis, který je po každém spuštění prázdný; tento záznam přežije restart a maže se podle stáří.",
+    "capturing": "Zaznamenává se",
+    "paused": "Nezaznamenává se",
+    "start": "Spustit záznam",
+    "stop": "Zastavit záznam",
+    "retention": "Uchovávat pakety po dobu",
+    "retentionHint": "Kolik hodin provozu ponechat na disku (1–168). Starší pakety se mažou automaticky.",
+    "window": "Zobrazit",
+    "lastHours": "Poslední {{count}} hodina",
+    "lastHours_other": "Posledních {{count}} hodin",
+    "filter": "Filtr",
+    "filterPlaceholder": "Filtrovat podle uzlu, portu nebo hex…",
+    "stats": "{{rows}} uložených paketů · {{size}} na disku · nejstarší {{oldest}}",
+    "refresh": "Obnovit",
+    "clear": "Smazat všechny zaznamenané pakety",
+    "empty": "V tomto okně zatím nebyly zaznamenány žádné pakety.",
+    "emptyPaused": "Záznam je vypnutý, nic se nezaznamenává.",
+    "colTime": "Čas",
+    "colFrom": "Od",
+    "colPort": "Port",
+    "colVia": "Přes",
+    "colSnr": "SNR",
+    "colSize": "Bajtů",
+    "viaMqtt": "MQTT",
+    "viaRf": "RF",
+    "privacyNote": "Zaznamenané pakety jsou uloženy nešifrovaně v packet-monitor.db a obsahují prvních 64 bajtů každého rámce. Před sdílením diagnostického balíčku je smažte."
   }
 }

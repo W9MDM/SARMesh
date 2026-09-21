@@ -5107,7 +5107,8 @@
     "games": "ゲーム",
     "aprs": "APRS",
     "inventory": "持ち物",
-    "firmware": "ファームウェア"
+    "firmware": "ファームウェア",
+    "packetmonitor": "パケットモニター"
   },
   "takServerPanel": {
     "title": "TAKサーバー",
@@ -6123,5 +6124,34 @@
     "done": "書き込みが完了しました — 無線機を再起動しています。",
     "powerWarning": "書き込み中に無線機を取り外したり SARMesh を終了したりしないでください。書き込みが中断されると、再書き込みするまで無線機が起動しなくなることがあります。",
     "noSerialApi": "このウィンドウではシリアルにアクセスできません。SARMesh を再起動してからやり直してください。"
+  },
+  "packetMonitor": {
+    "title": "パケットモニター",
+    "intro": "メッシュの通信を永続的に記録し、出動後に振り返れるようにします。スニファーは起動のたびに空から始まるライブ表示ですが、この記録は再起動後も残り、古いものから自動的に削除されます。",
+    "capturing": "記録中",
+    "paused": "記録していません",
+    "start": "記録を開始",
+    "stop": "記録を停止",
+    "retention": "パケットの保持期間",
+    "retentionHint": "ディスクに残す通信の時間数（1〜168）。古いパケットは自動的に削除されます。",
+    "window": "表示範囲",
+    "lastHours": "直近 {{count}} 時間",
+    "lastHours_other": "直近 {{count}} 時間",
+    "filter": "フィルター",
+    "filterPlaceholder": "ノード、ポート、16 進数で絞り込み…",
+    "stats": "{{rows}} 件を保存 · ディスク {{size}} · 最古 {{oldest}}",
+    "refresh": "更新",
+    "clear": "記録したパケットをすべて削除",
+    "empty": "この範囲で記録されたパケットはまだありません。",
+    "emptyPaused": "記録が無効のため、何も保存されていません。",
+    "colTime": "時刻",
+    "colFrom": "送信元",
+    "colPort": "ポート",
+    "colVia": "経路",
+    "colSnr": "SNR",
+    "colSize": "バイト",
+    "viaMqtt": "MQTT",
+    "viaRf": "RF",
+    "privacyNote": "記録されたパケットは packet-monitor.db に暗号化されずに保存され、各フレームの先頭 64 バイトを含みます。サポート用バンドルを共有する前に削除してください。"
   }
 }

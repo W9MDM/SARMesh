@@ -21,6 +21,7 @@ import { getIdentityNode } from '../identityStoreReads';
 import { shouldSuppressMeshtasticNodeHear } from '../meshcoreBleMacMeshtasticNodeId';
 import { mergeMeshtasticLivePacketLastHeard } from '../meshtasticLastHeard';
 import { effectiveLastHeardMs } from '../nodeStatus';
+import { capturePacket } from '../packetMonitorCapture';
 import type { RawPacketEntry } from '../protocols/Protocol';
 import { MESHTASTIC_CAPABILITIES } from '../radio/BaseRadioProvider';
 import {
@@ -66,6 +67,24 @@ function appendRawPacketLog(
       return next.length > MAX_RAW_PACKET_LOG_ENTRIES
         ? next.slice(next.length - MAX_RAW_PACKET_LOG_ENTRIES)
         : next;
+    });
+
+    // Durable capture for the Packet Monitor. The Sniffer ring above is
+    // session-only and holds MAX_RAW_PACKET_LOG_ENTRIES, which on a busy
+    // channel is minutes; this is the copy that survives a restart and is
+    // pruned by age. A no-op unless capture is enabled.
+    capturePacket({
+      ts: payload.ts,
+      protocol: 'meshtastic',
+      direction: entry.isLocal ? 'tx' : 'rx',
+      fromNode: fromNodeId ?? undefined,
+      portnum: payload.portnum,
+      rssi: payload.rssi,
+      snr: payload.snr,
+      hopLimit: payload.hopLimit,
+      hopStart: payload.hopStart,
+      viaMqtt: payload.viaMqtt,
+      raw: payload.raw,
     });
   } catch (e) {
     console.debug(

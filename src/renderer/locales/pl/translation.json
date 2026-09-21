@@ -5187,7 +5187,8 @@
     "games": "Gry",
     "aprs": "APRS",
     "inventory": "Inwentaryzacja",
-    "firmware": "Firmware"
+    "firmware": "Firmware",
+    "packetmonitor": "Monitor pakietów"
   },
   "takServerPanel": {
     "title": "Serwer TAK",
@@ -6217,5 +6218,34 @@
     "done": "Wgrywanie zakończone — radiotelefon uruchamia się ponownie.",
     "powerWarning": "Nie odłączaj radiotelefonu ani nie zamykaj SARMesh podczas wgrywania. Przerwany zapis może uniemożliwić uruchomienie radiotelefonu do czasu ponownego wgrania oprogramowania.",
     "noSerialApi": "Dostęp do portu szeregowego jest niedostępny w tym oknie. Uruchom ponownie SARMesh i spróbuj jeszcze raz."
+  },
+  "packetMonitor": {
+    "title": "Monitor pakietów",
+    "intro": "Prowadzi trwały zapis ruchu w sieci mesh, aby można go było przejrzeć po akcji. Sniffer to podgląd na żywo, który po każdym uruchomieniu jest pusty; ten zapis przetrwa restart i jest czyszczony według wieku.",
+    "capturing": "Zapisywanie",
+    "paused": "Bez zapisu",
+    "start": "Rozpocznij zapis",
+    "stop": "Zatrzymaj zapis",
+    "retention": "Przechowuj pakiety przez",
+    "retentionHint": "Liczba godzin ruchu pozostawiana na dysku (1–168). Starsze pakiety są usuwane automatycznie.",
+    "window": "Pokaż",
+    "lastHours": "Ostatnia {{count}} godzina",
+    "lastHours_other": "Ostatnie {{count}} godz.",
+    "filter": "Filtr",
+    "filterPlaceholder": "Filtruj według węzła, portu lub hex…",
+    "stats": "Zapisanych pakietów: {{rows}} · {{size}} na dysku · najstarszy {{oldest}}",
+    "refresh": "Odśwież",
+    "clear": "Usuń wszystkie zapisane pakiety",
+    "empty": "W tym oknie nie zapisano jeszcze żadnych pakietów.",
+    "emptyPaused": "Zapis jest wyłączony, nic nie jest rejestrowane.",
+    "colTime": "Czas",
+    "colFrom": "Od",
+    "colPort": "Port",
+    "colVia": "Przez",
+    "colSnr": "SNR",
+    "colSize": "Bajty",
+    "viaMqtt": "MQTT",
+    "viaRf": "RF",
+    "privacyNote": "Zapisane pakiety są przechowywane bez szyfrowania w packet-monitor.db i zawierają pierwsze 64 bajty każdej ramki. Usuń je przed udostępnieniem pakietu diagnostycznego."
   }
 }

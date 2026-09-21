@@ -5107,7 +5107,8 @@
     "games": "Games",
     "aprs": "APRS",
     "inventory": "Inventariseren",
-    "firmware": "Firmware"
+    "firmware": "Firmware",
+    "packetmonitor": "Pakketmonitor"
   },
   "takServerPanel": {
     "title": "TAK-server",
@@ -6123,5 +6124,34 @@
     "done": "Flashen voltooid — de radio start opnieuw op.",
     "powerWarning": "Koppel de radio niet los en sluit SARMesh niet tijdens het flashen. Een onderbroken schrijfactie kan de radio onstartbaar maken tot hij opnieuw geflasht wordt.",
     "noSerialApi": "Seriële toegang is niet beschikbaar in dit venster. Start SARMesh opnieuw en probeer het nogmaals."
+  },
+  "packetMonitor": {
+    "title": "Pakketmonitor",
+    "intro": "Houdt een blijvend overzicht van het mesh-verkeer bij, zodat het na een inzet te bekijken is. De Sniffer is een live-weergave die bij elke start leeg begint; dit overzicht blijft na een herstart bestaan en wordt op leeftijd opgeschoond.",
+    "capturing": "Legt vast",
+    "paused": "Legt niets vast",
+    "start": "Vastleggen starten",
+    "stop": "Vastleggen stoppen",
+    "retention": "Pakketten bewaren gedurende",
+    "retentionHint": "Uren verkeer die op schijf blijven staan (1–168). Oudere pakketten worden automatisch verwijderd.",
+    "window": "Tonen",
+    "lastHours": "Afgelopen {{count}} uur",
+    "lastHours_other": "Afgelopen {{count}} uur",
+    "filter": "Filter",
+    "filterPlaceholder": "Filteren op knooppunt, poort of hex…",
+    "stats": "{{rows}} pakketten opgeslagen · {{size}} op schijf · oudste {{oldest}}",
+    "refresh": "Vernieuwen",
+    "clear": "Alle vastgelegde pakketten verwijderen",
+    "empty": "Nog geen pakketten vastgelegd in dit venster.",
+    "emptyPaused": "Vastleggen staat uit, er wordt niets opgeslagen.",
+    "colTime": "Tijd",
+    "colFrom": "Van",
+    "colPort": "Poort",
+    "colVia": "Via",
+    "colSnr": "SNR",
+    "colSize": "Bytes",
+    "viaMqtt": "MQTT",
+    "viaRf": "RF",
+    "privacyNote": "Vastgelegde pakketten staan onversleuteld in packet-monitor.db en bevatten de eerste 64 bytes van elk frame. Verwijder ze voordat u een supportpakket deelt."
   }
 }

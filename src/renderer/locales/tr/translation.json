@@ -5107,7 +5107,8 @@
     "games": "Oyun",
     "aprs": "APRS",
     "inventory": "Envanter",
-    "firmware": "Ürün yazılımı"
+    "firmware": "Ürün yazılımı",
+    "packetmonitor": "Paket İzleyici"
   },
   "takServerPanel": {
     "title": "TAK Sunucusu",
@@ -6123,5 +6124,34 @@
     "done": "Yazma tamamlandı — telsiz yeniden başlıyor.",
     "powerWarning": "Yazma sırasında telsizin bağlantısını kesmeyin ve SARMesh'i kapatmayın. Yarıda kesilen bir yazma, telsiz yeniden yazılana kadar açılmamasına yol açabilir.",
     "noSerialApi": "Bu pencerede seri porta erişilemiyor. SARMesh'i yeniden başlatıp tekrar deneyin."
+  },
+  "packetMonitor": {
+    "title": "Paket izleyici",
+    "intro": "Mesh trafiğinin kalıcı bir kaydını tutar, böylece görev sonrasında incelenebilir. Sniffer her açılışta boş başlayan canlı bir listedir; bu kayıt yeniden başlatmadan sonra da durur ve yaşına göre temizlenir.",
+    "capturing": "Kaydediliyor",
+    "paused": "Kayıt yok",
+    "start": "Kaydı başlat",
+    "stop": "Kaydı durdur",
+    "retention": "Paketleri saklama süresi",
+    "retentionHint": "Diskte tutulacak trafik saati (1–168). Daha eski paketler otomatik olarak silinir.",
+    "window": "Göster",
+    "lastHours": "Son {{count}} saat",
+    "lastHours_other": "Son {{count}} saat",
+    "filter": "Filtre",
+    "filterPlaceholder": "Düğüm, port veya hex ile filtrele…",
+    "stats": "{{rows}} paket saklandı · diskte {{size}} · en eski {{oldest}}",
+    "refresh": "Yenile",
+    "clear": "Kaydedilen tüm paketleri sil",
+    "empty": "Bu aralıkta henüz paket kaydedilmedi.",
+    "emptyPaused": "Kayıt kapalı, hiçbir şey saklanmıyor.",
+    "colTime": "Saat",
+    "colFrom": "Kimden",
+    "colPort": "Port",
+    "colVia": "Üzerinden",
+    "colSnr": "SNR",
+    "colSize": "Bayt",
+    "viaMqtt": "MQTT",
+    "viaRf": "RF",
+    "privacyNote": "Kaydedilen paketler packet-monitor.db içinde şifrelenmeden saklanır ve her çerçevenin ilk 64 baytını içerir. Bir destek paketi paylaşmadan önce bunları silin."
   }
 }
