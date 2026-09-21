@@ -408,6 +408,33 @@ interface Props {
   onOpenReticulumSetupDestination?: (destination: ReticulumSetupDestination) => boolean;
 }
 
+/** Native Meshtastic TCP API port; the HTTP server is on 80/443 instead. */
+const MESHTASTIC_TCP_PORT = 4403;
+
+/**
+ * Seed a Wi-Fi address field from whatever IP transport was last used.
+ *
+ * HTTP and TCP are the same radio on different ports, so switching between them
+ * must not strand the address already known. Previously each field defaulted to
+ * `meshtastic.local` independently, which meant a user connected over HTTP who
+ * clicked TCP got `meshtastic.local:4403` — a hostname the app itself warns
+ * cannot resolve on Windows, so the switch guaranteed a timeout.
+ *
+ * `meshtastic.local` remains the fallback only when nothing has been connected.
+ */
+export function defaultIpAddressForTransport(
+  last: { type?: string; httpAddress?: string } | null | undefined,
+  want: 'http' | 'tcp',
+): string {
+  const saved = last?.httpAddress?.trim();
+  const isIpTransport = last?.type === 'http' || last?.type === 'tcp';
+  if (saved && isIpTransport) {
+    const { host } = parseTcpAddress(saved);
+    if (host) return want === 'tcp' ? `${host}:${MESHTASTIC_TCP_PORT}` : host;
+  }
+  return want === 'tcp' ? `meshtastic.local:${MESHTASTIC_TCP_PORT}` : 'meshtastic.local';
+}
+
 export default function ConnectionPanel({
   state,
   onConnect,
@@ -439,14 +466,12 @@ export default function ConnectionPanel({
   }, []);
 
   const [connectionType, setConnectionType] = useState<ConnectionType>('ble');
-  const [httpAddress, setHttpAddress] = useState(() => {
-    const last = loadLastConnection(protocol);
-    return last?.type === 'http' && last.httpAddress ? last.httpAddress : 'meshtastic.local';
-  });
-  const [tcpAddress, setTcpAddress] = useState(() => {
-    const last = loadLastConnection(protocol);
-    return last?.type === 'tcp' && last.httpAddress ? last.httpAddress : 'meshtastic.local:4403';
-  });
+  const [httpAddress, setHttpAddress] = useState(() =>
+    defaultIpAddressForTransport(loadLastConnection(protocol), 'http'),
+  );
+  const [tcpAddress, setTcpAddress] = useState(() =>
+    defaultIpAddressForTransport(loadLastConnection(protocol), 'tcp'),
+  );
   const [tcpHost, setTcpHost] = useState(() => {
     const last = loadLastConnection(protocol);
     if (last?.type === 'http' && last.httpAddress && protocol === 'meshcore') {

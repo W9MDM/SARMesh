@@ -46,6 +46,29 @@ function deviceStateFromConnection(conn: ReturnType<typeof useConnectionByProtoc
  * burst-complete deferred reconnect). Meshtastic keeps prepare → ConnectionDriver → attach
  * ([#375](https://github.com/Colorado-Mesh/mesh-client/issues/375)).
  */
+/**
+ * Connect attempts already in flight, keyed by protocol + transport + target.
+ *
+ * Module scope on purpose: the duplicate calls this guards against come from
+ * different components (cold-start auto-connect, the saved-device reconnect and
+ * the Connect button), so a hook-local ref would not see its rival.
+ */
+const connectInFlight = new Set<string>();
+
+function connectTargetKey(
+  protocol: MeshProtocol,
+  type: ConnectionType,
+  httpAddress?: string,
+  blePeripheralId?: string,
+): string {
+  return `${protocol}|${type}|${httpAddress ?? ''}|${blePeripheralId ?? ''}`;
+}
+
+/** Test seam. */
+export function resetConnectInFlightForTests(): void {
+  connectInFlight.clear();
+}
+
 export function useProtocolConnect(): (
   protocol: MeshProtocol,
   type: ConnectionType,
@@ -61,36 +84,68 @@ export function useProtocolConnect(): (
       httpAddress?: string,
       blePeripheralId?: string,
     ) => {
-      if (protocol === 'meshcore') {
-        // Delegate to runtime connect — do not reassemble prepare/driver/attach here (Neal OpenHop:
-        // that skipped session params + TCP deferred-reconnect after #792 / burst-complete).
-        const mcType = meshcoreConnectionType(type);
-        await getMeshcoreSession().connect(mcType, httpAddress, blePeripheralId);
+      // A second connect to the SAME target while one is still configuring is
+      // never useful: prepareRfConnect bumps the reconnect generation, so the
+      // in-flight attach dies with "Attach superseded during configure" — and
+      // that attach may already be connected and pulling history. Observed in
+      // the field as five createConnection calls for one click, one successful
+      // connect, and a session that lasted nine seconds.
+      //
+      // Only identical targets are coalesced. Connecting to a *different* radio
+      // or transport must still supersede, which is what that generation bump
+      // is for.
+      const key = connectTargetKey(protocol, type, httpAddress, blePeripheralId);
+      if (connectInFlight.has(key)) {
+        console.debug(`[useProtocolConnect] connect already in flight for ${key} — ignoring`);
         return;
       }
-
-      if (protocol === 'reticulum') {
-        await getReticulumSession().connect();
-        return;
-      }
-
-      const params = protocolTransportParams(
-        protocol,
-        rfConnectionTransportOpts(type, { httpAddress, blePeripheralId }),
-      );
-      const meshtastic = getMeshtasticSession();
-      await meshtastic.prepareRfConnect(type, httpAddress, blePeripheralId);
-      let driverIdentityId: string | undefined;
+      connectInFlight.add(key);
       try {
-        driverIdentityId = await driverConnect('meshtastic', params);
-        await meshtastic.attachRfSession(driverIdentityId, type);
-      } catch (err) {
-        await meshtastic.handleRfConnectFailure(driverIdentityId, err);
-        throw err;
+        await runProtocolConnect(protocol, type, httpAddress, blePeripheralId, driverConnect);
+      } finally {
+        connectInFlight.delete(key);
       }
     },
     [driverConnect],
   );
+}
+
+async function runProtocolConnect(
+  protocol: MeshProtocol,
+  type: ConnectionType,
+  httpAddress: string | undefined,
+  blePeripheralId: string | undefined,
+  driverConnect: ReturnType<typeof useConnect>,
+): Promise<void> {
+  {
+    if (protocol === 'meshcore') {
+      // Delegate to runtime connect — do not reassemble prepare/driver/attach here (Neal OpenHop:
+      // that skipped session params + TCP deferred-reconnect after #792 / burst-complete).
+      const mcType = meshcoreConnectionType(type);
+      await getMeshcoreSession().connect(mcType, httpAddress, blePeripheralId);
+      return;
+    }
+
+    if (protocol === 'reticulum') {
+      await getReticulumSession().connect();
+      return;
+    }
+
+    const params = protocolTransportParams(
+      protocol,
+      rfConnectionTransportOpts(type, { httpAddress, blePeripheralId }),
+    );
+    const meshtastic = getMeshtasticSession();
+    await meshtastic.prepareRfConnect(type, httpAddress, blePeripheralId);
+    let driverIdentityId: string | undefined;
+    try {
+      driverIdentityId = await driverConnect('meshtastic', params);
+      await meshtastic.attachRfSession(driverIdentityId, type);
+    } catch (err) {
+      await meshtastic.handleRfConnectFailure(driverIdentityId, err);
+      throw err;
+    }
+  }
 }
 
 /** RF disconnect: runtime session cleanup, then driver transport teardown. */
