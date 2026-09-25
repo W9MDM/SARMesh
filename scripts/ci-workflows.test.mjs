@@ -36,6 +36,9 @@ function requireIndex(haystack, needle, label) {
  */
 const WORKFLOW_GATE_TIMEOUT_MS = 30_000;
 
+/** ESLint flat-config resolution is far slower again — see its test below. */
+const ESLINT_CONFIG_RESOLUTION_TIMEOUT_MS = 180_000;
+
 describe('CI workflow contracts', { timeout: WORKFLOW_GATE_TIMEOUT_MS }, () => {
   const ciWorkflow = read('.github/workflows/ci.yaml');
   const testsWorkflow = read('.github/workflows/tests.yaml');
@@ -143,33 +146,44 @@ describe('CI workflow contracts', { timeout: WORKFLOW_GATE_TIMEOUT_MS }, () => {
     },
   );
 
-  it('delegates only duplicate formatting rules to the required format check', async () => {
-    const local = new ESLint({ cwd: ROOT });
-    const ci = new ESLint({ cwd: ROOT, overrideConfigFile: 'eslint.ci.config.mjs' });
-    const quality = ciWorkflow.split('  quality:')[1].split('  lint:')[0];
-    expect(quality).toContain('run: pnpm run format:check');
-    expect(quality).not.toMatch(/\bif:|continue-on-error:/);
-    expect(ciWorkflow).toContain('pnpm run lint --concurrency 2 --config eslint.ci.config.mjs');
-    const scripts = JSON.parse(read('package.json')).scripts;
-    expect(scripts['format:check']).toContain('**/*.{ts,tsx,js,jsx,json,css,md,sh}');
-    expect(scripts.lint).toBe('eslint . --max-warnings 0');
+  /**
+   * Resolves the full flat-config graph ten times over (five files against two
+   * ESLint instances). That costs ~2s on an idle machine but well over 30s
+   * inside a loaded parallel suite, where it aborted a release. The work is
+   * the point of the test, so give it headroom rather than checking fewer
+   * files.
+   */
+  it(
+    'delegates only duplicate formatting rules to the required format check',
+    async () => {
+      const local = new ESLint({ cwd: ROOT });
+      const ci = new ESLint({ cwd: ROOT, overrideConfigFile: 'eslint.ci.config.mjs' });
+      const quality = ciWorkflow.split('  quality:')[1].split('  lint:')[0];
+      expect(quality).toContain('run: pnpm run format:check');
+      expect(quality).not.toMatch(/\bif:|continue-on-error:/);
+      expect(ciWorkflow).toContain('pnpm run lint --concurrency 2 --config eslint.ci.config.mjs');
+      const scripts = JSON.parse(read('package.json')).scripts;
+      expect(scripts['format:check']).toContain('**/*.{ts,tsx,js,jsx,json,css,md,sh}');
+      expect(scripts.lint).toBe('eslint . --max-warnings 0');
 
-    for (const file of ['src/shared/tcpPort.ts', 'src/renderer/App.tsx', 'e2e/startup.spec.ts']) {
-      const original = await local.calculateConfigForFile(file);
-      const optimized = await ci.calculateConfigForFile(file);
-      expect(original.rules['prettier/prettier'][0], file).toBe(2);
-      expect(optimized.rules, file).toEqual({
-        ...original.rules,
-        'prettier/prettier': [0],
-      });
-    }
-    // format:check does not include these extensions; preserve their existing rules.
-    for (const file of ['vitest.harness.mts', 'scripts/electron-binary.mjs']) {
-      expect((await ci.calculateConfigForFile(file)).rules, file).toEqual(
-        (await local.calculateConfigForFile(file)).rules,
-      );
-    }
-  });
+      for (const file of ['src/shared/tcpPort.ts', 'src/renderer/App.tsx', 'e2e/startup.spec.ts']) {
+        const original = await local.calculateConfigForFile(file);
+        const optimized = await ci.calculateConfigForFile(file);
+        expect(original.rules['prettier/prettier'][0], file).toBe(2);
+        expect(optimized.rules, file).toEqual({
+          ...original.rules,
+          'prettier/prettier': [0],
+        });
+      }
+      // format:check does not include these extensions; preserve their existing rules.
+      for (const file of ['vitest.harness.mts', 'scripts/electron-binary.mjs']) {
+        expect((await ci.calculateConfigForFile(file)).rules, file).toEqual(
+          (await local.calculateConfigForFile(file)).rules,
+        );
+      }
+    },
+    ESLINT_CONFIG_RESOLUTION_TIMEOUT_MS,
+  );
 
   it('uses distinct artifact names for shards and bounds lint concurrency', () => {
     expect(testsWorkflow).toContain('name: vitest-blob-${{ matrix.project }}-${{ matrix.shard }}');
