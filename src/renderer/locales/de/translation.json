@@ -2276,7 +2276,14 @@
     "layerCongestionHalos": "Stauhalos",
     "waypointDefaultName": "Wegpunkt",
     "waypointDelete": "Wegpunkt löschen",
-    "noGpsNodes": "Noch keine Knoten mit GPS-Positionen"
+    "noGpsNodes": "Noch keine Knoten mit GPS-Positionen",
+    "search": {
+      "placeholder": "Einen Knoten suchen…",
+      "aria": "Finden Sie einen Knoten auf der Karte",
+      "noPosition": "keine Position",
+      "noMatches": "Kein Knoten stimmt mit diesem Namen oder dieser ID überein.",
+      "allUnlocatable": "Diese Knoten sind bekannt, haben aber noch nie eine Position gemeldet, so dass sie nicht auf der Karte angezeigt werden können."
+    }
   },
   "meshCongestion": {
     "blockTitle": "Warum Sie doppelten Traffic sehen",

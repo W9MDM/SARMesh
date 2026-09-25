@@ -50,6 +50,7 @@ import {
   LocateMeControl,
   MapViewportSaver,
 } from './map/leafletMapControls';
+import MapNodeSearch from './map/MapNodeSearch';
 import { useToast } from './Toast';
 
 const WAYPOINT_MARKER_ICON = L.divIcon({
@@ -900,6 +901,21 @@ export default function MapPanel({
     positionHistory,
   ]);
 
+  /**
+   * Where each drawn marker actually sits, for the find-a-node box. Built from
+   * `nodesToRender` rather than the raw node table so the search can only offer
+   * to fly to something the map is really showing — including nodes whose
+   * position came from tracked history rather than their own NodeInfo.
+   */
+  const mappablePositions = useMemo(() => {
+    const out = new Map<number, { lat: number; lon: number }>();
+    for (const n of nodesToRender) {
+      if (n.latitude == null || n.longitude == null) continue;
+      out.set(n.node_id, { lat: n.latitude, lon: n.longitude });
+    }
+    return out;
+  }, [nodesToRender]);
+
   const nodesWithStatus = useMemo(
     () =>
       nodesToRender.map((node) => {
@@ -1012,6 +1028,7 @@ export default function MapPanel({
   ]);
 
   const savedViewport = useMapViewportStore((s) => s.viewport);
+  const requestMapFocus = useMapViewportStore((s) => s.requestFocus);
   const computedCenter: [number, number] =
     nodesToRender.length > 0
       ? [nodesToRender[0].latitude!, nodesToRender[0].longitude!]
@@ -1059,6 +1076,19 @@ export default function MapPanel({
       className="relative h-full min-h-[500px] overflow-hidden rounded-lg border border-gray-700/50"
       aria-label={t('mapPanel.networkMap')}
     >
+      {/* Find a node — top left, clear of the Leaflet zoom (+/-) buttons. */}
+      <div className="absolute top-3 left-14 z-[1000]">
+        <MapNodeSearch
+          nodes={nodes}
+          mappable={mappablePositions}
+          meshcore={protocol === 'meshcore'}
+          onPick={(nodeId, pos, zoom) => {
+            requestMapFocus({ nodeId, lat: pos.lat, lon: pos.lon, zoom });
+            onNodeClick?.(nodeId);
+          }}
+        />
+      </div>
+
       {/* Status legend + layer controls — top right, below Leaflet zoom (+/-) on the left */}
       <div className="absolute top-3 right-3 z-[1000] flex flex-col items-end gap-2">
         <div className="bg-deep-black/80 flex items-center gap-3 rounded-lg border border-gray-700 px-3 py-1.5 text-xs backdrop-blur-sm">

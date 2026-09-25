@@ -2276,7 +2276,14 @@
     "layerCongestionHalos": "Tıkanıklık haleleri",
     "waypointDefaultName": "Yol noktası",
     "waypointDelete": "Yol Noktasını Sil",
-    "noGpsNodes": "Henüz GPS konumu olan düğüm yok"
+    "noGpsNodes": "Henüz GPS konumu olan düğüm yok",
+    "search": {
+      "placeholder": "Bir düğüm bul…",
+      "aria": "Haritada bir düğüm bulun",
+      "noPosition": "konum yok",
+      "noMatches": "Bu ad veya kimlik ile eşleşen düğüm yok.",
+      "allUnlocatable": "Bu düğümler bilinmektedir, ancak hiçbir zaman bir konum bildirmemiştir, bu nedenle harita üzerinde gösterilemezler."
+    }
   },
   "meshCongestion": {
     "blockTitle": "Neden yinelenen trafik görüyorsunuz?",

@@ -45,113 +45,127 @@ function runUpdate(args, env = {}, cwd = repoRoot, scriptPath = updateScriptPath
   });
 }
 
-describe('update.sh Reticulum stack functionality check', () => {
-  it('prepares and requires every rs path dependency before the full-feature build', () => {
-    const rebuildFunction = updateScript.match(
-      /rebuild_reticulum_sidecar\(\) \{([\s\S]*?)^\}/m,
-    )?.[1];
+/**
+ * Most of these tests spawn a real `bash update.sh` with shimmed `gh`/`git` on
+ * PATH. Vitest's 5s default is not enough under a full-suite parallel run: the
+ * spawns passed in isolation and timed out intermittently alongside everything
+ * else, failing otherwise-green commits. Set at the describe level so tests
+ * added later inherit it rather than rediscovering this.
+ */
+const UPDATE_SPAWN_TIMEOUT_MS = 30_000;
 
-    expect(rebuildFunction).toBeDefined();
-    expect(rebuildFunction).toContain('bash scripts/clone-ratspeak-stack.sh');
-    expect(rebuildFunction).toContain('../.rsstack/rsReticulum/crates/rns-runtime/Cargo.toml');
-    expect(rebuildFunction).toContain('../.rsstack/rsLXMF/crates/lxmf-core/Cargo.toml');
-    expect(rebuildFunction).toContain('../.rsstack/rsNomad/crates/nomad-core/Cargo.toml');
-    expect(rebuildFunction).toContain('cargo build --features rns-stack,rns-ble,rns-rnode-tcp');
-    expect(rebuildFunction).not.toMatch(/['"]\.\.\/rs(?:Reticulum|LXMF|Nomad)\//);
-    expect(rebuildFunction).not.toContain('cargo build)');
-    expect(rebuildFunction).toContain('CLEAN_SIDECAR_TARGET');
-    expect(rebuildFunction).toContain('cargo clean');
-    // Clean only after a successful build, and only when opted in.
-    const buildIdx = rebuildFunction.indexOf(
-      'cargo build --features rns-stack,rns-ble,rns-rnode-tcp',
-    );
-    const cleanIdx = rebuildFunction.indexOf('cargo clean');
-    expect(buildIdx).toBeGreaterThanOrEqual(0);
-    expect(cleanIdx).toBeGreaterThan(buildIdx);
-    expect(rebuildFunction).toMatch(
-      /if \[ "\$\{CLEAN_SIDECAR_TARGET\}" = '1' \]; then[\s\S]*cargo clean/,
-    );
-  });
+describe(
+  'update.sh Reticulum stack functionality check',
+  { timeout: UPDATE_SPAWN_TIMEOUT_MS },
+  () => {
+    it('prepares and requires every rs path dependency before the full-feature build', () => {
+      const rebuildFunction = updateScript.match(
+        /rebuild_reticulum_sidecar\(\) \{([\s\S]*?)^\}/m,
+      )?.[1];
 
-  it('defaults CLEAN_SIDECAR_TARGET to 0 (parse-only)', () => {
-    const result = runUpdate([], { UPDATE_SH_TEST_HOOK: 'parse-only' });
-    expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe('CLEAN_SIDECAR_TARGET=0');
-  });
-
-  it('opts in via CLEAN_SIDECAR_TARGET=1 (parse-only)', () => {
-    const result = runUpdate([], {
-      UPDATE_SH_TEST_HOOK: 'parse-only',
-      CLEAN_SIDECAR_TARGET: '1',
+      expect(rebuildFunction).toBeDefined();
+      expect(rebuildFunction).toContain('bash scripts/clone-ratspeak-stack.sh');
+      expect(rebuildFunction).toContain('../.rsstack/rsReticulum/crates/rns-runtime/Cargo.toml');
+      expect(rebuildFunction).toContain('../.rsstack/rsLXMF/crates/lxmf-core/Cargo.toml');
+      expect(rebuildFunction).toContain('../.rsstack/rsNomad/crates/nomad-core/Cargo.toml');
+      expect(rebuildFunction).toContain('cargo build --features rns-stack,rns-ble,rns-rnode-tcp');
+      expect(rebuildFunction).not.toMatch(/['"]\.\.\/rs(?:Reticulum|LXMF|Nomad)\//);
+      expect(rebuildFunction).not.toContain('cargo build)');
+      expect(rebuildFunction).toContain('CLEAN_SIDECAR_TARGET');
+      expect(rebuildFunction).toContain('cargo clean');
+      // Clean only after a successful build, and only when opted in.
+      const buildIdx = rebuildFunction.indexOf(
+        'cargo build --features rns-stack,rns-ble,rns-rnode-tcp',
+      );
+      const cleanIdx = rebuildFunction.indexOf('cargo clean');
+      expect(buildIdx).toBeGreaterThanOrEqual(0);
+      expect(cleanIdx).toBeGreaterThan(buildIdx);
+      expect(rebuildFunction).toMatch(
+        /if \[ "\$\{CLEAN_SIDECAR_TARGET\}" = '1' \]; then[\s\S]*cargo clean/,
+      );
     });
-    expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe('CLEAN_SIDECAR_TARGET=1');
-  });
 
-  it('opts in via --clean-target (parse-only)', () => {
-    const result = runUpdate(['--clean-target'], { UPDATE_SH_TEST_HOOK: 'parse-only' });
-    expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe('CLEAN_SIDECAR_TARGET=1');
-  });
+    it('defaults CLEAN_SIDECAR_TARGET to 0 (parse-only)', () => {
+      const result = runUpdate([], { UPDATE_SH_TEST_HOOK: 'parse-only' });
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe('CLEAN_SIDECAR_TARGET=0');
+    });
 
-  it('rejects unknown arguments', () => {
-    const result = runUpdate(['--nope']);
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain('unknown argument: --nope');
-    expect(result.stderr).toContain('Usage: scripts/update.sh [--clean-target]');
-  });
+    it('opts in via CLEAN_SIDECAR_TARGET=1 (parse-only)', () => {
+      const result = runUpdate([], {
+        UPDATE_SH_TEST_HOOK: 'parse-only',
+        CLEAN_SIDECAR_TARGET: '1',
+      });
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe('CLEAN_SIDECAR_TARGET=1');
+    });
 
-  it('prints Ratspeak upstream catalog (upstream-catalog-only)', () => {
-    const result = runUpdate([], { UPDATE_SH_TEST_HOOK: 'upstream-catalog-only' });
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).not.toContain('RATSPEAK_STACK_PR_ENTRIES:');
-    expect(result.stdout).toContain('RATSPEAK_RELEASE_WATCH_ENTRIES:');
-    expect(result.stdout).toContain('ratspeak/rsLXST||rsLXST voice (lxst-telephony)|v0.2.0');
-    expect(result.stdout).toContain('ratspeak/lrgp-rs||lrgp-rs games (LRGP)|v0.4.1');
-    expect(result.stdout).toContain(
-      'ratspeak/Ratspeak|games-parity|Ratspeak client (review Games tab parity)|v1.0.31',
-    );
-    expect(result.stdout).toContain('ratspeak/LXMFace||');
-    expect(result.stdout).toContain('file:js/lxmface.js@308a729d5bf951880633e5e174b3b7628203106b');
-    expect(updateScript).toContain('"${stub}" = \'games-parity\'');
-    expect(updateScript).toContain('docs/reticulum-games-parity.md');
-    expect(updateScript).toContain('reviewed-ref');
-    expect(result.stdout).toContain('RATSPEAK_KNOWN_ORG_REPOS:');
-    expect(result.stdout).toContain('  rsReticulum');
-    expect(result.stdout).toContain('  rsLXMF');
-    expect(result.stdout).toContain('  rsLXST');
-    expect(result.stdout).toContain('  lrgp-rs');
-  });
+    it('opts in via --clean-target (parse-only)', () => {
+      const result = runUpdate(['--clean-target'], { UPDATE_SH_TEST_HOOK: 'parse-only' });
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe('CLEAN_SIDECAR_TARGET=1');
+    });
 
-  it('tracks ReplyFile and multi-file attachment overlays in RATSPEAK_PATCH_ENTRIES', () => {
-    expect(updateScript).toContain(
-      'rsReticulum-reply-file-query-metadata.patch|ratspeak/rsReticulum|26|',
-    );
-    expect(updateScript).toContain('rsLXMF-file-attachments-list.patch|ratspeak/rsLXMF|7|');
-    expect(updateScript).not.toContain('RATSPEAK_STACK_PR_ENTRIES');
-    expect(updateScript).not.toContain('check_ratspeak_stack_prs');
-    expect(updateScript).not.toContain('ratspeak-stack-ci-pins.env');
-  });
+    it('rejects unknown arguments', () => {
+      const result = runUpdate(['--nope']);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('unknown argument: --nope');
+      expect(result.stderr).toContain('Usage: scripts/update.sh [--clean-target]');
+    });
 
-  it('wires check_ratspeak_patches before upstream checks', () => {
-    expect(updateScript).toContain('check_ratspeak_patches()');
-    const patchesCall = updateScript.lastIndexOf('\ncheck_ratspeak_patches\n');
-    const upstreamCall = updateScript.lastIndexOf('\ncheck_ratspeak_upstream\n');
-    expect(patchesCall).toBeGreaterThanOrEqual(0);
-    expect(upstreamCall).toBeGreaterThan(patchesCall);
-  });
+    it('prints Ratspeak upstream catalog (upstream-catalog-only)', () => {
+      const result = runUpdate([], { UPDATE_SH_TEST_HOOK: 'upstream-catalog-only' });
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).not.toContain('RATSPEAK_STACK_PR_ENTRIES:');
+      expect(result.stdout).toContain('RATSPEAK_RELEASE_WATCH_ENTRIES:');
+      expect(result.stdout).toContain('ratspeak/rsLXST||rsLXST voice (lxst-telephony)|v0.2.0');
+      expect(result.stdout).toContain('ratspeak/lrgp-rs||lrgp-rs games (LRGP)|v0.4.1');
+      expect(result.stdout).toContain(
+        'ratspeak/Ratspeak|games-parity|Ratspeak client (review Games tab parity)|v1.0.31',
+      );
+      expect(result.stdout).toContain('ratspeak/LXMFace||');
+      expect(result.stdout).toContain(
+        'file:js/lxmface.js@308a729d5bf951880633e5e174b3b7628203106b',
+      );
+      expect(updateScript).toContain('"${stub}" = \'games-parity\'');
+      expect(updateScript).toContain('docs/reticulum-games-parity.md');
+      expect(updateScript).toContain('reviewed-ref');
+      expect(result.stdout).toContain('RATSPEAK_KNOWN_ORG_REPOS:');
+      expect(result.stdout).toContain('  rsReticulum');
+      expect(result.stdout).toContain('  rsLXMF');
+      expect(result.stdout).toContain('  rsLXST');
+      expect(result.stdout).toContain('  lrgp-rs');
+    });
 
-  it('warns when an open upstream PR has no local overlay patch', () => {
-    const work = mkdtempSync(path.join(os.tmpdir(), 'mesh-update-patches-'));
-    tempDirs.push(work);
-    mkdirSync(path.join(work, 'reticulum-sidecar/patches'), { recursive: true });
-    // Intentionally omit tracked overlays so open-PR + missing-patch fires.
-    const binDir = path.join(work, 'bin');
-    mkdirSync(binDir, { recursive: true });
-    const ghPath = path.join(binDir, 'gh');
-    writeFileSync(
-      ghPath,
-      `#!/usr/bin/env bash
+    it('tracks ReplyFile and multi-file attachment overlays in RATSPEAK_PATCH_ENTRIES', () => {
+      expect(updateScript).toContain(
+        'rsReticulum-reply-file-query-metadata.patch|ratspeak/rsReticulum|26|',
+      );
+      expect(updateScript).toContain('rsLXMF-file-attachments-list.patch|ratspeak/rsLXMF|7|');
+      expect(updateScript).not.toContain('RATSPEAK_STACK_PR_ENTRIES');
+      expect(updateScript).not.toContain('check_ratspeak_stack_prs');
+      expect(updateScript).not.toContain('ratspeak-stack-ci-pins.env');
+    });
+
+    it('wires check_ratspeak_patches before upstream checks', () => {
+      expect(updateScript).toContain('check_ratspeak_patches()');
+      const patchesCall = updateScript.lastIndexOf('\ncheck_ratspeak_patches\n');
+      const upstreamCall = updateScript.lastIndexOf('\ncheck_ratspeak_upstream\n');
+      expect(patchesCall).toBeGreaterThanOrEqual(0);
+      expect(upstreamCall).toBeGreaterThan(patchesCall);
+    });
+
+    it('warns when an open upstream PR has no local overlay patch', () => {
+      const work = mkdtempSync(path.join(os.tmpdir(), 'mesh-update-patches-'));
+      tempDirs.push(work);
+      mkdirSync(path.join(work, 'reticulum-sidecar/patches'), { recursive: true });
+      // Intentionally omit tracked overlays so open-PR + missing-patch fires.
+      const binDir = path.join(work, 'bin');
+      mkdirSync(binDir, { recursive: true });
+      const ghPath = path.join(binDir, 'gh');
+      writeFileSync(
+        ghPath,
+        `#!/usr/bin/env bash
 set -euo pipefail
 if [[ "\${1:-}" != "api" ]]; then
   echo "unexpected gh args: $*" >&2
@@ -165,38 +179,38 @@ fi
 echo "unexpected gh api path: $path" >&2
 exit 1
 `,
-      'utf8',
-    );
-    chmodSync(ghPath, 0o755);
-    const result = runUpdate(
-      [],
-      {
-        UPDATE_SH_TEST_HOOK: 'ratspeak-patches-only',
-        PATH: `${binDir}:${process.env.PATH ?? ''}`,
-      },
-      work,
-    );
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toContain('HAS_WARNING=1');
-    expect(result.stdout).toMatch(
-      /ratspeak\/rsReticulum#26 open but rsReticulum-reply-file-query-metadata\.patch missing/,
-    );
-    expect(result.stdout).toMatch(
-      /ratspeak\/rsLXMF#7 open but rsLXMF-file-attachments-list\.patch missing/,
-    );
-  });
+        'utf8',
+      );
+      chmodSync(ghPath, 0o755);
+      const result = runUpdate(
+        [],
+        {
+          UPDATE_SH_TEST_HOOK: 'ratspeak-patches-only',
+          PATH: `${binDir}:${process.env.PATH ?? ''}`,
+        },
+        work,
+      );
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).toContain('HAS_WARNING=1');
+      expect(result.stdout).toMatch(
+        /ratspeak\/rsReticulum#26 open but rsReticulum-reply-file-query-metadata\.patch missing/,
+      );
+      expect(result.stdout).toMatch(
+        /ratspeak\/rsLXMF#7 open but rsLXMF-file-attachments-list\.patch missing/,
+      );
+    });
 
-  it('warns when PR state is unknown and a tracked overlay patch is missing', () => {
-    const work = mkdtempSync(path.join(os.tmpdir(), 'mesh-update-patches-unknown-'));
-    tempDirs.push(work);
-    mkdirSync(path.join(work, 'reticulum-sidecar/patches'), { recursive: true });
-    // Intentionally omit tracked overlays; fake gh returns non-PR JSON so state=unknown.
-    const binDir = path.join(work, 'bin');
-    mkdirSync(binDir, { recursive: true });
-    const ghPath = path.join(binDir, 'gh');
-    writeFileSync(
-      ghPath,
-      `#!/usr/bin/env bash
+    it('warns when PR state is unknown and a tracked overlay patch is missing', () => {
+      const work = mkdtempSync(path.join(os.tmpdir(), 'mesh-update-patches-unknown-'));
+      tempDirs.push(work);
+      mkdirSync(path.join(work, 'reticulum-sidecar/patches'), { recursive: true });
+      // Intentionally omit tracked overlays; fake gh returns non-PR JSON so state=unknown.
+      const binDir = path.join(work, 'bin');
+      mkdirSync(binDir, { recursive: true });
+      const ghPath = path.join(binDir, 'gh');
+      writeFileSync(
+        ghPath,
+        `#!/usr/bin/env bash
 set -euo pipefail
 if [[ "\${1:-}" != "api" ]]; then
   echo "unexpected gh args: $*" >&2
@@ -206,157 +220,160 @@ fi
 printf '%s' '{}'
 exit 0
 `,
-      'utf8',
-    );
-    chmodSync(ghPath, 0o755);
-    const result = runUpdate(
-      [],
-      {
-        UPDATE_SH_TEST_HOOK: 'ratspeak-patches-only',
-        PATH: `${binDir}:${process.env.PATH ?? ''}`,
-      },
-      work,
-    );
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toContain('HAS_WARNING=1');
-    expect(result.stdout).toMatch(
-      /rsReticulum-reply-file-query-metadata\.patch missing and could not query ratspeak\/rsReticulum#26/,
-    );
-    expect(result.stdout).toMatch(
-      /rsLXMF-file-attachments-list\.patch missing and could not query ratspeak\/rsLXMF#7/,
-    );
-  });
-
-  it('wires check_ratspeak_upstream after overlay PR checks', () => {
-    expect(updateScript).toContain('check_ratspeak_upstream()');
-    expect(updateScript).toContain('RATSPEAK_RELEASE_WATCH_ENTRIES');
-    expect(updateScript).toContain('RATSPEAK_KNOWN_ORG_REPOS');
-    expect(updateScript).toContain('warn_github_api_rate_limit_once');
-    expect(updateScript).toContain('return 2');
-    expect(updateScript).toContain('\\u0000-\\u001F\\u007F');
-    const patchesCall = updateScript.lastIndexOf('\ncheck_ratspeak_patches\n');
-    const upstreamCall = updateScript.lastIndexOf('\ncheck_ratspeak_upstream\n');
-    expect(patchesCall).toBeGreaterThanOrEqual(0);
-    expect(upstreamCall).toBeGreaterThan(patchesCall);
-  });
-
-  it('wires check_pinned_majors into the warn summary', () => {
-    expect(updateScript).toContain('check_pinned_majors()');
-    expect(updateScript).toContain('node scripts/check-pinned-majors.mjs');
-    const pinnedCall = updateScript.lastIndexOf('\ncheck_pinned_majors\n');
-    const patchesCall = updateScript.lastIndexOf('\ncheck_ratspeak_patches\n');
-    expect(pinnedCall).toBeGreaterThanOrEqual(0);
-    expect(patchesCall).toBeGreaterThan(pinnedCall);
-  });
-
-  it.each([
-    { exit: 10, expected: '1', label: 'drift' },
-    { exit: 0, expected: '0', label: 'clean' },
-    { exit: 1, expected: '0', label: 'inconclusive' },
-  ])('maps check-pinned-majors $label exit to HAS_WARNING=$expected', ({ exit, expected }) => {
-    const fixture = prepareStubNodeFixture(exit);
-    const result = runUpdate([], {
-      UPDATE_SH_TEST_HOOK: 'pinned-majors-only',
-      PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
+        'utf8',
+      );
+      chmodSync(ghPath, 0o755);
+      const result = runUpdate(
+        [],
+        {
+          UPDATE_SH_TEST_HOOK: 'ratspeak-patches-only',
+          PATH: `${binDir}:${process.env.PATH ?? ''}`,
+        },
+        work,
+      );
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).toContain('HAS_WARNING=1');
+      expect(result.stdout).toMatch(
+        /rsReticulum-reply-file-query-metadata\.patch missing and could not query ratspeak\/rsReticulum#26/,
+      );
+      expect(result.stdout).toMatch(
+        /rsLXMF-file-attachments-list\.patch missing and could not query ratspeak\/rsLXMF#7/,
+      );
     });
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toContain(`HAS_WARNING=${expected}`);
-  });
 
-  // Builds a synthetic PATH by symlinking system binaries. On Windows the
-  // resolved paths are MSYS ones (/usr/bin/bash) that symlinkSync cannot
-  // target, and a Windows PATH is not what the bash subprocess expects.
-  it.skipIf(process.platform === 'win32')(
-    'skips the pinned-majors check when node is unavailable',
-    () => {
-      // PATH with the shell utilities update.sh needs, but deliberately no `node`.
-      const binDir = mkdtempSync(path.join(os.tmpdir(), 'mesh-update-nonode-'));
-      tempDirs.push(binDir);
-      for (const tool of ['bash', 'printf', 'echo']) {
-        const resolved = spawnSync('/bin/sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' })
-          .stdout?.trim()
-          .split('\n')[0];
-        if (resolved && resolved.startsWith('/')) {
-          symlinkSync(resolved, path.join(binDir, tool));
-        }
-      }
+    it('wires check_ratspeak_upstream after overlay PR checks', () => {
+      expect(updateScript).toContain('check_ratspeak_upstream()');
+      expect(updateScript).toContain('RATSPEAK_RELEASE_WATCH_ENTRIES');
+      expect(updateScript).toContain('RATSPEAK_KNOWN_ORG_REPOS');
+      expect(updateScript).toContain('warn_github_api_rate_limit_once');
+      expect(updateScript).toContain('return 2');
+      expect(updateScript).toContain('\\u0000-\\u001F\\u007F');
+      const patchesCall = updateScript.lastIndexOf('\ncheck_ratspeak_patches\n');
+      const upstreamCall = updateScript.lastIndexOf('\ncheck_ratspeak_upstream\n');
+      expect(patchesCall).toBeGreaterThanOrEqual(0);
+      expect(upstreamCall).toBeGreaterThan(patchesCall);
+    });
+
+    it('wires check_pinned_majors into the warn summary', () => {
+      expect(updateScript).toContain('check_pinned_majors()');
+      expect(updateScript).toContain('node scripts/check-pinned-majors.mjs');
+      const pinnedCall = updateScript.lastIndexOf('\ncheck_pinned_majors\n');
+      const patchesCall = updateScript.lastIndexOf('\ncheck_ratspeak_patches\n');
+      expect(pinnedCall).toBeGreaterThanOrEqual(0);
+      expect(patchesCall).toBeGreaterThan(pinnedCall);
+    });
+
+    it.each([
+      { exit: 10, expected: '1', label: 'drift' },
+      { exit: 0, expected: '0', label: 'clean' },
+      { exit: 1, expected: '0', label: 'inconclusive' },
+    ])('maps check-pinned-majors $label exit to HAS_WARNING=$expected', ({ exit, expected }) => {
+      const fixture = prepareStubNodeFixture(exit);
       const result = runUpdate([], {
         UPDATE_SH_TEST_HOOK: 'pinned-majors-only',
-        PATH: binDir,
+        PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
       });
       expect(result.status, result.stderr || result.stdout).toBe(0);
-      expect(result.stdout).toContain('node missing — skip.');
-      expect(result.stdout).toContain('HAS_WARNING=0');
-    },
-  );
+      expect(result.stdout).toContain(`HAS_WARNING=${expected}`);
+    });
 
-  it('syncs Flatpak Electron archives after pnpm prune', () => {
-    expect(updateScript).toContain('sync_flatpak_electron()');
-    expect(updateScript).toContain('node scripts/sync-flatpak-electron.mjs');
-    const pruneIdx = updateScript.lastIndexOf("echo 'Running pnpm prune...'");
-    const syncCallIdx = updateScript.lastIndexOf('\nsync_flatpak_electron\n');
-    const rustIdx = updateScript.lastIndexOf('\nupdate_rust_toolchain\n');
-    expect(pruneIdx).toBeGreaterThanOrEqual(0);
-    expect(syncCallIdx).toBeGreaterThan(pruneIdx);
-    expect(rustIdx).toBeGreaterThan(syncCallIdx);
-  });
+    // Builds a synthetic PATH by symlinking system binaries. On Windows the
+    // resolved paths are MSYS ones (/usr/bin/bash) that symlinkSync cannot
+    // target, and a Windows PATH is not what the bash subprocess expects.
+    it.skipIf(process.platform === 'win32')(
+      'skips the pinned-majors check when node is unavailable',
+      () => {
+        // PATH with the shell utilities update.sh needs, but deliberately no `node`.
+        const binDir = mkdtempSync(path.join(os.tmpdir(), 'mesh-update-nonode-'));
+        tempDirs.push(binDir);
+        for (const tool of ['bash', 'printf', 'echo']) {
+          const resolved = spawnSync('/bin/sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' })
+            .stdout?.trim()
+            .split('\n')[0];
+          if (resolved && resolved.startsWith('/')) {
+            symlinkSync(resolved, path.join(binDir, tool));
+          }
+        }
+        const result = runUpdate([], {
+          UPDATE_SH_TEST_HOOK: 'pinned-majors-only',
+          PATH: binDir,
+        });
+        expect(result.status, result.stderr || result.stdout).toBe(0);
+        expect(result.stdout).toContain('node missing — skip.');
+        expect(result.stdout).toContain('HAS_WARNING=0');
+      },
+    );
 
-  const LXMFACE_REVIEWED_SHA = '308a729d5bf951880633e5e174b3b7628203106b';
+    it('syncs Flatpak Electron archives after pnpm prune', () => {
+      expect(updateScript).toContain('sync_flatpak_electron()');
+      expect(updateScript).toContain('node scripts/sync-flatpak-electron.mjs');
+      const pruneIdx = updateScript.lastIndexOf("echo 'Running pnpm prune...'");
+      const syncCallIdx = updateScript.lastIndexOf('\nsync_flatpak_electron\n');
+      const rustIdx = updateScript.lastIndexOf('\nupdate_rust_toolchain\n');
+      expect(pruneIdx).toBeGreaterThanOrEqual(0);
+      expect(syncCallIdx).toBeGreaterThan(pruneIdx);
+      expect(rustIdx).toBeGreaterThan(syncCallIdx);
+    });
 
-  /**
-   * @param {'release' | 'rate-limit' | 'malformed' | 'missing'} mode
-   * @param {{
-   *   releases?: Record<string, unknown>
-   *   commits?: Record<string, unknown>
-   *   compare?: unknown
-   * }} [extra]
-   */
-  function prepareUpstreamGhFixture(mode, extra = {}) {
-    const work = mkdtempSync(path.join(os.tmpdir(), 'mesh-update-upstream-'));
-    tempDirs.push(work);
-    const binDir = path.join(work, 'bin');
-    mkdirSync(binDir, { recursive: true });
-    mkdirSync(path.join(work, 'releases'), { recursive: true });
-    mkdirSync(path.join(work, 'commits'), { recursive: true });
-    const releasePath = path.join(work, 'release.json');
-    const reposPath = path.join(work, 'repos.json');
-    if (mode === 'release') {
+    const LXMFACE_REVIEWED_SHA = '308a729d5bf951880633e5e174b3b7628203106b';
+
+    /**
+     * @param {'release' | 'rate-limit' | 'malformed' | 'missing'} mode
+     * @param {{
+     *   releases?: Record<string, unknown>
+     *   commits?: Record<string, unknown>
+     *   compare?: unknown
+     * }} [extra]
+     */
+    function prepareUpstreamGhFixture(mode, extra = {}) {
+      const work = mkdtempSync(path.join(os.tmpdir(), 'mesh-update-upstream-'));
+      tempDirs.push(work);
+      const binDir = path.join(work, 'bin');
+      mkdirSync(binDir, { recursive: true });
+      mkdirSync(path.join(work, 'releases'), { recursive: true });
+      mkdirSync(path.join(work, 'commits'), { recursive: true });
+      const releasePath = path.join(work, 'release.json');
+      const reposPath = path.join(work, 'repos.json');
+      if (mode === 'release') {
+        writeFileSync(
+          releasePath,
+          JSON.stringify({
+            tag_name: 'v9.9.9',
+            published_at: '2026-08-01T00:00:00Z',
+            body: 'First line\nSecond',
+          }),
+        );
+        writeFileSync(reposPath, '[]');
+      } else if (mode === 'rate-limit') {
+        writeFileSync(releasePath, JSON.stringify({ message: 'API rate limit exceeded for ...' }));
+        writeFileSync(reposPath, JSON.stringify({ message: 'API rate limit exceeded' }));
+      } else if (mode === 'malformed') {
+        writeFileSync(releasePath, '{not-json');
+        writeFileSync(reposPath, '[]');
+      } else {
+        writeFileSync(releasePath, JSON.stringify({ message: 'Not Found' }));
+        writeFileSync(reposPath, '[]');
+      }
+      for (const [repo, payload] of Object.entries(extra.releases ?? {})) {
+        writeFileSync(
+          path.join(work, 'releases', `${repo.replaceAll('/', '-')}.json`),
+          typeof payload === 'string' ? payload : JSON.stringify(payload),
+        );
+      }
+      for (const [repo, payload] of Object.entries(extra.commits ?? {})) {
+        writeFileSync(
+          path.join(work, 'commits', `${repo.replaceAll('/', '-')}.json`),
+          typeof payload === 'string' ? payload : JSON.stringify(payload),
+        );
+      }
       writeFileSync(
-        releasePath,
-        JSON.stringify({
-          tag_name: 'v9.9.9',
-          published_at: '2026-08-01T00:00:00Z',
-          body: 'First line\nSecond',
-        }),
+        path.join(work, 'compare.json'),
+        JSON.stringify(extra.compare ?? { files: [] }),
       );
-      writeFileSync(reposPath, '[]');
-    } else if (mode === 'rate-limit') {
-      writeFileSync(releasePath, JSON.stringify({ message: 'API rate limit exceeded for ...' }));
-      writeFileSync(reposPath, JSON.stringify({ message: 'API rate limit exceeded' }));
-    } else if (mode === 'malformed') {
-      writeFileSync(releasePath, '{not-json');
-      writeFileSync(reposPath, '[]');
-    } else {
-      writeFileSync(releasePath, JSON.stringify({ message: 'Not Found' }));
-      writeFileSync(reposPath, '[]');
-    }
-    for (const [repo, payload] of Object.entries(extra.releases ?? {})) {
+      const ghPath = path.join(binDir, 'gh');
       writeFileSync(
-        path.join(work, 'releases', `${repo.replaceAll('/', '-')}.json`),
-        typeof payload === 'string' ? payload : JSON.stringify(payload),
-      );
-    }
-    for (const [repo, payload] of Object.entries(extra.commits ?? {})) {
-      writeFileSync(
-        path.join(work, 'commits', `${repo.replaceAll('/', '-')}.json`),
-        typeof payload === 'string' ? payload : JSON.stringify(payload),
-      );
-    }
-    writeFileSync(path.join(work, 'compare.json'), JSON.stringify(extra.compare ?? { files: [] }));
-    const ghPath = path.join(binDir, 'gh');
-    writeFileSync(
-      ghPath,
-      `#!/usr/bin/env bash
+        ghPath,
+        `#!/usr/bin/env bash
 set -euo pipefail
 if [[ "\${1:-}" != "api" ]]; then
   echo "unexpected gh args: $*" >&2
@@ -398,252 +415,253 @@ fi
 printf '%s' '{}'
 exit 0
 `,
-      'utf8',
-    );
-    chmodSync(ghPath, 0o755);
-    return { work, binDir };
-  }
+        'utf8',
+      );
+      chmodSync(ghPath, 0o755);
+      return { work, binDir };
+    }
 
-  /** Current reviewed-ref pins: no warn_box. */
-  function currentBaselineExtra() {
-    return {
-      releases: {
-        'ratspeak/rsLXST': {
-          tag_name: 'v0.2.0',
-          published_at: '2026-08-17T23:34:17Z',
-          body: 'rsLXST v0.2.0',
-        },
-        'ratspeak/lrgp-rs': {
-          tag_name: 'v0.4.1',
-          published_at: '2026-08-17T23:34:25Z',
-          body: 'lrgp-rs v0.4.1',
-        },
-        'ratspeak/Ratspeak': {
-          tag_name: 'v1.0.31',
-          published_at: '2026-08-27T09:26:44Z',
-          body: 'Improved voice message reliability and usage.',
-        },
-      },
-      commits: {
-        'ratspeak/LXMFace': [{ sha: LXMFACE_REVIEWED_SHA }],
-      },
-    };
-  }
-
-  it('upstream-check-only parses a valid release non-fatally', () => {
-    const fixture = prepareUpstreamGhFixture('release');
-    const result = runUpdate([], {
-      UPDATE_SH_TEST_HOOK: 'upstream-check-only',
-      PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-    });
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toContain('v9.9.9');
-    expect(result.stdout).toContain('First line');
-    expect(result.stdout).not.toContain('GitHub API rate limit:');
-  });
-
-  it('upstream-check-only warns on rate-limit without failing', () => {
-    const fixture = prepareUpstreamGhFixture('rate-limit');
-    const result = runUpdate([], {
-      UPDATE_SH_TEST_HOOK: 'upstream-check-only',
-      PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-    });
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toContain('GitHub API rate limit:');
-  });
-
-  it('upstream-check-only tolerates malformed repository JSON', () => {
-    const fixture = prepareUpstreamGhFixture('malformed');
-    const result = runUpdate([], {
-      UPDATE_SH_TEST_HOOK: 'upstream-check-only',
-      PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-    });
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toContain('no published GitHub release');
-    expect(result.stdout).not.toContain('query failed');
-  });
-
-  it('upstream-check-only tolerates missing releases', () => {
-    const fixture = prepareUpstreamGhFixture('missing');
-    const result = runUpdate([], {
-      UPDATE_SH_TEST_HOOK: 'upstream-check-only',
-      PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-    });
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toContain('no published GitHub release');
-    expect(result.stdout).not.toContain('query failed');
-    expect(result.stdout).not.toContain('WARNING:');
-  });
-
-  it('upstream-check-only stays quiet when published releases match reviewed-ref', () => {
-    const fixture = prepareUpstreamGhFixture('release', currentBaselineExtra());
-    const result = runUpdate([], {
-      UPDATE_SH_TEST_HOOK: 'upstream-check-only',
-      PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-    });
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toContain('v1.0.31');
-    expect(result.stdout).toContain('reviewed; current');
-    expect(result.stdout).toContain('js/lxmface.js @ 308a729d5bf9 (reviewed; current)');
-    expect(result.stdout).toContain('v0.4.1');
-    expect(result.stdout).toContain(
-      'Ratspeak upstream watch complete (reviewed baselines current; no new-repo warnings).',
-    );
-    expect(result.stdout).not.toContain('WARNING:');
-    expect(result.stdout).not.toContain('Four in a Row');
-    expect(result.stdout).not.toContain('query failed');
-  });
-
-  it('upstream-check-only warns when a published Ratspeak release is newer than the pin', () => {
-    const fixture = prepareUpstreamGhFixture('release', {
-      ...currentBaselineExtra(),
-      releases: {
-        ...currentBaselineExtra().releases,
-        'ratspeak/Ratspeak': {
-          tag_name: 'v9.9.9',
-          published_at: '2026-08-01T00:00:00Z',
-          body: 'First line\nSecond',
-        },
-      },
-    });
-    const result = runUpdate([], {
-      UPDATE_SH_TEST_HOOK: 'upstream-check-only',
-      PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-    });
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toContain('WARNING:');
-    expect(result.stdout).toContain('v1.0.31');
-    expect(result.stdout).toContain('v9.9.9');
-    expect(result.stdout).toContain('docs/reticulum-games-parity.md');
-    expect(result.stdout).not.toContain('Four in a Row');
-  });
-
-  it('upstream-check-only hints Four in a Row when the published release body mentions it', () => {
-    const fixture = prepareUpstreamGhFixture('release', {
-      ...currentBaselineExtra(),
-      releases: {
-        ...currentBaselineExtra().releases,
-        'ratspeak/Ratspeak': {
-          tag_name: 'v9.9.9',
-          published_at: '2026-08-01T00:00:00Z',
-          body: 'Added Four in a Row\nOther notes',
-        },
-      },
-    });
-    const result = runUpdate([], {
-      UPDATE_SH_TEST_HOOK: 'upstream-check-only',
-      PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-    });
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toContain('WARNING:');
-    expect(result.stdout).toContain(
-      'This published release includes Four in a Row — update Games UI + docs/reticulum-games-parity.md',
-    );
-  });
-
-  it('upstream-check-only hints Four in a Row when the compare diff mentions it', () => {
-    const fixture = prepareUpstreamGhFixture('release', {
-      ...currentBaselineExtra(),
-      releases: {
-        ...currentBaselineExtra().releases,
-        'ratspeak/Ratspeak': {
-          tag_name: 'v9.9.9',
-          published_at: '2026-08-01T00:00:00Z',
-          body: 'Protocol refresh only',
-        },
-      },
-      compare: {
-        files: [
-          {
-            filename: 'crates/ratspeak-tauri/src/commands/games.rs',
-            patch: '+    "four_in_a_row",',
+    /** Current reviewed-ref pins: no warn_box. */
+    function currentBaselineExtra() {
+      return {
+        releases: {
+          'ratspeak/rsLXST': {
+            tag_name: 'v0.2.0',
+            published_at: '2026-08-17T23:34:17Z',
+            body: 'rsLXST v0.2.0',
           },
-        ],
-      },
-    });
-    const result = runUpdate([], {
-      UPDATE_SH_TEST_HOOK: 'upstream-check-only',
-      PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-    });
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toContain(
-      'This published release includes Four in a Row — update Games UI + docs/reticulum-games-parity.md',
-    );
-  });
+          'ratspeak/lrgp-rs': {
+            tag_name: 'v0.4.1',
+            published_at: '2026-08-17T23:34:25Z',
+            body: 'lrgp-rs v0.4.1',
+          },
+          'ratspeak/Ratspeak': {
+            tag_name: 'v1.0.31',
+            published_at: '2026-08-27T09:26:44Z',
+            body: 'Improved voice message reliability and usage.',
+          },
+        },
+        commits: {
+          'ratspeak/LXMFace': [{ sha: LXMFACE_REVIEWED_SHA }],
+        },
+      };
+    }
 
-  it('upstream-check-only warns when the vendored LXMFace file commit changes', () => {
-    const fixture = prepareUpstreamGhFixture('release', {
-      ...currentBaselineExtra(),
-      commits: {
-        'ratspeak/LXMFace': [{ sha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' }],
-      },
-    });
-    const result = runUpdate([], {
-      UPDATE_SH_TEST_HOOK: 'upstream-check-only',
-      PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-    });
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    expect(result.stdout).toContain('WARNING:');
-    expect(result.stdout).toContain('308a729d5bf9');
-    expect(result.stdout).toContain('aaaaaaaaaaaa');
-    expect(result.stdout).toContain('src/renderer/lib/reticulum/lxmface.ts');
-  });
-
-  it('runs cargo clean after a successful rebuild when CLEAN_SIDECAR_TARGET=1', () => {
-    const fixture = prepareRebuildFixture({ buildExit: 0 });
-    const result = runUpdate(
-      [],
-      {
-        UPDATE_SH_TEST_HOOK: 'rebuild-only',
-        CLEAN_SIDECAR_TARGET: '1',
+    it('upstream-check-only parses a valid release non-fatally', () => {
+      const fixture = prepareUpstreamGhFixture('release');
+      const result = runUpdate([], {
+        UPDATE_SH_TEST_HOOK: 'upstream-check-only',
         PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-      },
-      fixture.work,
-      fixture.scriptPath,
-    );
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    const log = readFileSync(fixture.cargoLog, 'utf8');
-    expect(log).toContain('build --features rns-stack,rns-ble,rns-rnode-tcp');
-    expect(log).toContain('clean');
-    expect(log.indexOf('build')).toBeLessThan(log.indexOf('clean'));
-  });
+      });
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).toContain('v9.9.9');
+      expect(result.stdout).toContain('First line');
+      expect(result.stdout).not.toContain('GitHub API rate limit:');
+    });
 
-  it('skips cargo clean by default after a successful rebuild', () => {
-    const fixture = prepareRebuildFixture({ buildExit: 0 });
-    const result = runUpdate(
-      [],
-      {
-        UPDATE_SH_TEST_HOOK: 'rebuild-only',
-        CLEAN_SIDECAR_TARGET: '0',
+    it('upstream-check-only warns on rate-limit without failing', () => {
+      const fixture = prepareUpstreamGhFixture('rate-limit');
+      const result = runUpdate([], {
+        UPDATE_SH_TEST_HOOK: 'upstream-check-only',
         PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-      },
-      fixture.work,
-      fixture.scriptPath,
-    );
-    expect(result.status, result.stderr || result.stdout).toBe(0);
-    const log = readFileSync(fixture.cargoLog, 'utf8');
-    expect(log).toContain('build --features rns-stack,rns-ble,rns-rnode-tcp');
-    expect(log).not.toContain('clean');
-  });
+      });
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).toContain('GitHub API rate limit:');
+    });
 
-  it('does not run cargo clean when the rebuild fails', () => {
-    const fixture = prepareRebuildFixture({ buildExit: 1 });
-    const result = runUpdate(
-      [],
-      {
-        UPDATE_SH_TEST_HOOK: 'rebuild-only',
-        CLEAN_SIDECAR_TARGET: '1',
+    it('upstream-check-only tolerates malformed repository JSON', () => {
+      const fixture = prepareUpstreamGhFixture('malformed');
+      const result = runUpdate([], {
+        UPDATE_SH_TEST_HOOK: 'upstream-check-only',
         PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
-      },
-      fixture.work,
-      fixture.scriptPath,
-    );
-    expect(result.status).not.toBe(0);
-    const log = readFileSync(fixture.cargoLog, 'utf8');
-    expect(log).toContain('build --features rns-stack,rns-ble,rns-rnode-tcp');
-    expect(log).not.toContain('clean');
-  });
-});
+      });
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).toContain('no published GitHub release');
+      expect(result.stdout).not.toContain('query failed');
+    });
+
+    it('upstream-check-only tolerates missing releases', () => {
+      const fixture = prepareUpstreamGhFixture('missing');
+      const result = runUpdate([], {
+        UPDATE_SH_TEST_HOOK: 'upstream-check-only',
+        PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
+      });
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).toContain('no published GitHub release');
+      expect(result.stdout).not.toContain('query failed');
+      expect(result.stdout).not.toContain('WARNING:');
+    });
+
+    it('upstream-check-only stays quiet when published releases match reviewed-ref', () => {
+      const fixture = prepareUpstreamGhFixture('release', currentBaselineExtra());
+      const result = runUpdate([], {
+        UPDATE_SH_TEST_HOOK: 'upstream-check-only',
+        PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
+      });
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).toContain('v1.0.31');
+      expect(result.stdout).toContain('reviewed; current');
+      expect(result.stdout).toContain('js/lxmface.js @ 308a729d5bf9 (reviewed; current)');
+      expect(result.stdout).toContain('v0.4.1');
+      expect(result.stdout).toContain(
+        'Ratspeak upstream watch complete (reviewed baselines current; no new-repo warnings).',
+      );
+      expect(result.stdout).not.toContain('WARNING:');
+      expect(result.stdout).not.toContain('Four in a Row');
+      expect(result.stdout).not.toContain('query failed');
+    });
+
+    it('upstream-check-only warns when a published Ratspeak release is newer than the pin', () => {
+      const fixture = prepareUpstreamGhFixture('release', {
+        ...currentBaselineExtra(),
+        releases: {
+          ...currentBaselineExtra().releases,
+          'ratspeak/Ratspeak': {
+            tag_name: 'v9.9.9',
+            published_at: '2026-08-01T00:00:00Z',
+            body: 'First line\nSecond',
+          },
+        },
+      });
+      const result = runUpdate([], {
+        UPDATE_SH_TEST_HOOK: 'upstream-check-only',
+        PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
+      });
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).toContain('WARNING:');
+      expect(result.stdout).toContain('v1.0.31');
+      expect(result.stdout).toContain('v9.9.9');
+      expect(result.stdout).toContain('docs/reticulum-games-parity.md');
+      expect(result.stdout).not.toContain('Four in a Row');
+    });
+
+    it('upstream-check-only hints Four in a Row when the published release body mentions it', () => {
+      const fixture = prepareUpstreamGhFixture('release', {
+        ...currentBaselineExtra(),
+        releases: {
+          ...currentBaselineExtra().releases,
+          'ratspeak/Ratspeak': {
+            tag_name: 'v9.9.9',
+            published_at: '2026-08-01T00:00:00Z',
+            body: 'Added Four in a Row\nOther notes',
+          },
+        },
+      });
+      const result = runUpdate([], {
+        UPDATE_SH_TEST_HOOK: 'upstream-check-only',
+        PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
+      });
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).toContain('WARNING:');
+      expect(result.stdout).toContain(
+        'This published release includes Four in a Row — update Games UI + docs/reticulum-games-parity.md',
+      );
+    });
+
+    it('upstream-check-only hints Four in a Row when the compare diff mentions it', () => {
+      const fixture = prepareUpstreamGhFixture('release', {
+        ...currentBaselineExtra(),
+        releases: {
+          ...currentBaselineExtra().releases,
+          'ratspeak/Ratspeak': {
+            tag_name: 'v9.9.9',
+            published_at: '2026-08-01T00:00:00Z',
+            body: 'Protocol refresh only',
+          },
+        },
+        compare: {
+          files: [
+            {
+              filename: 'crates/ratspeak-tauri/src/commands/games.rs',
+              patch: '+    "four_in_a_row",',
+            },
+          ],
+        },
+      });
+      const result = runUpdate([], {
+        UPDATE_SH_TEST_HOOK: 'upstream-check-only',
+        PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
+      });
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).toContain(
+        'This published release includes Four in a Row — update Games UI + docs/reticulum-games-parity.md',
+      );
+    });
+
+    it('upstream-check-only warns when the vendored LXMFace file commit changes', () => {
+      const fixture = prepareUpstreamGhFixture('release', {
+        ...currentBaselineExtra(),
+        commits: {
+          'ratspeak/LXMFace': [{ sha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' }],
+        },
+      });
+      const result = runUpdate([], {
+        UPDATE_SH_TEST_HOOK: 'upstream-check-only',
+        PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
+      });
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(result.stdout).toContain('WARNING:');
+      expect(result.stdout).toContain('308a729d5bf9');
+      expect(result.stdout).toContain('aaaaaaaaaaaa');
+      expect(result.stdout).toContain('src/renderer/lib/reticulum/lxmface.ts');
+    });
+
+    it('runs cargo clean after a successful rebuild when CLEAN_SIDECAR_TARGET=1', () => {
+      const fixture = prepareRebuildFixture({ buildExit: 0 });
+      const result = runUpdate(
+        [],
+        {
+          UPDATE_SH_TEST_HOOK: 'rebuild-only',
+          CLEAN_SIDECAR_TARGET: '1',
+          PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
+        },
+        fixture.work,
+        fixture.scriptPath,
+      );
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      const log = readFileSync(fixture.cargoLog, 'utf8');
+      expect(log).toContain('build --features rns-stack,rns-ble,rns-rnode-tcp');
+      expect(log).toContain('clean');
+      expect(log.indexOf('build')).toBeLessThan(log.indexOf('clean'));
+    });
+
+    it('skips cargo clean by default after a successful rebuild', () => {
+      const fixture = prepareRebuildFixture({ buildExit: 0 });
+      const result = runUpdate(
+        [],
+        {
+          UPDATE_SH_TEST_HOOK: 'rebuild-only',
+          CLEAN_SIDECAR_TARGET: '0',
+          PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
+        },
+        fixture.work,
+        fixture.scriptPath,
+      );
+      expect(result.status, result.stderr || result.stdout).toBe(0);
+      const log = readFileSync(fixture.cargoLog, 'utf8');
+      expect(log).toContain('build --features rns-stack,rns-ble,rns-rnode-tcp');
+      expect(log).not.toContain('clean');
+    });
+
+    it('does not run cargo clean when the rebuild fails', () => {
+      const fixture = prepareRebuildFixture({ buildExit: 1 });
+      const result = runUpdate(
+        [],
+        {
+          UPDATE_SH_TEST_HOOK: 'rebuild-only',
+          CLEAN_SIDECAR_TARGET: '1',
+          PATH: `${fixture.binDir}:${process.env.PATH ?? ''}`,
+        },
+        fixture.work,
+        fixture.scriptPath,
+      );
+      expect(result.status).not.toBe(0);
+      const log = readFileSync(fixture.cargoLog, 'utf8');
+      expect(log).toContain('build --features rns-stack,rns-ble,rns-rnode-tcp');
+      expect(log).not.toContain('clean');
+    });
+  },
+);
 
 /** Stub `node` on PATH that exits with a fixed code, standing in for check-pinned-majors.mjs. */
 function prepareStubNodeFixture(exitCode) {

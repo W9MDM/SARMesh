@@ -2276,7 +2276,14 @@
     "layerCongestionHalos": "Congestiehalo's",
     "waypointDefaultName": "Waypoint",
     "waypointDelete": "Waypoint verwijderen",
-    "noGpsNodes": "Nog geen knooppunten met GPS-posities"
+    "noGpsNodes": "Nog geen knooppunten met GPS-posities",
+    "search": {
+      "placeholder": "Zoek een knooppunt…",
+      "aria": "Zoek een knooppunt op de kaart",
+      "noPosition": "geen positie",
+      "noMatches": "Geen enkel knooppunt komt overeen met die naam of ID.",
+      "allUnlocatable": "Deze knooppunten zijn bekend, maar hebben nooit een positie gerapporteerd, dus ze kunnen niet op de kaart worden weergegeven."
+    }
   },
   "meshCongestion": {
     "blockTitle": "Waarom u dubbel verkeer ziet",

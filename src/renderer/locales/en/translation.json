@@ -2424,7 +2424,14 @@
     "layerCongestionHalos": "Congestion halos",
     "waypointDefaultName": "Waypoint",
     "waypointDelete": "Delete Waypoint",
-    "noGpsNodes": "No nodes with GPS positions yet"
+    "noGpsNodes": "No nodes with GPS positions yet",
+    "search": {
+      "placeholder": "Find a node…",
+      "aria": "Find a node on the map",
+      "noPosition": "no position",
+      "noMatches": "No node matches that name or ID.",
+      "allUnlocatable": "These nodes are known but have never reported a position, so they cannot be shown on the map."
+    }
   },
   "meshCongestion": {
     "blockTitle": "Why you're seeing duplicate traffic",

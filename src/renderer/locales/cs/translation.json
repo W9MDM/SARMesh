@@ -2303,7 +2303,14 @@
     "layerCongestionHalos": "Halo přetížení",
     "waypointDefaultName": "Trasový bod",
     "waypointDelete": "Smazat trasový bod",
-    "noGpsNodes": "Zatím žádné uzly s pozicemi GPS"
+    "noGpsNodes": "Zatím žádné uzly s pozicemi GPS",
+    "search": {
+      "placeholder": "Najít uzel…",
+      "aria": "Najít uzel na mapě",
+      "noPosition": "bez polohy",
+      "noMatches": "Tomuto jménu nebo ID neodpovídá žádný uzel.",
+      "allUnlocatable": "Tyto uzly jsou známy, ale nikdy nehlásily polohu, takže je nelze zobrazit na mapě."
+    }
   },
   "meshCongestion": {
     "blockTitle": "Proč vidíte duplicitní provoz",

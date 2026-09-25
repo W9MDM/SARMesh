@@ -2276,7 +2276,14 @@
     "layerCongestionHalos": "Halos de congestion",
     "waypointDefaultName": "Point de cheminement",
     "waypointDelete": "Supprimer un point de cheminement",
-    "noGpsNodes": "Aucun nœud avec des positions GPS pour l'instant"
+    "noGpsNodes": "Aucun nœud avec des positions GPS pour l'instant",
+    "search": {
+      "placeholder": "Trouver un nœud…",
+      "aria": "Trouver un nœud sur la carte",
+      "noPosition": "sans position",
+      "noMatches": "Aucun nœud ne correspond à ce nom ou à cet ID.",
+      "allUnlocatable": "Ces nœuds sont connus mais n'ont jamais signalé de position, ils ne peuvent donc pas être affichés sur la carte."
+    }
   },
   "meshCongestion": {
     "blockTitle": "Pourquoi voyez-vous du trafic en double ?",

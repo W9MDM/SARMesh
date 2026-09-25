@@ -2276,7 +2276,14 @@
     "layerCongestionHalos": "拥堵光环",
     "waypointDefaultName": "航路点",
     "waypointDelete": "删除航点",
-    "noGpsNodes": "尚无具有 GPS 位置的节点"
+    "noGpsNodes": "尚无具有 GPS 位置的节点",
+    "search": {
+      "placeholder": "查找节点…",
+      "aria": "在地图上查找节点",
+      "noPosition": "无位置",
+      "noMatches": "没有与该名称或 ID 匹配的节点。",
+      "allUnlocatable": "这些节点是已知的，但从未报告过位置，因此无法在地图上显示。"
+    }
   },
   "meshCongestion": {
     "blockTitle": "为什么您会看到重复的流量",

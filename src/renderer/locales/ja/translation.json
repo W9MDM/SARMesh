@@ -2276,7 +2276,14 @@
     "layerCongestionHalos": "輻輳ハロー",
     "waypointDefaultName": "ウェイポイント",
     "waypointDelete": "ウェイポイントの削除",
-    "noGpsNodes": "GPS 位置を持つノードはまだありません"
+    "noGpsNodes": "GPS 位置を持つノードはまだありません",
+    "search": {
+      "placeholder": "ノードを見つける…",
+      "aria": "マップ上のノードを見つける",
+      "noPosition": "位置なし",
+      "noMatches": "その名前または ID に一致するノードはありません。",
+      "allUnlocatable": "これらのノードは既知ですが、位置を報告したことがないため、マップに表示することはできません。"
+    }
   },
   "meshCongestion": {
     "blockTitle": "重複したトラフィックが表示される理由",

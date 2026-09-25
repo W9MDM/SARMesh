@@ -2276,7 +2276,14 @@
     "layerCongestionHalos": "Aloni di congestione",
     "waypointDefaultName": "Punto di passaggio",
     "waypointDelete": "Elimina punto di passaggio",
-    "noGpsNodes": "Nessun nodo con posizioni GPS ancora"
+    "noGpsNodes": "Nessun nodo con posizioni GPS ancora",
+    "search": {
+      "placeholder": "Trova un nodo…",
+      "aria": "Trova un nodo sulla mappa",
+      "noPosition": "nessuna posizione",
+      "noMatches": "Nessun nodo corrisponde a quel nome o ID.",
+      "allUnlocatable": "Questi nodi sono noti ma non hanno mai riportato una posizione, quindi non possono essere mostrati sulla mappa."
+    }
   },
   "meshCongestion": {
     "blockTitle": "Perché vedi traffico duplicato",

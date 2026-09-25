@@ -2276,7 +2276,14 @@
     "layerCongestionHalos": "Halo kemacetan",
     "waypointDefaultName": "Titik jalan",
     "waypointDelete": "Hapus Titik Jalan",
-    "noGpsNodes": "Belum ada node dengan posisi GPS"
+    "noGpsNodes": "Belum ada node dengan posisi GPS",
+    "search": {
+      "placeholder": "Temukan simpul…",
+      "aria": "Temukan simpul di peta",
+      "noPosition": "tanpa posisi",
+      "noMatches": "Tidak ada simpul yang cocok dengan nama atau ID itu.",
+      "allUnlocatable": "Simpul-simpul ini diketahui tetapi tidak pernah melaporkan posisi, sehingga tidak dapat ditampilkan di peta."
+    }
   },
   "meshCongestion": {
     "blockTitle": "Mengapa Anda melihat lalu lintas duplikat",

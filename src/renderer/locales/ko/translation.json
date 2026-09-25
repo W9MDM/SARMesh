@@ -2276,7 +2276,14 @@
     "layerCongestionHalos": "혼잡 후광",
     "waypointDefaultName": "웨이포인트",
     "waypointDelete": "웨이포인트 삭제",
-    "noGpsNodes": "아직 GPS 위치가 있는 노드가 없습니다."
+    "noGpsNodes": "아직 GPS 위치가 있는 노드가 없습니다.",
+    "search": {
+      "placeholder": "노드 찾기…",
+      "aria": "지도에서 노드 찾기",
+      "noPosition": "위치 없음",
+      "noMatches": "해당 이름 또는 ID와 일치하는 노드가 없습니다.",
+      "allUnlocatable": "이 노드는 알려져 있지만 위치를 보고한 적이 없으므로 지도에 표시할 수 없습니다."
+    }
   },
   "meshCongestion": {
     "blockTitle": "중복된 트래픽이 표시되는 이유",

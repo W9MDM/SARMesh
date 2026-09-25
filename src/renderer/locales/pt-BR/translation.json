@@ -2276,7 +2276,14 @@
     "layerCongestionHalos": "Halos de congestionamento",
     "waypointDefaultName": "Ponto de referência",
     "waypointDelete": "Excluir ponto de referência",
-    "noGpsNodes": "Ainda não há nós com posições GPS"
+    "noGpsNodes": "Ainda não há nós com posições GPS",
+    "search": {
+      "placeholder": "Encontrar um nó…",
+      "aria": "Encontre um nó no mapa",
+      "noPosition": "sem posição",
+      "noMatches": "Nenhum nó corresponde a esse nome ou ID.",
+      "allUnlocatable": "Esses nós são conhecidos, mas nunca relataram uma posição, portanto, não podem ser mostrados no mapa."
+    }
   },
   "meshCongestion": {
     "blockTitle": "Por que você está vendo tráfego duplicado",
