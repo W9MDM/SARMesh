@@ -2,6 +2,7 @@
   "ignores": [
     "node_modules/**",
     ".rsstack/**",
+    ".cache/**",
     ".cursor/**",
     ".hermes/**",
     "site/**",

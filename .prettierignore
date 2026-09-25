@@ -11,6 +11,11 @@ node_modules
 # Repo-local Ratspeak overlay workspace (cloned upstream repos; gitignored)
 .rsstack
 
+# Local tool caches (flatpak-node-generator venv, actionlint binary; gitignored).
+# The venv vendors third-party JS/JSON that is not ours to format, and it failed
+# the release format gate. eslint already ignores this path.
+.cache
+
 # Logs & temp
 *.log
 tmp/
