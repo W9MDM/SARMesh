@@ -3196,7 +3196,8 @@
     "hybridMqttPathTooltip": "RF aracılığıyla alınır; bazı paketler bir MQTT röle yolu kullanır",
     "hybridMqttPathAria": "RF ve MQTT yolu",
     "connectedViaRfAndMqttTooltip": "RF ve MQTT ile bağlanır",
-    "connectedViaRfAndMqttAria": "RF ve MQTT ile bağlanır"
+    "connectedViaRfAndMqttAria": "RF ve MQTT ile bağlanır",
+    "noPositionReported": "Konum bildirilmedi — bu düğümde GPS veya sabit konum ayarı yok."
   },
   "nodeListPanel": {
     "contactsRefreshed": "Kişiler yenilendi.",

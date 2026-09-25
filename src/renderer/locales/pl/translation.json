@@ -3260,7 +3260,8 @@
     "changes_few": "{{count}} zmiany",
     "changes_many": "{{count}} zmian",
     "echoes_few": "{{count}} echa",
-    "echoes_many": "{{count}} ech"
+    "echoes_many": "{{count}} ech",
+    "noPositionReported": "Nie zgłoszono pozycji — ten węzeł nie ma ustawionego GPS ani stałej pozycji."
   },
   "nodeListPanel": {
     "refreshFailed": "Odświeżanie nie powiodło się: {{message}}",

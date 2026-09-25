@@ -3196,7 +3196,8 @@
     "hybridMqttPathTooltip": "Über RF empfangen; einige Pakete verwenden einen MQTT-Relay-Pfad",
     "hybridMqttPathAria": "RF- und MQTT-Pfad",
     "connectedViaRfAndMqttTooltip": "Anbindung über RF und MQTT",
-    "connectedViaRfAndMqttAria": "Anbindung über RF und MQTT"
+    "connectedViaRfAndMqttAria": "Anbindung über RF und MQTT",
+    "noPositionReported": "Keine Position gemeldet — für diesen Knoten ist weder GPS noch eine feste Position eingestellt."
   },
   "nodeListPanel": {
     "contactsRefreshed": "Kontakte aktualisiert.",

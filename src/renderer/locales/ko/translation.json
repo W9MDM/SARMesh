@@ -3196,7 +3196,8 @@
     "hybridMqttPathTooltip": "RF를 통해 수신; 일부 패킷은 MQTT 릴레이 경로를 사용합니다",
     "hybridMqttPathAria": "RF 및 MQTT 경로",
     "connectedViaRfAndMqttTooltip": "RF 및 MQTT를 통해 연결됨",
-    "connectedViaRfAndMqttAria": "RF 및 MQTT를 통해 연결됨"
+    "connectedViaRfAndMqttAria": "RF 및 MQTT를 통해 연결됨",
+    "noPositionReported": "위치가 보고되지 않음 — 이 노드에는 GPS도 고정 위치도 설정되어 있지 않습니다."
   },
   "nodeListPanel": {
     "contactsRefreshed": "연락처가 새로 고쳐졌습니다.",

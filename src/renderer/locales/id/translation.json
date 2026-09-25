@@ -3196,7 +3196,8 @@
     "hybridMqttPathTooltip": "Diterima melalui RF; beberapa paket menggunakan jalur relai MQTT",
     "hybridMqttPathAria": "Jalur RF dan MQTT",
     "connectedViaRfAndMqttTooltip": "Terhubung melalui RF dan MQTT",
-    "connectedViaRfAndMqttAria": "Terhubung melalui RF dan MQTT"
+    "connectedViaRfAndMqttAria": "Terhubung melalui RF dan MQTT",
+    "noPositionReported": "Tidak ada posisi yang dilaporkan — simpul ini tidak memiliki GPS maupun posisi tetap yang ditetapkan."
   },
   "nodeListPanel": {
     "contactsRefreshed": "Kontak disegarkan.",

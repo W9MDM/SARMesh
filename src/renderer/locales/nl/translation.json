@@ -3196,7 +3196,8 @@
     "hybridMqttPathTooltip": "Ontvangen via RF; sommige pakketten gebruiken een MQTT-relaispad",
     "hybridMqttPathAria": "RF- en MQTT-pad",
     "connectedViaRfAndMqttTooltip": "Verbonden via RF en MQTT",
-    "connectedViaRfAndMqttAria": "Verbonden via RF en MQTT"
+    "connectedViaRfAndMqttAria": "Verbonden via RF en MQTT",
+    "noPositionReported": "Geen positie gerapporteerd — dit knooppunt heeft geen GPS en geen vaste positie ingesteld."
   },
   "nodeListPanel": {
     "contactsRefreshed": "Contacten vernieuwd.",

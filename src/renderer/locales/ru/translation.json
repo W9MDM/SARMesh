@@ -3260,7 +3260,8 @@
     "changes_few": "{{count}} изменения",
     "changes_many": "{{count}} изменений",
     "echoes_few": "{{count}} эхо",
-    "echoes_many": "{{count}} эхо"
+    "echoes_many": "{{count}} эхо",
+    "noPositionReported": "Позиция не передана — у этого узла нет GPS и не задана фиксированная позиция."
   },
   "nodeListPanel": {
     "contactsRefreshed": "Контакты обновлены.",

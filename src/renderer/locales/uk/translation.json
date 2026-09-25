@@ -3260,7 +3260,8 @@
     "changes_few": "{{count}} зміни",
     "changes_many": "{{count}} змін",
     "echoes_few": "{{count}} луни",
-    "echoes_many": "{{count}} лун"
+    "echoes_many": "{{count}} лун",
+    "noPositionReported": "Позиція не передана — цей вузол не має GPS, і фіксовану позицію не задано."
   },
   "nodeListPanel": {
     "contactsRefreshed": "Контакти оновлено.",

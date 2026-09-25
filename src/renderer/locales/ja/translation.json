@@ -3196,7 +3196,8 @@
     "hybridMqttPathTooltip": "RFを介して受信。一部のパケットはMQTTリレーパスを使用",
     "hybridMqttPathAria": "RFおよびMQTTパス",
     "connectedViaRfAndMqttTooltip": "RFおよびMQTT経由で接続",
-    "connectedViaRfAndMqttAria": "RFおよびMQTT経由で接続"
+    "connectedViaRfAndMqttAria": "RFおよびMQTT経由で接続",
+    "noPositionReported": "位置が報告されていません。このノードには GPS も固定位置も設定されていません。"
   },
   "nodeListPanel": {
     "contactsRefreshed": "連絡先が更新されました。",

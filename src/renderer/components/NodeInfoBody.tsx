@@ -509,7 +509,18 @@ export default function NodeInfoBody({
       {/* Location */}
       {(() => {
         const mapPosition = resolveNodeMapPosition(node, latestTrackedPosition);
-        if (!mapPosition) return null;
+        if (!mapPosition) {
+          // Say so rather than hiding the row. Roughly half the nodes in a
+          // typical mesh have never sent a position — with the row removed the
+          // absence looks like a broken lookup instead of a node that simply
+          // has no GPS and no fixed position set.
+          return (
+            <div className="flex items-center justify-between gap-2 border-b border-gray-700/50 py-2 last:border-b-0">
+              <span className="text-muted shrink-0 text-sm">{t('nodeInfoBody.position')}</span>
+              <span className="text-muted text-xs">{t('nodeInfoBody.noPositionReported')}</span>
+            </div>
+          );
+        }
         const hasNodeDbPosition =
           node.latitude != null &&
           node.longitude != null &&

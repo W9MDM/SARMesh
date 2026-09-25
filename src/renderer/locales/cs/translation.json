@@ -3229,7 +3229,8 @@
     "connectedViaRfAndMqttTooltip": "Připojeno přes RF a MQTT",
     "connectedViaRfAndMqttAria": "Připojeno přes RF a MQTT",
     "changes_few": "{{count}} změny",
-    "echoes_few": "{{count}} ozvěny"
+    "echoes_few": "{{count}} ozvěny",
+    "noPositionReported": "Není hlášena žádná poloha — tento uzel nemá nastavenou GPS ani pevnou polohu."
   },
   "nodeListPanel": {
     "contactsRefreshed": "Kontakty byly obnoveny.",

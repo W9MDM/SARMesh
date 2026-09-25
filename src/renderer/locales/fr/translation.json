@@ -3196,7 +3196,8 @@
     "hybridMqttPathTooltip": "Reçu via RF ; certains paquets utilisent un chemin de relais MQTT",
     "hybridMqttPathAria": "Chemin RF et MQTT",
     "connectedViaRfAndMqttTooltip": "Connecté via RF et MQTT",
-    "connectedViaRfAndMqttAria": "Connecté via RF et MQTT"
+    "connectedViaRfAndMqttAria": "Connecté via RF et MQTT",
+    "noPositionReported": "Aucune position signalée — ce nœud n'a ni GPS ni position fixe définie."
   },
   "nodeListPanel": {
     "contactsRefreshed": "Contacts actualisés.",
