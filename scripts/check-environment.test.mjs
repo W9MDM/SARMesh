@@ -11,8 +11,38 @@ import {
   parseVersion,
   resolveExitCode,
   resolvePnpmBinCandidates,
+  resolveWindowsCommand,
   versionGte,
 } from './check-environment.mjs';
+
+describe('check-environment resolveWindowsCommand', () => {
+  // Node does not apply PATHEXT without `shell: true`, so a tool that exists
+  // only as a .cmd shim (pnpm installed via npm) was reported ENOENT on a
+  // machine where it ran fine — which blocked `pnpm run release`.
+  const env = { PATH: 'C:\\tools;C:\\npm', PATHEXT: '.EXE;.CMD' };
+  const exists = (p) => p === 'C:\\npm\\pnpm.CMD' || p === 'C:\\tools\\git.EXE';
+
+  it('resolves a bare name to the shim found on PATH', () => {
+    expect(resolveWindowsCommand('pnpm', env, 'win32', exists)).toBe('C:\\npm\\pnpm.CMD');
+  });
+
+  it('honours PATH order over PATHEXT order', () => {
+    expect(resolveWindowsCommand('git', env, 'win32', exists)).toBe('C:\\tools\\git.EXE');
+  });
+
+  it('leaves the command alone when nothing matches', () => {
+    expect(resolveWindowsCommand('nope', env, 'win32', exists)).toBe('nope');
+  });
+
+  it('does not touch an explicit path or an extension already given', () => {
+    expect(resolveWindowsCommand('C:\\x\\y.exe', env, 'win32', exists)).toBe('C:\\x\\y.exe');
+    expect(resolveWindowsCommand('pnpm.cmd', env, 'win32', exists)).toBe('pnpm.cmd');
+  });
+
+  it('is a no-op off Windows, where spawn resolves PATH itself', () => {
+    expect(resolveWindowsCommand('pnpm', env, 'linux', exists)).toBe('pnpm');
+  });
+});
 
 describe('check-environment resolvePnpmBinCandidates', () => {
   it('returns Windows PNPM_HOME shim paths including bin/', () => {
@@ -54,12 +84,15 @@ describe('check-environment evaluateWindowsBuildDepsCheck', () => {
     });
   });
 
-  it('fails when neither cl nor vswhere VC Tools are available', () => {
+  it('warns, but does not block, when neither cl nor vswhere VC Tools are available', () => {
+    // The project builds no native code on Windows (electron-builder runs with
+    // npmRebuild: false and installers come from CI), so a missing MSVC must
+    // not fail the gate that `pnpm run release` depends on.
     expect(
       evaluateWindowsBuildDepsCheck({ clOnPath: false, vswhereInstallPath: null }),
     ).toMatchObject({
-      status: 'fail',
-      label: 'Windows build dependencies missing',
+      status: 'warn',
+      severity: 'optional',
     });
   });
 });

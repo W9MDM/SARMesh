@@ -32,9 +32,11 @@ pnpm run check:environment # re-check after install
 pnpm run dev
 ```
 
-**Required** checks (must pass): Git, Node.js, pnpm, `node_modules`, and platform-native build tools (Xcode CLT on macOS, `g++`/`make` on Linux, MSVC `cl` on Windows).
+**Required** checks (must pass): Git, Node.js, pnpm, `node_modules`, and platform-native build tools on macOS (Xcode CLT) and Linux (`g++`/`make`).
 
-**Optional** checks (warnings only): Python/pip, Rust, actionlint, yamllint, a Docker-compatible container engine (Podman preferred), act, and Linux `dialout` group membership. For local CI you can use **container mode** (`pnpm run act:ci` — act + Podman/Docker) or **host mode** (`pnpm run act:ci:native` — no container engine). Fix optional items when you need docs builds, pre-commit hooks, Reticulum sidecar work, local CI parity, or USB serial on Linux.
+**Optional** checks (warnings only): MSVC build tools on Windows, Python/pip, Rust, actionlint, yamllint, a Docker-compatible container engine (Podman preferred), act, and Linux `dialout` group membership.
+
+> Windows does not require MSVC to develop or release SARMesh: electron-builder runs with `npmRebuild: false`, native dependencies ship N-API prebuilds, and installers are produced by CI. Install the C++ workload only if you add a native dependency that has no prebuild for your platform. For local CI you can use **container mode** (`pnpm run act:ci` — act + Podman/Docker) or **host mode** (`pnpm run act:ci:native` — no container engine). Fix optional items when you need docs builds, pre-commit hooks, Reticulum sidecar work, local CI parity, or USB serial on Linux.
 
 Use the printed `→` hints and `setup:*` scripts (`setup:build-deps`, `setup:actionlint`, `setup:dialout`) to fix failures. See [Helper scripts (auto-install where possible)](#8-helper-scripts-auto-install-where-possible) below.
 

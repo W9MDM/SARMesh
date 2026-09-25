@@ -79,14 +79,72 @@ export function resolveExitCode(checks) {
   return requiredFailed ? 1 : 0;
 }
 
+/**
+ * Resolve a bare command name to a real file on Windows.
+ *
+ * Node's spawnSync does not apply PATHEXT unless `shell: true`, so a tool that
+ * exists only as a `.cmd`/`.bat` shim is reported ENOENT even though it runs
+ * fine from any shell. pnpm installed through npm is exactly that: the npm
+ * global directory holds `pnpm` (an sh script Windows cannot execute),
+ * `pnpm.cmd` and `pnpm.ps1`. The result was a release blocked on "pnpm not
+ * found" by a machine with a working pnpm 12.3.4.
+ *
+ * `shell: true` would also fix it, but it concatenates rather than escapes
+ * arguments (DEP0190). Resolving the path keeps the argv array intact.
+ *
+ * @param {string} command
+ * @returns {string} the resolved path, or the command unchanged
+ */
+export function resolveWindowsCommand(
+  command,
+  env = process.env,
+  platform = process.platform,
+  exists = existsSync,
+) {
+  if (platform !== 'win32') return command;
+  // An explicit path or extension needs no lookup.
+  if (/[\\/]/.test(command) || /\.[a-z0-9]+$/i.test(command)) return command;
+  const exts = (env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean);
+  // PATH order wins over PATHEXT order, matching how the shell picks.
+  for (const dir of (env.PATH ?? '').split(pathWin32.delimiter).filter(Boolean)) {
+    for (const ext of exts) {
+      const candidate = pathWin32.join(dir, command + ext);
+      if (exists(candidate)) return candidate;
+    }
+  }
+  return command;
+}
+
+/**
+ * Node refuses to spawn `.cmd`/`.bat` without a shell (the CVE-2024-27980
+ * mitigation), so a resolved shim needs `shell: true` — and then the command
+ * is concatenated rather than escaped, so a path like
+ * `C:\Users\Matt Melton\...` has to carry its own quotes.
+ *
+ * @param {string} command
+ */
+function spawnOptionsFor(command) {
+  const resolved = resolveWindowsCommand(command);
+  if (/\.(cmd|bat)$/i.test(resolved)) {
+    return { command: `"${resolved}"`, shell: /** @type {const} */ (true) };
+  }
+  return { command: resolved, shell: /** @type {const} */ (false) };
+}
+
 function commandOutput(command, args) {
-  const res = spawnSync(command, args, { encoding: 'utf8', stdio: 'pipe' });
+  const target = spawnOptionsFor(command);
+  const res = spawnSync(target.command, args, {
+    encoding: 'utf8',
+    stdio: 'pipe',
+    shell: target.shell,
+  });
   if (res.status !== 0) return null;
   return (res.stdout || res.stderr || '').trim();
 }
 
 function commandOk(command, args) {
-  const res = spawnSync(command, args, { stdio: 'ignore' });
+  const target = spawnOptionsFor(command);
+  const res = spawnSync(target.command, args, { stdio: 'ignore', shell: target.shell });
   return res.status === 0;
 }
 
@@ -346,11 +404,19 @@ export function evaluateWindowsBuildDepsCheck(input) {
       detail: `MSVC via vswhere (${vswhereInstallPath.trim()})`,
     };
   }
+  // Warn rather than block. This project does not compile native code on
+  // Windows: electron-builder runs with `npmRebuild: false`, native deps ship
+  // N-API prebuilds, and installers are produced by CI on a runner that has
+  // Visual Studio. A machine with no MSVC installs, tests and runs SARMesh
+  // fine, so failing the check here blocked every local gate — `pnpm run
+  // release` included — on a toolchain the release path never invokes.
+  // Still reported, because adding a native dep without a prebuild will need
+  // it.
   return {
-    status: 'fail',
-    severity: 'required',
-    label: 'Windows build dependencies missing',
-    hint: "Install Visual Studio Build Tools with 'Desktop development with C++' workload",
+    status: 'warn',
+    severity: 'optional',
+    label: 'MSVC build tools not found (optional)',
+    hint: "Only needed for native deps without prebuilds — install Visual Studio Build Tools with 'Desktop development with C++' workload",
   };
 }
 
