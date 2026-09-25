@@ -3,6 +3,21 @@
 # Ensure the script stops on any error
 set -e
 
+# Put repo-local tooling on PATH, the same way .githooks/pre-commit does.
+# `setup:actionlint` installs into .githooks/bin, which is not on PATH, so the
+# release's required `command -v actionlint` check failed against a binary the
+# environment check had just reported as present.
+RELEASE_REPO_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+if [ -d "$RELEASE_REPO_ROOT/.githooks/bin" ]; then
+  RELEASE_HOOK_BIN="$RELEASE_REPO_ROOT/.githooks/bin"
+  # On Git for Windows, `pwd` yields a Windows path (C:/...), which the POSIX
+  # shell silently ignores as a PATH entry. Convert it so the tooling is found.
+  if command -v cygpath > /dev/null 2>&1; then
+    RELEASE_HOOK_BIN=$(cygpath -u "$RELEASE_HOOK_BIN")
+  fi
+  export PATH="$RELEASE_HOOK_BIN:$PATH"
+fi
+
 # Git Bash on Windows ships `python`, not `python3`; CI images ship both.
 python_bin() {
   if command -v python3 > /dev/null 2>&1; then
