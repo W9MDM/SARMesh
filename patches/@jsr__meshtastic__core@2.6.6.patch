@@ -1,6 +1,6 @@
 diff --git a/src/meshDevice.js b/src/meshDevice.js
-index 8c58dc7d43f91d1a7c0759f2172950f1c987dd95..7cb760e509e23b72626eab5833359f602b308b3a 100755
---- a/src/meshDevice.js
+index 8c58dc7d43f91d1a7c0759f2172950f1c987dd95..7cb760e509e23b72626eab5833359f602b308b3a 100644
+--- a/src/meshDevice.js	
 +++ b/src/meshDevice.js
 @@ -20,6 +20,8 @@ export class MeshDevice {
    events;
@@ -65,8 +65,8 @@ index 8c58dc7d43f91d1a7c0759f2172950f1c987dd95..7cb760e509e23b72626eab5833359f60
    }
    /**
 diff --git a/src/meshDevice.ts b/src/meshDevice.ts
-index ddca80fc9134fa56ac273b17387e62af087c95c6..b9cdc7d703496cea5ed2037c1f19ecbcf3a09144 100755
---- a/src/meshDevice.ts
+index ddca80fc9134fa56ac273b17387e62af087c95c6..b9cdc7d703496cea5ed2037c1f19ecbcf3a09144 100644
+--- a/src/meshDevice.ts	
 +++ b/src/meshDevice.ts
 @@ -41,6 +41,10 @@ export class MeshDevice {
  
@@ -149,8 +149,8 @@ index ddca80fc9134fa56ac273b17387e62af087c95c6..b9cdc7d703496cea5ed2037c1f19ecbc
    }
  
 diff --git a/src/utils/queue.js b/src/utils/queue.js
-index d6082a6401e15eeb3e8873820b64341c961ac35f..73457e9e6fbde50800af427bb82b53b59049a7df 100755
---- a/src/utils/queue.js
+index d6082a6401e15eeb3e8873820b64341c961ac35f..73457e9e6fbde50800af427bb82b53b59049a7df 100644
+--- a/src/utils/queue.js	
 +++ b/src/utils/queue.js
 @@ -55,10 +55,8 @@ export class Queue {
      this.queue.push(queueItem);
@@ -180,8 +180,8 @@ index d6082a6401e15eeb3e8873820b64341c961ac35f..73457e9e6fbde50800af427bb82b53b5
        }
      } finally{
 diff --git a/src/utils/queue.ts b/src/utils/queue.ts
-index 9c0d192d0a22c1a158e70f4dc3b74460ea7bd22b..7d63cb22ad5c6a8cde8823b9925e93b63f8cdeb9 100755
---- a/src/utils/queue.ts
+index 9c0d192d0a22c1a158e70f4dc3b74460ea7bd22b..7d63cb22ad5c6a8cde8823b9925e93b63f8cdeb9 100644
+--- a/src/utils/queue.ts	
 +++ b/src/utils/queue.ts
 @@ -70,10 +70,11 @@ export class Queue {
    }
@@ -220,8 +220,8 @@ index 9c0d192d0a22c1a158e70f4dc3b74460ea7bd22b..7d63cb22ad5c6a8cde8823b9925e93b6
        }
      } finally {
 diff --git a/src/utils/transform/decodePacket.js b/src/utils/transform/decodePacket.js
-index b1cb39a13ac3f7fb5a368b04755d73a5c2f32743..78a812eaca5079a599e81e618399a247688a7786 100755
---- a/src/utils/transform/decodePacket.js
+index b1cb39a13ac3f7fb5a368b04755d73a5c2f32743..78a812eaca5079a599e81e618399a247688a7786 100644
+--- a/src/utils/transform/decodePacket.js	
 +++ b/src/utils/transform/decodePacket.js
 @@ -71,8 +71,11 @@ export const decodePacket = (device)=>new WritableStream({
                  }
@@ -252,8 +252,8 @@ index b1cb39a13ac3f7fb5a368b04755d73a5c2f32743..78a812eaca5079a599e81e618399a247
                  {
                    device.log.warn(Types.Emitter[Types.Emitter.HandleFromRadio], `⚠️ Unhandled payload variant: ${decodedMessage.payloadVariant.case}`);
 diff --git a/src/utils/transform/decodePacket.ts b/src/utils/transform/decodePacket.ts
-index ff5ccb00f5b9b1f80f0126a0fb6e757fd19ddc6b..2597e6af6783de19390ece201bd678a02fc930e1 100755
---- a/src/utils/transform/decodePacket.ts
+index ff5ccb00f5b9b1f80f0126a0fb6e757fd19ddc6b..2597e6af6783de19390ece201bd678a02fc930e1 100644
+--- a/src/utils/transform/decodePacket.ts	
 +++ b/src/utils/transform/decodePacket.ts
 @@ -104,11 +104,14 @@ export const decodePacket = (device: MeshDevice) =>
              }
@@ -286,3 +286,82 @@ index ff5ccb00f5b9b1f80f0126a0fb6e757fd19ddc6b..2597e6af6783de19390ece201bd678a0
              default: {
                device.log.warn(
                  Types.Emitter[Types.Emitter.HandleFromRadio],
+diff --git a/src/utils/transform/fromDevice.js b/src/utils/transform/fromDevice.js
+index e451fa6db2a2c16ffb5a2f6b49e4c6f4245e89ae..0f0ded923234e7c60a86510efb74b7c7b412fed1 100644
+--- a/src/utils/transform/fromDevice.js	
++++ b/src/utils/transform/fromDevice.js
+@@ -26,17 +26,18 @@ export const fromDeviceStream = ()=>{
+           const lsb = byteBuffer[3];
+           if (msb !== undefined && lsb !== undefined && byteBuffer.length >= 4 + (msb << 8) + lsb) {
+             const packet = byteBuffer.subarray(4, 4 + (msb << 8) + lsb);
+-            const malformedDetectorIndex = packet.findIndex((byte)=>byte === 0x94);
+-            if (malformedDetectorIndex !== -1 && packet[malformedDetectorIndex + 1] === 0xc3) {
+-              console.warn(`⚠️ Malformed packet found, discarding: ${byteBuffer.subarray(0, malformedDetectorIndex - 1).toString()}`);
+-              byteBuffer = byteBuffer.subarray(malformedDetectorIndex);
+-            } else {
+-              byteBuffer = byteBuffer.subarray(3 + (msb << 8) + lsb + 1);
+-              controller.enqueue({
+-                type: "packet",
+-                data: packet
+-              });
+-            }
++            // mesh-client: upstream scanned the *payload* for the 0x94 0xc3
++            // frame magic and discarded a frame the length prefix had already
++            // delimited correctly, rewinding byteBuffer into the middle of it
++            // and desyncing the stream. Those two bytes occur naturally in
++            // binary fields; a NodeInfo public key contained them, so that node
++            // was undecodable on every reconnect and took the session with it.
++            // The length prefix is authoritative — trust it.
++            byteBuffer = byteBuffer.subarray(3 + (msb << 8) + lsb + 1);
++            controller.enqueue({
++              type: "packet",
++              data: packet
++            });
+           } else {
+             /** Only partioal message in buffer, wait for the rest */ processingExhausted = true;
+           }
+diff --git a/src/utils/transform/fromDevice.ts b/src/utils/transform/fromDevice.ts
+index 832d73565bf3010478d7e84a237cb239e61e2d3a..6209d81580f3c47cd1d46112bc8fa5409a6123be 100644
+--- a/src/utils/transform/fromDevice.ts	
++++ b/src/utils/transform/fromDevice.ts
+@@ -35,28 +35,19 @@ export const fromDeviceStream: () => TransformStream<Uint8Array, DeviceOutput> =
+             ) {
+               const packet = byteBuffer.subarray(4, 4 + (msb << 8) + lsb);
+ 
+-              const malformedDetectorIndex = packet.findIndex(
+-                (byte) => byte === 0x94,
+-              );
+-              if (
+-                malformedDetectorIndex !== -1 &&
+-                packet[malformedDetectorIndex + 1] === 0xc3
+-              ) {
+-                console.warn(
+-                  `⚠️ Malformed packet found, discarding: ${byteBuffer
+-                    .subarray(0, malformedDetectorIndex - 1)
+-                    .toString()}`,
+-                );
++            // mesh-client: upstream scanned the *payload* for the 0x94 0xc3
++            // frame magic and discarded a frame the length prefix had already
++            // delimited correctly, rewinding byteBuffer into the middle of it
++            // and desyncing the stream. Those two bytes occur naturally in
++            // binary fields; a NodeInfo public key contained them, so that node
++            // was undecodable on every reconnect and took the session with it.
++            // The length prefix is authoritative — trust it.
++              byteBuffer = byteBuffer.subarray(3 + (msb << 8) + lsb + 1);
+ 
+-                byteBuffer = byteBuffer.subarray(malformedDetectorIndex);
+-              } else {
+-                byteBuffer = byteBuffer.subarray(3 + (msb << 8) + lsb + 1);
+-
+-                controller.enqueue({
+-                  type: "packet",
+-                  data: packet,
+-                });
+-              }
++              controller.enqueue({
++                type: "packet",
++                data: packet,
++              });
+             } else {
+               /** Only partioal message in buffer, wait for the rest */
+               processingExhausted = true;

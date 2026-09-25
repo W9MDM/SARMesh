@@ -54,6 +54,46 @@ describe('TransportTcpIpc', () => {
     reader.releaseLock();
   });
 
+  it('delivers a packet whose payload contains the 0x94 0xc3 frame magic', async () => {
+    // Upstream scanned the payload for the frame magic and threw away a frame
+    // the length prefix had already delimited, rewinding into the middle of it
+    // and desyncing the stream (patched in @jsr/meshtastic__core@2.6.6).
+    //
+    // These two bytes occur naturally in binary fields. A real NodeInfo on the
+    // reporting mesh — !db2b2424 "KF4PMY-Home" — carried them inside its 32-byte
+    // public key, so that node was undecodable on every reconnect and took the
+    // whole session down with it: configure, malformed, disconnect, repeat.
+    const transport = new TransportTcpIpc('192.168.200.4', 4403);
+    const reader = transport.fromDevice.getReader();
+
+    const payload = new Uint8Array([0x01, 0x02, 0x94, 0xc3, 0x03, 0x04]);
+    onDataCallback?.(new Uint8Array([0x94, 0xc3, 0, payload.length, ...payload]));
+
+    const { value } = await reader.read();
+    expect(value).toEqual({ type: 'packet', data: payload });
+    reader.releaseLock();
+  });
+
+  it('stays in sync on the frame after a payload containing the frame magic', async () => {
+    // The damage was not just the lost frame: the rewind left the parser
+    // misaligned, so everything after it decoded as garbage too.
+    const transport = new TransportTcpIpc('192.168.200.4', 4403);
+    const reader = transport.fromDevice.getReader();
+
+    onDataCallback?.(new Uint8Array([0x94, 0xc3, 0, 3, 0x94, 0xc3, 0x07]));
+    onDataCallback?.(new Uint8Array([0x94, 0xc3, 0, 2, 0xde, 0xad]));
+
+    expect((await reader.read()).value).toEqual({
+      type: 'packet',
+      data: new Uint8Array([0x94, 0xc3, 0x07]),
+    });
+    expect((await reader.read()).value).toEqual({
+      type: 'packet',
+      data: new Uint8Array([0xde, 0xad]),
+    });
+    reader.releaseLock();
+  });
+
   it('reassembles a message split across two onData calls', async () => {
     const transport = new TransportTcpIpc('192.168.200.4', 4403);
     const reader = transport.fromDevice.getReader();
