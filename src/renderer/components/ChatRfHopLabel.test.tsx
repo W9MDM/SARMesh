@@ -53,6 +53,33 @@ describe('ChatRfHopLabel', () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 
+  it('marks an approximate count and says where it came from', async () => {
+    // The sender's current distance is not this message's path, so it must not
+    // read as a measurement.
+    const { container } = render(
+      <ChatRfHopLabel
+        rxHops={2}
+        approximate
+        msg={{ storeId: 'ch:0:3:x', sender_id: 2, timestamp: Date.now(), channel: 0 }}
+      />,
+    );
+    const label = screen.getByText('~2 hops');
+    expect(label).toHaveAttribute('title', expect.stringMatching(/approximate/i));
+    prepareHopLabelForAxe(container, label, HOP_LABEL_GRAY_400);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('leaves an exact count unmarked', () => {
+    render(
+      <ChatRfHopLabel
+        rxHops={2}
+        msg={{ storeId: 'ch:0:4:x', sender_id: 2, timestamp: Date.now(), channel: 0 }}
+      />,
+    );
+    expect(screen.getByText('2 hops')).toBeInTheDocument();
+    expect(screen.queryByText('~2 hops')).not.toBeInTheDocument();
+  });
+
   it('uses refined title when a correction mark is active', async () => {
     markMeshcoreHopCorrected('ch:0:2:x');
     const { container } = render(

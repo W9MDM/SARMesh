@@ -767,7 +767,8 @@
       "bleUnavailable": "Il Bluetooth non è pronto. Riconnettiti e riprova.",
       "roomSessionExpired": "Sessione room scaduta — accedi di nuovo per pubblicare.",
       "noSavedRoomCredential": "Nessuna password della stanza salvata. Accedi prima alla stanza."
-    }
+    },
+    "hopCountFromSenderDistance": "Approssimativa — la distanza corrente di questo nodo. Il messaggio non riportava il proprio numero di hop."
   },
   "chatPayload": {
     "mention": "Menziona {{label}}",

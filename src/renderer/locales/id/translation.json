@@ -767,7 +767,8 @@
       "bleUnavailable": "Bluetooth belum siap. Sambungkan kembali dan coba lagi.",
       "roomSessionExpired": "Sesi ruangan kedaluwarsa — masuk lagi untuk memposting.",
       "noSavedRoomCredential": "Tidak ada kata sandi ruangan yang disimpan. Masuk ke ruangan terlebih dahulu."
-    }
+    },
+    "hopCountFromSenderDistance": "Perkiraan — jarak simpul ini saat ini. Pesan tidak melaporkan jumlah hop-nya sendiri."
   },
   "chatPayload": {
     "mention": "Sebutkan {{label}}",

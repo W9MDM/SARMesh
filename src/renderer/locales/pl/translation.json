@@ -805,7 +805,8 @@
       "bleUnavailable": "Bluetooth nie jest gotowy. Połącz się ponownie i spróbuj ponownie.",
       "roomSessionExpired": "Sesja w pokoju wygasła — zaloguj się ponownie, aby opublikować.",
       "noSavedRoomCredential": "Brak zapisanego hasła do pokoju. Najpierw zaloguj się do pokoju."
-    }
+    },
+    "hopCountFromSenderDistance": "Przybliżona — aktualna odległość tego węzła. Wiadomość nie zgłosiła własnej liczby przeskoków."
   },
   "chatPayload": {
     "mention": "Wspomnij o {{label}}",

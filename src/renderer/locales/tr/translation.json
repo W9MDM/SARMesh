@@ -767,7 +767,8 @@
       "bleUnavailable": "Bluetooth hazır değil. Yeniden bağlanın ve tekrar deneyin.",
       "roomSessionExpired": "Oda oturumunun süresi doldu — yayınlamak için tekrar giriş yapın.",
       "noSavedRoomCredential": "Kaydedilmiş oda şifresi yok. Önce odaya giriş yapın."
-    }
+    },
+    "hopCountFromSenderDistance": "Yaklaşık — bu düğümün mevcut mesafesi. Mesaj kendi atlama sayısını bildirmedi."
   },
   "chatPayload": {
     "mention": "{{label}}'dan bahsedin",

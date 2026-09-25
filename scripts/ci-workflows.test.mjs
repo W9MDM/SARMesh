@@ -28,7 +28,15 @@ function requireIndex(haystack, needle, label) {
   return idx;
 }
 
-describe('CI workflow contracts', () => {
+/**
+ * These tests shell out to `bash -c` to exercise the workflow gate scripts.
+ * The spawns are fast in isolation but not against vitest's 5s default under a
+ * full-suite parallel run, where they timed out and failed an otherwise-green
+ * commit. Set at the describe level so tests added later inherit it.
+ */
+const WORKFLOW_GATE_TIMEOUT_MS = 30_000;
+
+describe('CI workflow contracts', { timeout: WORKFLOW_GATE_TIMEOUT_MS }, () => {
   const ciWorkflow = read('.github/workflows/ci.yaml');
   const testsWorkflow = read('.github/workflows/tests.yaml');
   const setupAction = read('.github/actions/setup-node-pnpm/action.yaml');

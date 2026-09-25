@@ -767,7 +767,8 @@
       "bleUnavailable": "Bluetoothの準備ができていません。再接続してもう一度お試しください。",
       "roomSessionExpired": "ルームセッションの有効期限が切れました。再度ログインして投稿してください。",
       "noSavedRoomCredential": "保存されたルームのパスワードはありません。まずルームにログインします。"
-    }
+    },
+    "hopCountFromSenderDistance": "概算—このノードの現在の距離。メッセージは独自のホップカウントを報告しませんでした。"
   },
   "chatPayload": {
     "mention": "{{label}} について言及してください",

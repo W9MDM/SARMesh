@@ -787,7 +787,8 @@
       "bleUnavailable": "Bluetooth není připraven. Připojte se znovu a zkuste to znovu.",
       "roomSessionExpired": "Relace místnosti vypršela — pro zveřejnění se znovu přihlaste.",
       "noSavedRoomCredential": "Žádné uložené heslo místnosti. Nejprve se přihlaste do místnosti."
-    }
+    },
+    "hopCountFromSenderDistance": "Přibližná — aktuální vzdálenost tohoto uzlu. Zpráva nenahlásila vlastní počet hopů."
   },
   "chatPayload": {
     "mention": "Zmínit {{label}}",

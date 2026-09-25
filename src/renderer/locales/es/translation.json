@@ -767,7 +767,8 @@
       "bleUnavailable": "El Bluetooth no está listo. Vuelve a conectarte e inténtalo de nuevo.",
       "roomSessionExpired": "La sesión de la sala ha caducado. Vuelve a iniciar sesión para publicar.",
       "noSavedRoomCredential": "No se ha guardado la contraseña de la sala. Inicie sesión en la sala primero."
-    }
+    },
+    "hopCountFromSenderDistance": "Aproximado: la distancia actual de este nodo. El mensaje no informó su propio recuento de saltos."
   },
   "chatPayload": {
     "mention": "Mencionar {{label}}",

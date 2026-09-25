@@ -767,7 +767,8 @@
       "bleUnavailable": "Bluetooth ist nicht bereit. Verbinden Sie sich erneut und versuchen Sie es erneut.",
       "roomSessionExpired": "Die Raumsitzung ist abgelaufen - melden Sie sich erneut an, um zu posten.",
       "noSavedRoomCredential": "Kein gespeichertes Raumpasswort. Logge dich zuerst in den Raum ein."
-    }
+    },
+    "hopCountFromSenderDistance": "Ungefähr — die aktuelle Entfernung dieses Knotens. Die Nachricht hat keine eigene Hop-Anzahl gemeldet."
   },
   "chatPayload": {
     "mention": "Erwähne {{label}}",

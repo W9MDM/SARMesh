@@ -767,7 +767,8 @@
       "tooLargeForWire": "Voice memo is too large to send. Record a shorter clip.",
       "tooLargeForPropagation": "Voice message is larger than the propagation-node limit. It will deliver only when the recipient is online. Shorten it to store it for offline delivery.",
       "directOnlyBadge": "Direct only — too large for offline storage"
-    }
+    },
+    "hopCountFromSenderDistance": "Approximate — this node's current distance. The message did not report its own hop count."
   },
   "chatPayload": {
     "mention": "Mention {{label}}",

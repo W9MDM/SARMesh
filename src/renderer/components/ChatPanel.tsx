@@ -98,6 +98,7 @@ import { useChatOutbox } from '../hooks/useChatOutbox';
 import { useNowMs } from '../hooks/useNowMs';
 import { useReticulumDmPathProbe } from '../hooks/useReticulumDmPathProbe';
 import { chatDmPeerMessageCounts } from '../lib/chatDmPeerIndex';
+import { resolveChatHopDisplay } from '../lib/chatHopDisplay';
 import { playMessageNotification } from '../lib/chatNotifications';
 import {
   dismissedDmTabsStorageKey,
@@ -2191,6 +2192,17 @@ function ChatPanel({
     return nodes.get(activeDmNode)?.hops_away ?? null;
   }, [activeDmNode, nodes, reticulumDmPeerHops]);
 
+  /**
+   * Hop count to show beside an incoming message. Prefers the packet's own
+   * figure and falls back to the sender's known distance, which is the only
+   * thing available for most traffic — see resolveChatHopDisplay.
+   */
+  const hopDisplayForMessage = useCallback(
+    (msg: { rxHops?: number; sender_id: number }) =>
+      resolveChatHopDisplay(msg.rxHops, nodes.get(msg.sender_id)?.hops_away),
+    [nodes],
+  );
+
   const reticulumDmPathProbe = useReticulumDmPathProbe({
     enabled:
       protocol === 'reticulum' &&
@@ -3276,13 +3288,23 @@ function ChatPanel({
                             {!isOwn &&
                               (msg.receivedVia ||
                                 msg.viaStoreForward ||
-                                (msg.rxHops != null &&
+                                (hopDisplayForMessage(msg) != null &&
                                   (msg.receivedVia === 'rf' || msg.receivedVia === 'both'))) && (
                                 <div className="mt-0.5 flex items-center justify-end gap-2">
-                                  {msg.rxHops != null &&
-                                    (msg.receivedVia === 'rf' || msg.receivedVia === 'both') && (
-                                      <ChatRfHopLabel rxHops={msg.rxHops} msg={msg} />
-                                    )}
+                                  {(() => {
+                                    if (msg.receivedVia !== 'rf' && msg.receivedVia !== 'both') {
+                                      return null;
+                                    }
+                                    const hop = hopDisplayForMessage(msg);
+                                    if (!hop) return null;
+                                    return (
+                                      <ChatRfHopLabel
+                                        rxHops={hop.hops}
+                                        msg={msg}
+                                        approximate={hop.approximate}
+                                      />
+                                    );
+                                  })()}
                                   {msg.viaStoreForward && <StoreForwardBadge />}
                                   {msg.receivedVia && (
                                     <TransportBadge via={msg.receivedVia} protocol={protocol} />

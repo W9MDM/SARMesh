@@ -767,7 +767,8 @@
       "bleUnavailable": "Bluetooth is niet gereed. Maak opnieuw verbinding en probeer het opnieuw.",
       "roomSessionExpired": "Roomsessie verlopen — log opnieuw in om te posten.",
       "noSavedRoomCredential": "Geen opgeslagen ruimtewachtwoord. Log eerst in op de ruimte."
-    }
+    },
+    "hopCountFromSenderDistance": "Bij benadering — de huidige afstand van dit knooppunt. Het bericht rapporteerde geen eigen hoptelling."
   },
   "chatPayload": {
     "mention": "Vermeld {{label}}",
