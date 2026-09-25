@@ -102,6 +102,46 @@ export function rewriteGeneratorSkipElectronArmv7l(source) {
 }
 
 /**
+ * Read one of the generator's Python modules with LF line endings.
+ *
+ * pip on Windows installs them with CRLF, while every patch pattern in this
+ * file is written with LF — so `source.includes(...)` missed and the release
+ * gate reported the playwright dispatch as absent on a file that contained it
+ * verbatim. The target is an untracked venv module that Python reads with
+ * either ending, so normalising on read is safe.
+ *
+ * @param {(p: string, enc: BufferEncoding) => string} read
+ * @param {string} filePath
+ * @returns {string}
+ */
+function readGeneratorSource(read, filePath) {
+  return read(filePath, 'utf8').replace(/\r\n/g, '\n');
+}
+
+/**
+ * Glob patterns for a module inside an installed flatpak_node_generator,
+ * relative to the directory above the console-script.
+ *
+ * A POSIX venv puts packages under `lib/python3.x/site-packages`, but a
+ * Windows one uses `Lib/site-packages` with no interpreter-version level, so
+ * the POSIX patterns alone find nothing there. resolveFlatpakNodeGeneratorBin
+ * already looks in `Scripts/` for the .exe, so the generator was located and
+ * then rejected for "could not find special.py", blocking the release gate on
+ * Windows.
+ *
+ * @param {string} moduleRelPath e.g. 'electron.py' or 'providers/special.py'
+ * @returns {string[]}
+ */
+export function generatorModulePatterns(moduleRelPath) {
+  return [
+    `lib/python*/site-packages/flatpak_node_generator/${moduleRelPath}`,
+    `lib/python*/dist-packages/flatpak_node_generator/${moduleRelPath}`,
+    `Lib/site-packages/flatpak_node_generator/${moduleRelPath}`,
+    `Lib/dist-packages/flatpak_node_generator/${moduleRelPath}`,
+  ];
+}
+
+/**
  * Locate electron.py next to a generator console-script (venv or pip --user).
  *
  * @param {string} generatorBin
@@ -117,10 +157,7 @@ export function resolveGeneratorElectronPyPath(generatorBin, opts = {}) {
   const glob = opts.globSync ?? ((pattern, o) => fs.globSync(pattern, { cwd: o.cwd }));
   const binDir = path.dirname(generatorBin);
   const roots = [path.dirname(binDir)];
-  const patterns = [
-    'lib/python*/site-packages/flatpak_node_generator/electron.py',
-    'lib/python*/dist-packages/flatpak_node_generator/electron.py',
-  ];
+  const patterns = generatorModulePatterns('electron.py');
   for (const root of roots) {
     for (const pattern of patterns) {
       let hits;
@@ -154,7 +191,7 @@ export function applyGeneratorSkipElectronArmv7l(electronPyPath, opts = {}) {
   const write = opts.writeFileSync ?? ((p, data, enc) => fs.writeFileSync(p, data, enc));
   let source;
   try {
-    source = read(electronPyPath, 'utf8');
+    source = readGeneratorSource(read, electronPyPath);
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     return { ok: false, message: `could not read ${electronPyPath}: ${detail}` };
@@ -218,10 +255,7 @@ export function resolveGeneratorSpecialPyPath(generatorBin, opts = {}) {
   const glob = opts.globSync ?? ((pattern, o) => fs.globSync(pattern, { cwd: o.cwd }));
   const binDir = path.dirname(generatorBin);
   const roots = [path.dirname(binDir)];
-  const patterns = [
-    'lib/python*/site-packages/flatpak_node_generator/providers/special.py',
-    'lib/python*/dist-packages/flatpak_node_generator/providers/special.py',
-  ];
+  const patterns = generatorModulePatterns('providers/special.py');
   for (const root of roots) {
     for (const pattern of patterns) {
       let hits;
@@ -255,7 +289,7 @@ export function applyGeneratorSkipPlaywrightSpecialSources(specialPyPath, opts =
   const write = opts.writeFileSync ?? ((p, data, enc) => fs.writeFileSync(p, data, enc));
   let source;
   try {
-    source = read(specialPyPath, 'utf8');
+    source = readGeneratorSource(read, specialPyPath);
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     return { ok: false, message: `could not read ${specialPyPath}: ${detail}` };
@@ -308,7 +342,7 @@ export function applyGeneratorFlatpakNodeGeneratorPatches(
 
   let specialOriginal;
   try {
-    specialOriginal = read(specialPyPath, 'utf8');
+    specialOriginal = readGeneratorSource(read, specialPyPath);
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     return { ok: false, message: `could not read ${specialPyPath}: ${detail}` };
@@ -316,7 +350,7 @@ export function applyGeneratorFlatpakNodeGeneratorPatches(
 
   let electronOriginal;
   try {
-    electronOriginal = read(electronPyPath, 'utf8');
+    electronOriginal = readGeneratorSource(read, electronPyPath);
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     return { ok: false, message: `could not read ${electronPyPath}: ${detail}` };
