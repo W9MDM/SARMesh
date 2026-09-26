@@ -5239,10 +5239,16 @@ function ConnectionBanner({
           ⟳
         </span>
         <span className="text-sm text-orange-200">
-          {t('connectionBanner.reconnectingAttempt', {
-            attempt: reconnectAttempt ?? 1,
-            max: reconnectBannerMaxAttempts(connectionType),
-          })}
+          {(() => {
+            // Network transports retry without a limit, so there is no "of N"
+            // to show — saying "attempt 3/Infinity" would be worse than saying
+            // nothing about the budget.
+            const max = reconnectBannerMaxAttempts(connectionType);
+            const attempt = reconnectAttempt ?? 1;
+            return Number.isFinite(max)
+              ? t('connectionBanner.reconnectingAttempt', { attempt, max })
+              : t('connectionBanner.reconnectingAttemptNoLimit', { attempt });
+          })()}
         </span>
       </div>
     );

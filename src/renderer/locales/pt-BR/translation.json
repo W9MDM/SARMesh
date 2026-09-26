@@ -849,7 +849,8 @@
     "reconnectingAttempt": "Reconectando… tentativa {{attempt}}/{{max}}",
     "serialReselect": "Conexão serial USB perdida — selecione seu dispositivo novamente",
     "serialReselectAction": "Selecionar porta serial",
-    "statusRegion": "Status da conexão"
+    "statusRegion": "Status da conexão",
+    "reconnectingAttemptNoLimit": "Reconectando… tentativa {{attempt}}"
   },
   "connectionPanel": {
     "maxReconnectAttempts": "Tentativas máximas de reconexão do MQTT",

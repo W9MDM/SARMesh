@@ -887,7 +887,8 @@
     "reconnectingAttempt": "Ponowne łączenie… próba {{attempt}}/{{max}}",
     "serialReselect": "Utracono połączenie szeregowe USB — wybierz ponownie swoje urządzenie",
     "serialReselectAction": "Wybierz port szeregowy",
-    "statusRegion": "Status połączenia"
+    "statusRegion": "Status połączenia",
+    "reconnectingAttemptNoLimit": "Ponowne łączenie… próba {{attempt}}"
   },
   "connectionPanel": {
     "maxReconnectAttempts": "Maksymalna liczba prób ponownego połączenia MQTT",

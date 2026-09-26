@@ -887,7 +887,8 @@
     "reconnectingAttempt": "Повторное подключение… попытка {{attempt}}/{{max}}",
     "serialReselect": "Последовательное USB-соединение потеряно — выберите устройство еще раз",
     "serialReselectAction": "Выберите последовательный порт",
-    "statusRegion": "Статус подключения"
+    "statusRegion": "Статус подключения",
+    "reconnectingAttemptNoLimit": "Повторное подключение… попытка {{attempt}}"
   },
   "connectionPanel": {
     "maxReconnectAttempts": "Максимальное количество попыток переподключения MQTT",

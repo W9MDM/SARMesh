@@ -869,7 +869,8 @@
     "reconnectingAttempt": "Opětovné připojení... Pokus {{attempt}}/{{max}}",
     "serialReselect": "Ztráta sériového připojení USB — vyberte zařízení znovu",
     "serialReselectAction": "Výběr sériového portu",
-    "statusRegion": "Stav připojení"
+    "statusRegion": "Stav připojení",
+    "reconnectingAttemptNoLimit": "Probíhá opětovné připojení… Pokus {{attempt}}"
   },
   "connectionPanel": {
     "maxReconnectAttempts": "Maximální počet pokusů o opětovné připojení MQTT",

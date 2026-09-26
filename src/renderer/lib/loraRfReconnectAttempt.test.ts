@@ -6,6 +6,7 @@ import {
   runLoraRfReconnectAttempt,
 } from './loraRfReconnectAttempt';
 import { createRfReconnectController } from './rfReconnectController';
+import { RF_MAX_RECONNECT_ATTEMPTS_BLE } from './rfReconnectShared';
 import { loadRendererLibSource } from './sourceContractTestHelpers';
 import { setSystemSuspended } from './systemPowerState';
 import { NOBLE_BLE_RECONNECT_ATTEMPT_BUDGET_MS } from './timeConstants';
@@ -161,11 +162,27 @@ describe('runLoraRfReconnectAttempt', () => {
   });
 
   it('marks exhausted and calls onExhausted when attempt budget is spent', async () => {
-    attemptCounter.set(5); // RF_MAX_RECONNECT_ATTEMPTS for tcp
+    // Transports with a finite budget still latch off. BLE is the case that
+    // wants this: the radio may be out of range or powered down, and scanning
+    // forever costs battery.
+    params = { type: 'ble' };
+    attemptCounter.set(RF_MAX_RECONNECT_ATTEMPTS_BLE);
     await runLoraRfReconnectAttempt(buildDeps());
     expect(controller.isReconnecting).toBe(false);
-    expect(onExhausted).toHaveBeenCalledWith({ type: 'tcp' });
+    expect(onExhausted).toHaveBeenCalledWith({ type: 'ble' });
     expect(runOpenAndAttach).not.toHaveBeenCalled();
+  });
+
+  it('never exhausts a network transport, however many attempts have run', async () => {
+    // A TCP node is a fixed host that comes back after a reboot; giving up
+    // left the app silently disconnected until a human noticed. Backoff is
+    // capped, so attempt 501 still waits only DEFAULT_MAX_DELAY_MS.
+    attemptCounter.set(500);
+    const promise = runLoraRfReconnectAttempt(buildDeps());
+    await vi.advanceTimersByTimeAsync(35_000);
+    await promise;
+    expect(onExhausted).not.toHaveBeenCalled();
+    expect(runOpenAndAttach).toHaveBeenCalledTimes(1);
   });
 
   it('runs open after backoff and bounds the attempt with raceWithDeadline', async () => {

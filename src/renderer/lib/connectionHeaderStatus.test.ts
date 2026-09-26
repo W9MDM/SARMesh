@@ -18,6 +18,7 @@ import {
 import {
   RF_MAX_RECONNECT_ATTEMPTS,
   RF_MAX_RECONNECT_ATTEMPTS_BLE,
+  RF_MAX_RECONNECT_ATTEMPTS_NETWORK,
   RF_MAX_RECONNECT_ATTEMPTS_SERIAL,
 } from './rfReconnectShared';
 
@@ -117,8 +118,8 @@ describe('connectionHeaderStatus', () => {
     it.each([
       ['ble', RF_MAX_RECONNECT_ATTEMPTS_BLE],
       ['serial', RF_MAX_RECONNECT_ATTEMPTS_SERIAL],
-      ['http', RF_MAX_RECONNECT_ATTEMPTS],
-      ['tcp', RF_MAX_RECONNECT_ATTEMPTS],
+      ['http', RF_MAX_RECONNECT_ATTEMPTS_NETWORK],
+      ['tcp', RF_MAX_RECONNECT_ATTEMPTS_NETWORK],
       [null, RF_MAX_RECONNECT_ATTEMPTS],
     ] as const)('maps %s → %s', (type, expected) => {
       expect(reconnectBannerMaxAttempts(type)).toBe(expected);

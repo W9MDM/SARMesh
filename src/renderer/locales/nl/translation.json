@@ -849,7 +849,8 @@
     "reconnectingAttempt": "Opnieuw verbinden… poging {{attempt}}/{{max}}",
     "serialReselect": "USB seriële verbinding verbroken — selecteer uw apparaat opnieuw",
     "serialReselectAction": "Seriële poort selecteren",
-    "statusRegion": "Verbindingsstatus"
+    "statusRegion": "Verbindingsstatus",
+    "reconnectingAttemptNoLimit": "Opnieuw verbinden… poging {{attempt}}"
   },
   "connectionPanel": {
     "maxReconnectAttempts": "Max. MQTT-pogingen om opnieuw verbinding te maken",

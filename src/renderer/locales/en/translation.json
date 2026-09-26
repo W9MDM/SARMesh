@@ -849,7 +849,8 @@
     "reconnectingAttempt": "Reconnecting… attempt {{attempt}}/{{max}}",
     "serialReselect": "USB serial connection lost — reselect the port, or power-cycle the radio if it still will not connect",
     "serialReselectAction": "Select serial port",
-    "statusRegion": "Connection status"
+    "statusRegion": "Connection status",
+    "reconnectingAttemptNoLimit": "Reconnecting… attempt {{attempt}}"
   },
   "connectionPanel": {
     "maxReconnectAttempts": "Max MQTT reconnect attempts",

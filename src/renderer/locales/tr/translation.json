@@ -849,7 +849,8 @@
     "reconnectingAttempt": "Yeniden bağlanıyor… {{attempt}}/{{max}} denemesi",
     "serialReselect": "USB seri bağlantısı kesildi — cihazınızı tekrar seçin",
     "serialReselectAction": "Seri port seçin",
-    "statusRegion": "Bağlantı durumu"
+    "statusRegion": "Bağlantı durumu",
+    "reconnectingAttemptNoLimit": "Yeniden bağlanıyor… {{attempt}} girişimi"
   },
   "connectionPanel": {
     "maxReconnectAttempts": "Maksimum MQTT yeniden bağlanma denemesi",

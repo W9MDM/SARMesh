@@ -143,10 +143,12 @@ export async function runLoraRfReconnectAttempt<TParams>(
   deps.setReconnectingUi(attemptNumber);
 
   const maxDelayMs = deps.maxDelayMs ?? DEFAULT_MAX_DELAY_MS;
+  // Math.pow overflows to Infinity for an unbounded budget; the cap absorbs it.
   const delay = Math.min(2000 * Math.pow(2, attemptNumber - 1), maxDelayMs);
-  console.debug(
-    `[${deps.logTag}] reconnect: waiting ${delay}ms before attempt ${attemptNumber}/${maxReconnectAttempts}`,
-  );
+  const budgetLabel = Number.isFinite(maxReconnectAttempts)
+    ? `${attemptNumber}/${maxReconnectAttempts}`
+    : `${attemptNumber} (no limit)`;
+  console.debug(`[${deps.logTag}] reconnect: waiting ${delay}ms before attempt ${budgetLabel}`);
   const delayResult = await delayUnlessSuspended(delay, () => shouldAbortDelay(deps, generation));
 
   if (delayResult === 'aborted') {
